@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node:*)",
+      "Bash(del \"C:\\Users\\Administrador\\Downloads\\War1954-main\\War1954-main\\debug-template.js\")",
+      "Bash(del \"C:\\Users\\Administrador\\Downloads\\War1954-main\\War1954-main\\test-syntax.js\")",
+      "Bash(del \"C:\\Users\\Administrador\\Downloads\\War1954-main\\War1954-main\\test-narrador.html\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -202,7 +202,16 @@ export function renderDetailedCountryPanel(country) {
 // UI do narrador
 export function updateNarratorUI(isNarrator, isAdmin) {
   const { narratorTools, userRoleBadge } = DOM;
-  if (narratorTools) narratorTools.style.display = (isNarrator || isAdmin) ? 'block' : 'none';
+  
+  if (narratorTools) {
+    narratorTools.style.display = (isNarrator || isAdmin) ? 'block' : 'none';
+  }
+  
+  const narratorLink = document.querySelector('a[href="narrador.html"]');
+  if (narratorLink) {
+    narratorLink.style.display = (isNarrator || isAdmin) ? 'block' : 'none';
+  }
+  
   if (userRoleBadge) {
     if (isAdmin) {
       userRoleBadge.textContent = 'Admin';
