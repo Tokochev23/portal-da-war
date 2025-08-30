@@ -3,11 +3,11 @@ import {
   checkUserPermissions,
   checkPlayerCountry,
   getAvailableCountries,
-  vincularJogadorAoPais,
+  vincularJogadorAoPaisSemRebaixar as vincularJogadorAoPais,
   getAllCountries,
   getGameConfig,
   updateTurn,
-  signInWithGoogle,
+  signInWithGooglePreserveRole as signInWithGoogle,
   registerWithEmailPassword,
   signInWithEmailPassword
 } from "./services/firebase.js";
@@ -16,7 +16,8 @@ import {
   updateKPIs,
   fillPlayerPanel,
   createCountrySelectionModal,
-  updateNarratorUI
+  updateNarratorUI,
+  renderDetailedCountryPanel
 } from "./ui/renderer.js";
 import { showNotification } from "./utils.js";
 
@@ -473,6 +474,20 @@ countryPanelModal.addEventListener('click', (e) => {
     countryPanelModal.classList.add('hidden');
   }
 });
+
+// Abrir painel detalhado ao clicar em qualquer card (delegação)
+if (countryListContainer) {
+  countryListContainer.addEventListener('click', (e) => {
+    const button = e.target.closest('.country-card-button');
+    if (!button) return;
+    e.preventDefault();
+    const countryId = button.dataset.countryId;
+    const countryData = appState.allCountries.find(c => c.id === countryId);
+    if (countryData) {
+      renderDetailedCountryPanel(countryData);
+    }
+  });
+}
 
 // Esc para fechar modal
 document.addEventListener('keydown', (e) => {

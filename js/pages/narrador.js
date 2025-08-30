@@ -1,4 +1,5 @@
 import { auth, db, getAllCountries, getGameConfig, updateTurn, checkUserPermissions } from "../services/firebase.js";
+import { showNotification, Logger, showConfirmBox } from "../utils.js";
 
 // Catálogo local (fallback). Pode ser salvo no Firestore em configuracoes/campos
 const localCatalog = {
