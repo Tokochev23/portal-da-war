@@ -7,7 +7,7 @@ import "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js";
 import "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js";
 
 // === INICIALIZAÇÃO SEGURA DO FIREBASE ===
-let app, auth, db;
+let app, auth, db, firebase;
 let loginAttempts = new Map(); // Rate limiting por usuário
 
 // Classe para tratamento centralizado de erros Firebase
@@ -66,6 +66,7 @@ function checkRateLimit(identifier) {
 
 // Inicialização com tratamento de erro
 try {
+    firebase = window.firebase; // Capturar referência global
     app = firebase.initializeApp(FIREBASE_CONFIG);
     auth = firebase.auth();
     db = firebase.firestore();

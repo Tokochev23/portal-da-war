@@ -9,7 +9,8 @@ import {
   updateTurn,
   signInWithGooglePreserveRole as signInWithGoogle,
   registerWithEmailPassword,
-  signInWithEmailPassword
+  signInWithEmailPassword,
+  db
 } from "./services/firebase.js";
 import {
   renderPublicCountries,
@@ -149,6 +150,9 @@ async function loadSiteData() {
       // Esconder loading
       document.querySelectorAll('.loading-shimmer').forEach(el => el.style.display = 'none');
       appState.isDataLoaded = true;
+      
+      // Ativar sincronização em tempo real após carregamento inicial
+      setupRealTimeSync();
     } else {
       console.warn("Nenhum país encontrado no Firestore");
       showNotification('warning', 'Nenhum país encontrado. Verifique a configuração do Firestore.');
@@ -264,6 +268,10 @@ async function handleUserLogin(user) {
     authButton.querySelector('.btn-text').textContent = 'Entrar';
     updateNarratorUI(false, false);
     fillPlayerPanel(null); // Limpa o painel do jogador
+    
+    // Limpar listeners de tempo real ao deslogar
+    teardownRealTimeSync();
+    
     const hb2 = getHeroBlurb();
     if (hb2) hb2.classList.remove('hidden');
     if (turnPostBtn) turnPostBtn.classList.add('hidden');
@@ -525,6 +533,116 @@ if (turnoEditor) {
 
 // Monitora o estado da autenticação
 auth.onAuthStateChanged(handleUserLogin);
+
+// Sistema de sincronização em tempo real
+let realTimeListeners = new Map();
+
+function setupRealTimeSync() {
+  console.log("Configurando sincronização em tempo real...");
+  
+  // 1. Listener para mudanças na coleção de países
+  const countriesListener = db.collection('paises').onSnapshot(snapshot => {
+    console.log("Mudanças detectadas na coleção de países");
+    
+    // Atualizar dados locais
+    snapshot.docChanges().forEach(change => {
+      const countryData = { id: change.doc.id, ...change.doc.data() };
+      const countryIndex = appState.allCountries.findIndex(c => c.id === change.doc.id);
+      
+      if (change.type === 'added' && countryIndex === -1) {
+        appState.allCountries.push(countryData);
+        console.log(`País adicionado: ${countryData.Pais}`);
+      } else if (change.type === 'modified' && countryIndex !== -1) {
+        appState.allCountries[countryIndex] = countryData;
+        console.log(`País atualizado: ${countryData.Pais}`);
+      } else if (change.type === 'removed' && countryIndex !== -1) {
+        appState.allCountries.splice(countryIndex, 1);
+        console.log(`País removido: ${countryData.Pais}`);
+      }
+    });
+    
+    // Re-renderizar interface se dados foram carregados
+    if (appState.isDataLoaded) {
+      updateKPIs(appState.allCountries);
+      filterAndRenderCountries();
+      console.log("Interface atualizada automaticamente");
+    }
+  }, error => {
+    console.error("Erro no listener de países:", error);
+  });
+  
+  realTimeListeners.set('countries', countriesListener);
+  
+  // 2. Listener para eventos de broadcast do realTimeUpdates
+  window.addEventListener('realtime:update', (event) => {
+    console.log("Evento realtime:update recebido:", event.detail);
+    
+    const { countryId, section, field, newValue } = event.detail;
+    
+    // Encontrar e atualizar o país afetado
+    const countryIndex = appState.allCountries.findIndex(c => c.id === countryId);
+    if (countryIndex !== -1) {
+      const country = appState.allCountries[countryIndex];
+      
+      // Garantir que a seção existe
+      if (!country[section]) {
+        country[section] = {};
+      }
+      
+      // Atualizar o campo
+      country[section][field] = newValue;
+      
+      // Se é um campo do nível raiz (como no geral), também atualizar lá
+      if (section === 'geral') {
+        country[field] = newValue;
+      }
+      
+      console.log(`Campo ${field} do país ${country.Pais} atualizado via broadcast:`, newValue);
+      
+      // Re-renderizar interface
+      updateKPIs(appState.allCountries);
+      filterAndRenderCountries();
+    }
+  });
+  
+  // 3. Listener para mudanças de configuração do jogo
+  const configListener = db.collection('configuracoes').doc('jogo').onSnapshot(doc => {
+    if (doc.exists) {
+      const newConfig = doc.data();
+      if (appState.gameConfig.turnoAtual !== newConfig.turnoAtual) {
+        console.log(`Turno atualizado: ${appState.gameConfig.turnoAtual} → ${newConfig.turnoAtual}`);
+        appState.gameConfig = newConfig;
+        
+        // Atualizar interface do turno
+        const turnoAtualElement = document.getElementById('turno-atual');
+        if (turnoAtualElement) {
+          turnoAtualElement.textContent = `#${newConfig.turnoAtual}`;
+        }
+        
+        if (turnPostBtn) {
+          turnPostBtn.textContent = `Ver turno #${newConfig.turnoAtual} (Facebook)`;
+        }
+      }
+    }
+  }, error => {
+    console.error("Erro no listener de configuração:", error);
+  });
+  
+  realTimeListeners.set('config', configListener);
+  
+  console.log("Sincronização em tempo real ativada ✅");
+}
+
+function teardownRealTimeSync() {
+  console.log("Removendo listeners de tempo real...");
+  realTimeListeners.forEach(unsubscribe => unsubscribe());
+  realTimeListeners.clear();
+}
+
+// Limpeza ao fechar a página
+window.addEventListener('beforeunload', () => {
+  teardownRealTimeSync();
+});
 
 // Carregamento inicial
 document.addEventListener('DOMContentLoaded', () => {

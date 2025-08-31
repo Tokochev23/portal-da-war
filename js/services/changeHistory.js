@@ -40,7 +40,7 @@ export class ChangeHistoryService {
                 newValue: this.sanitizeValue(newValue),
                 userId: userId || user.uid,
                 userName: userName || user.displayName || 'Sistema',
-                timestamp: firebase.firestore.Timestamp.now(),
+                timestamp: new Date(),
                 reason: reason,
                 metadata: {
                     userAgent: navigator.userAgent,
@@ -72,7 +72,7 @@ export class ChangeHistoryService {
     async recordBatchChanges(changes, reason = null) {
         try {
             const batch = db.batch();
-            const timestamp = firebase.firestore.Timestamp.now();
+            const timestamp = new Date();
             const user = auth.currentUser;
             
             const batchId = this.generateBatchId();
@@ -136,7 +136,7 @@ export class ChangeHistoryService {
             const updatePath = `${section}.${field}`;
             const updateData = {
                 [updatePath]: newValue,
-                [`${section}.lastModified`]: firebase.firestore.Timestamp.now(),
+                [`${section}.lastModified`]: new Date(),
                 [`${section}.lastModifiedBy`]: auth.currentUser?.uid
             };
 
@@ -198,10 +198,10 @@ export class ChangeHistoryService {
             if (userId) query = query.where('userId', '==', userId);
             
             if (startDate) {
-                query = query.where('timestamp', '>=', firebase.firestore.Timestamp.fromDate(startDate));
+                query = query.where('timestamp', '>=', startDate);
             }
             if (endDate) {
-                query = query.where('timestamp', '<=', firebase.firestore.Timestamp.fromDate(endDate));
+                query = query.where('timestamp', '<=', endDate);
             }
 
             // Ordenar e limitar
@@ -265,7 +265,7 @@ export class ChangeHistoryService {
             // 4. Marcar mudança original como revertida
             await db.collection('changeHistory').doc(changeId).update({
                 rolledBack: true,
-                rollbackTimestamp: firebase.firestore.Timestamp.now(),
+                rollbackTimestamp: new Date(),
                 rollbackUserId: auth.currentUser?.uid,
                 rollbackReason: reason
             });
@@ -325,7 +325,7 @@ export class ChangeHistoryService {
             startDate.setDate(startDate.getDate() - days);
 
             let query = db.collection('changeHistory')
-                .where('timestamp', '>=', firebase.firestore.Timestamp.fromDate(startDate));
+                .where('timestamp', '>=', startDate);
             
             if (countryId) {
                 query = query.where('countryId', '==', countryId);

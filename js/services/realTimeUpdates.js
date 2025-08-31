@@ -46,14 +46,9 @@ export class RealTimeUpdateService {
                 return false;
             }
 
-            // 5. Aplicar mudança via ChangeHistory (que já faz tudo)
-            await changeHistory.applyRealTimeChange({
-                countryId,
-                section,
-                field,
-                newValue: value,
-                reason
-            });
+            // 5. Aplicar mudança - direto no Firebase (sem histórico)
+            Logger.info('Salvando diretamente no Firebase (histórico desabilitado)');
+            await this.saveWithRetry(countryId, section, field, value);
 
             // 6. Broadcast local se solicitado
             if (broadcast) {
@@ -109,8 +104,8 @@ export class RealTimeUpdateService {
                 return false;
             }
 
-            // Aplicar todas as mudanças em uma transação
-            await this.executeTransactionalUpdate(updates, reason);
+            // Aplicar todas as mudanças diretamente (sem transação/histórico)
+            await this.executeDirectUpdate(updates);
 
             if (broadcast) {
                 updates.forEach(update => this.broadcastLocalUpdate(update));
@@ -186,11 +181,17 @@ export class RealTimeUpdateService {
                 return false;
             }
 
-            // Registrar todas as mudanças em lote
-            const batchId = await changeHistory.recordBatchChanges(allChanges, reason);
-
-            // Aplicar todas as mudanças no Firebase
+            // Aplicar todas as mudanças no Firebase primeiro
             await this.executeBatchUpdate(allChanges);
+
+            // Tentar registrar no histórico (opcional)
+            let batchId = null;
+            try {
+                batchId = await changeHistory.recordBatchChanges(allChanges, reason);
+            } catch (historyError) {
+                Logger.warn('Erro ao registrar deltas no histórico:', historyError.message);
+                batchId = 'fallback_' + Date.now();
+            }
 
             // Broadcast das mudanças
             allChanges.forEach(change => this.broadcastLocalUpdate(change));
@@ -319,7 +320,7 @@ export class RealTimeUpdateService {
                     });
                     
                     // Metadata da seção
-                    updateData[`${section}.lastModified`] = firebase.firestore.Timestamp.now();
+                    updateData[`${section}.lastModified`] = new Date();
                     updateData[`${section}.lastModifiedBy`] = auth.currentUser?.uid;
                 });
 
@@ -327,8 +328,12 @@ export class RealTimeUpdateService {
             });
         });
 
-        // Registrar no histórico após transação bem-sucedida
-        await changeHistory.recordBatchChanges(updates, reason);
+        // Tentar registrar no histórico (opcional se falhar)
+        try {
+            await changeHistory.recordBatchChanges(updates, reason);
+        } catch (historyError) {
+            Logger.warn('Erro ao registrar no histórico, continuando:', historyError.message);
+        }
     }
 
     async executeBatchUpdate(changes) {
@@ -359,7 +364,7 @@ export class RealTimeUpdateService {
                     updateData[`${section}.${field}`] = value;
                 });
                 
-                updateData[`${section}.lastModified`] = firebase.firestore.Timestamp.now();
+                updateData[`${section}.lastModified`] = new Date();
                 updateData[`${section}.lastModifiedBy`] = auth.currentUser?.uid;
             });
 
@@ -467,6 +472,57 @@ export class RealTimeUpdateService {
                 const key = `${change.countryId}.${change.section}.${change.field}`;
                 this.pendingChanges.set(key, change);
             });
+        }
+    }
+
+    async executeDirectUpdate(updates) {
+        for (const update of updates) {
+            await this.saveWithRetry(
+                update.countryId, 
+                update.section, 
+                update.field, 
+                update.newValue
+            );
+        }
+    }
+
+    async saveWithRetry(countryId, section, field, value, maxRetries = 3) {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const updateData = {};
+                updateData[`${section}.${field}`] = value;
+                updateData[`${section}.lastModified`] = new Date();
+                updateData[`${section}.lastModifiedBy`] = auth.currentUser?.uid;
+                
+                await db.collection('paises').doc(countryId).update(updateData);
+                Logger.info(`Mudança salva (tentativa ${attempt}): ${countryId}.${section}.${field}`);
+                return;
+                
+            } catch (error) {
+                const isNetworkError = error.message.includes('ERR_BLOCKED_BY_CLIENT') || 
+                                     error.code === 'unavailable' || 
+                                     error.code === 'deadline-exceeded';
+                
+                if (isNetworkError && attempt < maxRetries) {
+                    Logger.warn(`Tentativa ${attempt} falhou (rede), tentando novamente em ${attempt * 1000}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+                } else {
+                    Logger.error(`Falha após ${attempt} tentativas:`, error);
+                    
+                    // Se falhou, pelo menos fazer broadcast local para atualizar a UI
+                    this.broadcastLocalUpdate({
+                        countryId,
+                        section,
+                        field,
+                        oldValue: null,
+                        newValue: value
+                    });
+                    
+                    showNotification('warning', 
+                        'Conexão instável. A mudança pode não ter sido salva no servidor, mas foi aplicada localmente.');
+                    throw error;
+                }
+            }
         }
     }
 }

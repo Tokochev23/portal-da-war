@@ -262,18 +262,22 @@ function renderForm() {
           }
         }
         
-        if (state.realTimeEnabled) {
-          // Aplicar todas as mudanças em tempo real
-          await realTimeUpdates.updateMultipleFields({
-            countryId: pais.id,
-            section: state.secaoSelecionada,
-            fields: payload,
-            reason: 'Aplicação manual de seção completa'
+        // Sempre usar modo direto e sincronizar raiz com geral
+        const updateData = {
+          [`${state.secaoSelecionada}`]: payload
+        };
+        
+        // Se estamos editando a seção "geral", também atualizar campos na raiz
+        if (state.secaoSelecionada === 'geral') {
+          Object.entries(payload).forEach(([key, value]) => {
+            // Campos que devem ser sincronizados na raiz
+            if (['PIB', 'Populacao', 'Estabilidade', 'Tecnologia', 'Urbanizacao', 'ModeloPolitico', 'Visibilidade'].includes(key)) {
+              updateData[key] = value;
+            }
           });
-        } else {
-          // Modo tradicional
-          await db.collection('paises').doc(pais.id).set({ [state.secaoSelecionada]: payload }, { merge: true });
         }
+        
+        await db.collection('paises').doc(pais.id).update(updateData);
         
         showNotification('success', 'Seção salva com sucesso');
         
@@ -339,9 +343,10 @@ if (el.btnAdicionarCampo) el.btnAdicionarCampo.addEventListener('click', ()=>{
 });
 if (el.logout) el.logout.addEventListener('click', (e)=>{ e.preventDefault(); auth.signOut(); });
 
-// Função para lidar com mudanças em tempo real
+// Função para lidar com mudanças em tempo real (DESABILITADA)
 async function handleRealTimeChange(fieldKey, fieldDef, value, indicator) {
-  if (!state.paisSelecionado || !state.realTimeEnabled || !state.autoSave) return;
+  // Auto-save desabilitado para evitar problemas - use o botão "Salvar Seção"
+  return;
   
   try {
     // Converter valor baseado no tipo

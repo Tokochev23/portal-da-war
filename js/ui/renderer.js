@@ -266,10 +266,26 @@ export function renderPublicCountries(countries) {
   }
 
   validCountries.forEach(country => {
-    const formattedPib = formatCurrency(country.PIB || 0);
-    const formattedPopulation = Number(country.Populacao || 0).toLocaleString('pt-BR');
-    const stabilityInfo = getStabilityInfo(parseFloat(country.Estabilidade) || 0);
-    const wpi = calculateWPI(country);
+    // Priorizar dados da seção 'geral' se existir, senão usar da raiz
+    const pib = country.geral?.PIB ?? country.PIB ?? 0;
+    const populacao = country.geral?.Populacao ?? country.Populacao ?? 0;
+    const estabilidade = country.geral?.Estabilidade ?? country.Estabilidade ?? 0;
+    const tecnologia = country.geral?.Tecnologia ?? country.Tecnologia ?? 0;
+    const urbanizacao = country.geral?.Urbanizacao ?? country.Urbanizacao ?? 0;
+    
+    const formattedPib = formatCurrency(pib);
+    const formattedPopulation = Number(populacao).toLocaleString('pt-BR');
+    const stabilityInfo = getStabilityInfo(parseFloat(estabilidade));
+    // Passar dados atualizados para o WPI
+    const countryForWPI = {
+      ...country,
+      PIB: pib,
+      Populacao: populacao,
+      Tecnologia: tecnologia,
+      Estabilidade: estabilidade,
+      Urbanizacao: urbanizacao
+    };
+    const wpi = calculateWPI(countryForWPI);
     const bandeira = countryFlagEmoji(country.Pais);
     const flagHTML = getFlagHTML(country.Pais);
     if (bandeira === '🏴') {
@@ -283,7 +299,7 @@ export function renderPublicCountries(countries) {
             <div class="h-7 w-10 grid place-items-center rounded-md ring-1 ring-white/10 bg-slate-800">${flagHTML}</div>
             <div class="min-w-0">
               <div class="truncate text-sm font-semibold text-slate-100">${country.Pais}</div>
-              <div class="text-[10px] text-slate-400">PIB pc ${formatCurrency(country.PIBPerCapita || ((parseFloat(country.PIB) || 0) / (parseFloat(country.Populacao) || 1)))}</div>
+              <div class="text-[10px] text-slate-400">PIB pc ${formatCurrency(country.PIBPerCapita || (pib / populacao))}</div>
             </div>
           </div>
           <div class="shrink-0 text-center">
@@ -317,10 +333,10 @@ export function renderPublicCountries(countries) {
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v2H4V6zm0 5h12v2H4v-2zm0 5h8v2H4v-2z"/></svg>
               Urbanização
             </span>
-            <span class="text-slate-300">${Math.max(0, Math.min(100, parseFloat(country.Urbanizacao) || 0))}%</span>
+            <span class="text-slate-300">${Math.max(0, Math.min(100, urbanizacao))}%</span>
           </div>
           <div class="mt-1 h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
-            <div class="h-1.5 rounded-full bg-emerald-500" style="width: ${Math.max(0, Math.min(100, parseFloat(country.Urbanizacao) || 0))}%"></div>
+            <div class="h-1.5 rounded-full bg-emerald-500" style="width: ${Math.max(0, Math.min(100, urbanizacao))}%"></div>
           </div>
         </div>
       </button>`;
@@ -337,12 +353,21 @@ export function renderPublicCountries(countries) {
 // Painel detalhado (compacto)
 export function renderDetailedCountryPanel(country) {
   if (!DOM.countryPanelContent || !DOM.countryPanelModal) return;
-  const wpi = calculateWPI(country);
-  const stabilityInfo = getStabilityInfo(parseFloat(country.Estabilidade) || 0);
-  const pibTotal = formatCurrency(country.PIB || 0);
-  const popTotal = Number(country.Populacao || 0).toLocaleString('pt-BR');
-  const pibPerCapita = formatCurrency(country.PIBPerCapita || ((parseFloat(country.PIB) || 0) / (parseFloat(country.Populacao) || 1)));
-  const urban = Math.max(0, Math.min(100, parseFloat(country.Urbanizacao) || 0));
+  
+  // Priorizar dados da seção 'geral' se existir
+  const pib = country.geral?.PIB ?? country.PIB ?? 0;
+  const populacao = country.geral?.Populacao ?? country.Populacao ?? 0;
+  const estabilidade = country.geral?.Estabilidade ?? country.Estabilidade ?? 0;
+  const tecnologia = country.geral?.Tecnologia ?? country.Tecnologia ?? 0;
+  const urbanizacao = country.geral?.Urbanizacao ?? country.Urbanizacao ?? 0;
+  
+  const countryForWPI = { ...country, PIB: pib, Populacao: populacao, Tecnologia: tecnologia };
+  const wpi = calculateWPI(countryForWPI);
+  const stabilityInfo = getStabilityInfo(parseFloat(estabilidade));
+  const pibTotal = formatCurrency(pib);
+  const popTotal = Number(populacao).toLocaleString('pt-BR');
+  const pibPerCapita = formatCurrency(country.PIBPerCapita || (pib / populacao));
+  const urban = Math.max(0, Math.min(100, parseFloat(urbanizacao)));
   const flagContainer = `<span class=\"inline-grid h-8 w-12 place-items-center rounded-md ring-1 ring-white/10 bg-slate-800 overflow-hidden\">${getFlagHTML(country.Pais)}</span>`;
 
   const leftColumn = `
@@ -394,26 +419,26 @@ export function renderDetailedCountryPanel(country) {
         <span class="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] border ${stabilityInfo.tone}">
           Estabilidade: ${stabilityInfo.label}
         </span>
-        <div class="ml-auto text-[12px] text-slate-400">Índice: <span class="text-slate-200 font-semibold">${country.Estabilidade || 0}</span></div>
+        <div class="ml-auto text-[12px] text-slate-400">Índice: <span class="text-slate-200 font-semibold">${estabilidade}</span></div>
       </div>
 
       <div class="space-y-3 mt-2">
         <div>
           <div class="flex items-center justify-between text-[12px] text-slate-400">
             <span>Estabilidade Interna</span>
-            <span class="text-slate-200">${country.Estabilidade || 0}%</span>
+            <span class="text-slate-200">${estabilidade}%</span>
           </div>
           <div class="mt-1 h-2 w-full rounded-full bg-slate-800 overflow-hidden">
-            <div class="h-2 rounded-full bg-cyan-400" style="width:${Math.max(0, Math.min(100, parseFloat(country.Estabilidade) || 0))}%"></div>
+            <div class="h-2 rounded-full bg-cyan-400" style="width:${Math.max(0, Math.min(100, estabilidade))}%"></div>
           </div>
         </div>
         <div>
           <div class="flex items-center justify-between text-[12px] text-slate-400">
             <span>Tecnologia</span>
-            <span class="text-slate-200">${country.Tecnologia || 0}%</span>
+            <span class="text-slate-200">${tecnologia}%</span>
           </div>
           <div class="mt-1 h-2 w-full rounded-full bg-slate-800 overflow-hidden">
-            <div class="h-2 rounded-full bg-emerald-400" style="width:${Math.max(0, Math.min(100, parseFloat(country.Tecnologia) || 0))}%"></div>
+            <div class="h-2 rounded-full bg-emerald-400" style="width:${Math.max(0, Math.min(100, tecnologia))}%"></div>
           </div>
         </div>
       </div>
