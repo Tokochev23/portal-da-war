@@ -1,6 +1,7 @@
 // === SISTEMA DE ACESSIBILIDADE COMPLETO ===
 
-import { Logger, DOMUtils } from '../utils.js';
+// Importar apenas o Logger para evitar erro quando DOMUtils não estiver exportado
+import { Logger } from '../utils.js';
 
 class AccessibilityManager {
     constructor() {

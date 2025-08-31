@@ -464,6 +464,8 @@ export function animateCounter(elementId, finalValue) {
 }
 
 export { DOMUtils };
+// Expor também no escopo global para consumidores que não usam import nomeado
+try { window.DOMUtils = DOMUtils; } catch {}
 
 // === SISTEMA DE NOTIFICAÇÕES APRIMORADO ===
 class NotificationManager {
