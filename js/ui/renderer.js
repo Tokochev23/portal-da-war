@@ -1,4 +1,4 @@
-import { formatCurrency, formatDelta, animateCounter } from "../utils.js";
+import { formatCurrency, formatCurrencyCompact, formatDelta, animateCounter } from "../utils.js";
 
 // Cache de elementos do DOM
 const DOM = {
@@ -662,31 +662,84 @@ export function updateKPIs(allCountries) {
   if (DOM.paisesPublicos) animateCounter('paises-publicos', publicCountries);
 }
 
-// Painel do jogador
+// Painel do jogador redesenhado
 export function fillPlayerPanel(playerData, currentTurn) {
   if (playerData && DOM.playerPanel) {
+    // Atualizar nome do país
     if (DOM.playerCountryName) DOM.playerCountryName.textContent = playerData.Pais || 'País do Jogador';
-    if (DOM.playerCurrentTurn) DOM.playerCurrentTurn.textContent = currentTurn;
-    if (DOM.playerPib) DOM.playerPib.textContent = formatCurrency(playerData.PIB || 0);
-    if (DOM.playerEstabilidade) DOM.playerEstabilidade.textContent = `${Number(playerData.Estabilidade) || 0}/100`;
+    
+    // Atualizar bandeira do país
+    const flagContainer = document.getElementById('player-flag-container');
+    if (flagContainer) {
+      flagContainer.innerHTML = getFlagHTML(playerData.Pais, 'h-full w-full');
+    }
+    
+    // Atualizar turno atual
+    if (DOM.playerCurrentTurn) DOM.playerCurrentTurn.textContent = `#${currentTurn}`;
+    
+    // Calcular PIB per capita
+    const pibPerCapita = (parseFloat(playerData.PIB) || 0) / (parseFloat(playerData.Populacao) || 1);
+    const pibPerCapitaElement = document.getElementById('player-pib-per-capita');
+    if (pibPerCapitaElement) {
+      pibPerCapitaElement.textContent = formatCurrency(pibPerCapita);
+    }
+    
+    // Atualizar PIB com formatação responsiva
+    if (DOM.playerPib) {
+      const pibValue = playerData.PIB || 0;
+      const formattedPib = formatCurrencyCompact(pibValue);
+      DOM.playerPib.textContent = formattedPib;
+    }
+    
+    // Atualizar estabilidade
+    const estabilidade = Number(playerData.Estabilidade) || 0;
+    if (DOM.playerEstabilidade) DOM.playerEstabilidade.textContent = `${estabilidade}/100`;
+    
+    // Atualizar barra de estabilidade
+    const estabilidadeBar = document.getElementById('player-estabilidade-bar');
+    if (estabilidadeBar) {
+      estabilidadeBar.style.width = `${Math.max(0, Math.min(100, estabilidade))}%`;
+      // Mudar cor baseado no valor
+      if (estabilidade >= 75) {
+        estabilidadeBar.className = 'h-1.5 rounded-full bg-emerald-400';
+      } else if (estabilidade >= 50) {
+        estabilidadeBar.className = 'h-1.5 rounded-full bg-cyan-400';
+      } else if (estabilidade >= 25) {
+        estabilidadeBar.className = 'h-1.5 rounded-full bg-yellow-400';
+      } else {
+        estabilidadeBar.className = 'h-1.5 rounded-full bg-red-400';
+      }
+    }
+    
+    // Atualizar combustível
     if (DOM.playerCombustivel) DOM.playerCombustivel.textContent = playerData.Combustivel || '50';
-    if (DOM.playerPibDelta) DOM.playerPibDelta.innerHTML = '<span class="text-slate-400">Sem histórico</span>';
-    if (DOM.playerEstabilidadeDelta) DOM.playerEstabilidadeDelta.innerHTML = '<span class="text-slate-400">Sem histórico</span>';
+    
+    // Atualizar deltas (se não houver histórico)
+    if (DOM.playerPibDelta) DOM.playerPibDelta.textContent = 'Sem histórico';
+    if (DOM.playerEstabilidadeDelta) DOM.playerEstabilidadeDelta.textContent = 'Sem histórico';
+    
+    // Atualizar histórico
     if (DOM.playerHistorico) {
       DOM.playerHistorico.innerHTML = `
         <div class="text-sm text-slate-300 border-l-2 border-emerald-500/30 pl-3 mb-2">
-          <div class="font-medium">Turno ${currentTurn} (atual)</div>
-          <div class="text-xs text-slate-400">PIB: ${formatCurrency(playerData.PIB)} · Estab: ${playerData.Estabilidade}/100 · Pop: ${Number(playerData.Populacao || 0).toLocaleString('pt-BR')}</div>
+          <div class="font-medium">Turno #${currentTurn} (atual)</div>
+          <div class="text-xs text-slate-400">PIB: ${formatCurrency(playerData.PIB)} · Estab: ${estabilidade}/100 · Pop: ${Number(playerData.Populacao || 0).toLocaleString('pt-BR')}</div>
         </div>`;
     }
+    
+    // Verificar se precisa mostrar notificações
     const isTurnLate = playerData.TurnoUltimaAtualizacao < currentTurn;
     if (DOM.playerNotifications) {
       isTurnLate ? DOM.playerNotifications.classList.remove('hidden') : DOM.playerNotifications.classList.add('hidden');
     }
+    
     DOM.playerPanel.style.display = 'block';
   } else {
+    // Estado de carregamento/erro
     if (DOM.playerCountryName) DOM.playerCountryName.textContent = 'Carregando...';
-    if (DOM.playerHistorico) DOM.playerHistorico.innerHTML = '<div class="text-sm text-slate-400 italic">Nenhum histórico disponível</div>';
+    if (DOM.playerHistorico) {
+      DOM.playerHistorico.innerHTML = '<div class="text-sm text-slate-400 italic">Nenhum histórico disponível</div>';
+    }
     if (DOM.playerPanel) DOM.playerPanel.style.display = 'none';
   }
 }

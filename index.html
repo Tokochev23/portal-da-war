@@ -70,14 +70,6 @@
       border-color: rgba(71, 85, 105, 0.6);
     }
 
-    .player-panel {
-      background: #10172a;
-      border: 1px solid rgba(30, 41, 59, 0.7);
-      border-radius: 1rem;
-      padding: 1.5rem;
-      margin-top: 1.5rem;
-      box-shadow: 0 1px 0 0 rgba(255,255,255,0.03) inset, 0 6px 20px -12px rgba(0,0,0,0.6);
-    }
 
     .narrator-tools {
       background: #10172a;
@@ -183,91 +175,145 @@
         </div>
         
 
-        <!-- Painel do Jogador -->
-        <div id="player-panel" class="player-panel" style="display: none;">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h2 class="text-lg font-semibold text-slate-100 flex items-center gap-2">
-                <span class="inline-grid h-6 w-6 place-items-center rounded-lg bg-emerald-500/15 text-emerald-400">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        <!-- Painel do Jogador Redesenhado -->
+        <div id="player-panel" class="rounded-2xl border border-slate-800/70 bg-slate-900/60 p-6 shadow-[0_1px_0_0_rgba(255,255,255,0.03)_inset,0_6px_20px_-12px_rgba(0,0,0,0.6)]" style="display: none;">
+          <!-- Header com bandeira e informações principais -->
+          <div class="flex items-start justify-between mb-6">
+            <div class="flex items-center gap-3">
+              <div id="player-flag-container" class="h-12 w-16 rounded-lg border border-white/10 bg-slate-800 grid place-items-center overflow-hidden">
+                <span class="text-slate-400 text-xs">🏴</span>
+              </div>
+              <div>
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="inline-grid h-5 w-5 place-items-center rounded-md bg-brand-500/15 text-brand-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                  </span>
+                  <span class="text-xs font-medium text-slate-400 uppercase tracking-wide">Seu País</span>
+                </div>
+                <h2 id="player-country-name" class="text-2xl font-extrabold tracking-tight text-brand-400">URSS</h2>
+                <div class="text-sm text-slate-400">PIB per capita <span id="player-pib-per-capita" class="font-semibold text-slate-200">US$ 1.268</span></div>
+              </div>
+            </div>
+            <div class="text-center">
+              <div class="text-xs text-slate-400 uppercase tracking-wide">Turno Atual</div>
+              <div class="text-3xl font-extrabold text-slate-100" id="player-current-turn">#1</div>
+              <div class="text-[10px] text-slate-500 mt-0.5">1/semana</div>
+            </div>
+          </div>
+
+          <!-- Métricas principais em grid -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <!-- PIB -->
+            <div class="rounded-xl border border-white/5 bg-gradient-to-br from-emerald-500/10 to-slate-900/20 p-4">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-400" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 3h2v18H3V3zm4 8h2v10H7V11zm4-4h2v14h-2V7zm4 6h2v8h-2v-8zm4-10h2v18h-2V3z"/>
                   </svg>
-                </span>
-                Prévia do Painel do Jogador
-              </h2>
-              <h3 id="player-country-name" class="font-bold text-xl text-brand-400">Carregando...</h3>
+                  <span class="text-sm font-medium text-slate-300">PIB</span>
+                </div>
+                <div id="player-pib-delta" class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 shrink-0">Sem histórico</div>
+              </div>
+              <div id="player-pib" class="text-lg lg:text-xl xl:text-2xl font-extrabold text-emerald-400 break-all">US$ 265.525.354.490</div>
             </div>
-            <div class="text-right">
-              <div class="text-xs text-slate-400">Turno atual</div>
-              <div class="text-lg font-bold" id="player-current-turn">#12</div>
+
+            <!-- Estabilidade -->
+            <div class="rounded-xl border border-white/5 bg-gradient-to-br from-cyan-500/10 to-slate-900/20 p-4">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-cyan-400" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                  </svg>
+                  <span class="text-sm font-medium text-slate-300">Estabilidade</span>
+                </div>
+                <div id="player-estabilidade-delta" class="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300">Sem histórico</div>
+              </div>
+              <div id="player-estabilidade" class="text-2xl font-extrabold text-cyan-400">70/100</div>
+              <div class="mt-2">
+                <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+                  <span>Índice</span>
+                  <span class="text-slate-300">70%</span>
+                </div>
+                <div class="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
+                  <div id="player-estabilidade-bar" class="h-1.5 rounded-full bg-cyan-400" style="width: 70%"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Combustível -->
+            <div class="rounded-xl border border-white/5 bg-gradient-to-br from-orange-500/10 to-slate-900/20 p-4">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-orange-400" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/>
+                  </svg>
+                  <span class="text-sm font-medium text-slate-300">Combustível</span>
+                </div>
+                <div id="player-combustivel-delta" class="text-xs px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-300">+300</div>
+              </div>
+              <div id="player-combustivel" class="text-2xl font-extrabold text-orange-400">50</div>
             </div>
           </div>
 
-          <div class="grid grid-cols-3 gap-4 mb-6">
-            <div class="rounded-xl border border-bg-ring/70 p-4 bg-gradient-to-br from-emerald-500/5 to-transparent">
-              <div class="flex items-center justify-between mb-2">
-                <div class="text-sm text-slate-400">PIB</div>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+          <!-- Seção inferior com histórico e ações -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Histórico recente -->
+            <div class="rounded-xl border border-white/5 bg-slate-900/30 p-4">
+              <h3 class="text-sm font-semibold text-slate-100 mb-3 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
+                Histórico Recente
+              </h3>
+              <div id="player-historico" class="space-y-2">
+                <div class="text-sm text-slate-300 border-l-2 border-emerald-500/30 pl-3 mb-2">
+                  <div class="font-medium">Turno #1 (atual)</div>
+                  <div class="text-xs text-slate-400">PIB: US$ 265.525.354.490 · Estab: 70/100 · Pop: 209.901.466</div>
+                </div>
               </div>
-              <div class="text-2xl font-extrabold text-emerald-400" id="player-pib">$ 83.826</div>
-              <div class="text-xs text-emerald-300 mt-1" id="player-pib-delta">+2,1%</div>
             </div>
 
-            <div class="rounded-xl border border-bg-ring/70 p-4 bg-gradient-to-br from-yellow-500/5 to-transparent">
-              <div class="flex items-center justify-between mb-2">
-                <div class="text-sm text-slate-400">Estabilidade</div>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            <!-- Ações rápidas -->
+            <div class="rounded-xl border border-white/5 bg-slate-900/30 p-4">
+              <h3 class="text-sm font-semibold text-slate-100 mb-3 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
+                Ações Rápidas
+              </h3>
+              <div class="grid grid-cols-2 gap-2">
+                <button class="rounded-lg py-2 px-3 text-center text-xs border border-white/10 hover:bg-white/5 hover:border-emerald-500/30 hover:text-emerald-400 transition-all group">
+                  <div class="font-medium text-slate-300 group-hover:text-emerald-400">Produção</div>
+                  <div class="text-slate-500 group-hover:text-emerald-300 text-[10px]">Recursos</div>
+                </button>
+                <button class="rounded-lg py-2 px-3 text-center text-xs border border-white/10 hover:bg-white/5 hover:border-blue-500/30 hover:text-blue-400 transition-all group">
+                  <div class="font-medium text-slate-300 group-hover:text-blue-400">Mercado</div>
+                  <div class="text-slate-500 group-hover:text-blue-300 text-[10px]">Comércio</div>
+                </button>
+                <button class="rounded-lg py-2 px-3 text-center text-xs border border-white/10 hover:bg-white/5 hover:border-yellow-500/30 hover:text-yellow-400 transition-all group">
+                  <div class="font-medium text-slate-300 group-hover:text-yellow-400">Diplomacia</div>
+                  <div class="text-slate-500 group-hover:text-yellow-300 text-[10px]">Tratados</div>
+                </button>
+                <button class="rounded-lg py-2 px-3 text-center text-xs border border-white/10 hover:bg-white/5 hover:border-red-500/30 hover:text-red-400 transition-all group">
+                  <div class="font-medium text-slate-300 group-hover:text-red-400">Equipamentos</div>
+                  <div class="text-slate-500 group-hover:text-red-300 text-[10px]">Design</div>
+                </button>
               </div>
-              <div class="text-2xl font-extrabold text-yellow-400" id="player-estabilidade">72/100</div>
-              <div class="text-xs text-yellow-300 mt-1" id="player-estabilidade-delta">-1</div>
-            </div>
-
-            <div class="rounded-xl border border-bg-ring/70 p-4 bg-gradient-to-br from-orange-500/5 to-transparent">
-              <div class="flex items-center justify-between mb-2">
-                <div class="text-sm text-slate-400">Combustível</div>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
-                </svg>
-              </div>
-              <div class="text-2xl font-extrabold text-orange-400" id="player-combustivel">14.200</div>
-              <div class="text-xs text-orange-300 mt-1" id="player-combustivel-delta">+300</div>
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-6">
-            <div class="rounded-xl border border-bg-ring/70 p-4 bg-gradient-to-br from-blue-500/5 to-transparent">
-              <div class="text-sm font-medium text-slate-100 mb-3">Histórico recente</div>
-              <div class="space-y-2 text-sm" id="player-historico">
-                <div class="text-slate-300">Turno 12: +2,1% PIB, -1 Estab. — ver post</div>
-                <div class="text-slate-300">Turno 11: +1,3% PIB — ver post</div>
-                <div class="text-slate-300">Turno 10: +0,5% PIB — ver post</div>
+          <!-- Notificações (se houver) -->
+          <div id="player-notifications" class="mt-4 hidden">
+            <div class="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
+              <div class="flex items-center gap-2 text-amber-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <span class="text-sm font-medium">Atenção necessária</span>
               </div>
-            </div>
-
-            <div class="rounded-xl border border-bg-ring/70 p-4 bg-gradient-to-br from-purple-500/5 to-transparent">
-              <div class="text-sm font-medium text-slate-100 mb-3">Ações do país</div>
-              <div class="grid grid-cols-2 gap-3">
-                <button class="rounded-xl py-2.5 text-center text-xs border border-bg-ring/70 hover:bg-white/5 hover:border-emerald-500/30 hover:text-emerald-400 transition-all">
-                  <div class="font-medium">Produção</div>
-                  <div class="text-slate-400">Recursos</div>
-                </button>
-                <button class="rounded-xl py-2.5 text-center text-xs border border-bg-ring/70 hover:bg-white/5 hover:border-blue-500/30 hover:text-blue-400 transition-all">
-                  <div class="font-medium">Mercado</div>
-                  <div class="text-slate-400">Comércio</div>
-                </button>
-                <button class="rounded-xl py-2.5 text-center text-xs border border-bg-ring/70 hover:bg-white/5 hover:border-yellow-500/30 hover:text-yellow-400 transition-all">
-                  <div class="font-medium">Tratados</div>
-                  <div class="text-slate-400">Diplomacia</div>
-                </button>
-                <button class="rounded-xl py-2.5 text-center text-xs border border-bg-ring/70 hover:bg-white/5 hover:border-red-500/30 hover:text-red-400 transition-all">
-                  <div class="font-medium">Design (equip.)</div>
-                  <div class="text-slate-400">Equipamentos</div>
-                </button>
-              </div>
+              <div class="text-xs text-amber-300 mt-1">Você precisa enviar suas ações para este turno.</div>
             </div>
           </div>
         </div>

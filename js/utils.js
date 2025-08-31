@@ -115,11 +115,40 @@ class Formatter {
         if (isNaN(numero)) return '0%';
         return `${numero.toFixed(decimals)}%`;
     }
+    
+    static formatCurrencyCompact(valor, currency = 'USD', locale = 'pt-BR') {
+        const numero = this.parseNumber(valor);
+        if (isNaN(numero)) return currency === 'USD' ? '$0' : '0';
+        
+        // Para números menores que 1 trilhão, usa formato normal
+        if (numero < 1000000000000) {
+            return new Intl.NumberFormat(locale, {
+                style: 'currency',
+                currency: currency,
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(numero);
+        }
+        
+        // Para números muito grandes, usa notação compacta
+        return new Intl.NumberFormat(locale, {
+            style: 'currency',
+            currency: currency,
+            notation: 'compact',
+            compactDisplay: 'short',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 1
+        }).format(numero);
+    }
 }
 
 // Mantém compatibilidade com código existente
 export function formatCurrency(valor) {
     return Formatter.formatCurrency(valor);
+}
+
+export function formatCurrencyCompact(valor) {
+    return Formatter.formatCurrencyCompact(valor);
 }
 
 export { Formatter };
