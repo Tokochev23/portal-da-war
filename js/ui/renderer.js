@@ -41,6 +41,39 @@ function calculateWPI(country) {
   const score = Math.round((normalizedPib * 0.45) + (parseFloat(country.Tecnologia) || 0) * 0.55);
   return clamp(score, 1, 100);
 }
+function calculateBudget(country) {
+  const pibBruto = parseFloat(country.PIB) || 0;
+  const burocracia = (parseFloat(country.Burocracia) || 0) / 100;
+  const estabilidade = (parseFloat(country.Estabilidade) || 0) / 100;
+  return pibBruto * 0.25 * burocracia * estabilidade * 1.5;
+}
+function calculateVehicleProductionCapacity(country) {
+  const pibBruto = parseFloat(country.PIB) || 0;
+  const tecnologiaCivil = (parseFloat(country.Tecnologia) || 0) / 100;
+  const urbanizacao = (parseFloat(country.Urbanizacao) || 0) / 100;
+  const tecnologiaVeiculos = (parseFloat(country.Veiculos) || 0) / 100; // campo Veiculos = tecnologia de veículos
+  
+  const fatorMultiplicador = 0.15;
+  return pibBruto * tecnologiaCivil * urbanizacao * tecnologiaVeiculos * fatorMultiplicador;
+}
+function calculateAircraftProductionCapacity(country) {
+  const pibBruto = parseFloat(country.PIB) || 0;
+  const tecnologiaCivil = (parseFloat(country.Tecnologia) || 0) / 100;
+  const urbanizacao = (parseFloat(country.Urbanizacao) || 0) / 100;
+  const tecnologiaAeronautica = (parseFloat(country.Aeronautica) || 0) / 100;
+  
+  const fatorMultiplicador = 0.12;
+  return pibBruto * tecnologiaCivil * urbanizacao * tecnologiaAeronautica * fatorMultiplicador;
+}
+function calculateShipProductionCapacity(country) {
+  const pibBruto = parseFloat(country.PIB) || 0;
+  const tecnologiaCivil = (parseFloat(country.Tecnologia) || 0) / 100;
+  const urbanizacao = (parseFloat(country.Urbanizacao) || 0) / 100;
+  const tecnologiaMarinha = (parseFloat(country.Marinha) || 0) / 100;
+  
+  const fatorMultiplicador = 0.18;
+  return pibBruto * tecnologiaCivil * urbanizacao * tecnologiaMarinha * fatorMultiplicador;
+}
 
 // Bandeiras com segurança de encoding
 function flagEmojiFromCode(cc) {
@@ -363,6 +396,10 @@ export function renderDetailedCountryPanel(country) {
   
   const countryForWPI = { ...country, PIB: pib, Populacao: populacao, Tecnologia: tecnologia };
   const wpi = calculateWPI(countryForWPI);
+  const budget = calculateBudget({ PIB: pib, Burocracia: country.Burocracia, Estabilidade: estabilidade });
+  const vehicleProductionCapacity = calculateVehicleProductionCapacity({ PIB: pib, Tecnologia: tecnologia, Urbanizacao: urbanizacao, Veiculos: country.Veiculos });
+  const aircraftProductionCapacity = calculateAircraftProductionCapacity({ PIB: pib, Tecnologia: tecnologia, Urbanizacao: urbanizacao, Aeronautica: country.Aeronautica });
+  const shipProductionCapacity = calculateShipProductionCapacity({ PIB: pib, Tecnologia: tecnologia, Urbanizacao: urbanizacao, Marinha: country.Marinha });
   const stabilityInfo = getStabilityInfo(parseFloat(estabilidade));
   const pibTotal = formatCurrency(pib);
   const popTotal = Number(populacao).toLocaleString('pt-BR');
@@ -415,6 +452,62 @@ export function renderDetailedCountryPanel(country) {
         </div>
       </div>
 
+      <div class="mt-4">
+        <h4 class="text-sm font-medium text-slate-200 mb-2">Força Militar</h4>
+        <div class="grid grid-cols-1 gap-2">
+          <div class="rounded-lg border border-white/5 bg-slate-900/50 p-2">
+            <div class="text-[10px] text-slate-400">Exército</div>
+            <div class="text-sm font-semibold text-slate-100">${country.Exercito || 0}</div>
+            <div class="text-[9px] text-slate-500">Força terrestre</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 grid grid-cols-2 gap-2">
+        <div class="rounded-lg border border-white/5 bg-slate-900/50 p-2">
+          <div class="text-[10px] text-slate-400">Burocracia</div>
+          <div class="text-sm font-semibold text-slate-100">${country.Burocracia || 0}%</div>
+        </div>
+        <div class="rounded-lg border border-white/5 bg-slate-900/50 p-2">
+          <div class="text-[10px] text-slate-400">Combustível</div>
+          <div class="text-sm font-semibold text-slate-100">${country.Combustivel || 0}</div>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <h4 class="text-sm font-medium text-slate-200 mb-2">Capacidade de Produção</h4>
+        <div class="grid grid-cols-1 gap-2">
+          <div class="rounded-lg border border-white/5 bg-slate-900/50 p-2">
+            <div class="text-[10px] text-slate-400">Veículos por Turno</div>
+            <div class="text-sm font-semibold text-blue-400">${formatCurrency(vehicleProductionCapacity)}</div>
+          </div>
+          <div class="rounded-lg border border-white/5 bg-slate-900/50 p-2">
+            <div class="text-[10px] text-slate-400">Aeronaves por Turno</div>
+            <div class="text-sm font-semibold text-cyan-400">${formatCurrency(aircraftProductionCapacity)}</div>
+          </div>
+          <div class="rounded-lg border border-white/5 bg-slate-900/50 p-2">
+            <div class="text-[10px] text-slate-400">Navios por Turno</div>
+            <div class="text-sm font-semibold text-indigo-400">${formatCurrency(shipProductionCapacity)}</div>
+          </div>
+        </div>
+        
+        <h5 class="text-xs font-medium text-slate-300 mt-3 mb-1">Tecnologias Militares</h5>
+        <div class="grid grid-cols-3 gap-1">
+          <div class="rounded border border-white/5 bg-slate-900/30 p-1.5">
+            <div class="text-[9px] text-slate-500">Veículos</div>
+            <div class="text-xs font-semibold text-slate-100">${country.Veiculos || 0}%</div>
+          </div>
+          <div class="rounded border border-white/5 bg-slate-900/30 p-1.5">
+            <div class="text-[9px] text-slate-500">Aeronáutica</div>
+            <div class="text-xs font-semibold text-slate-100">${country.Aeronautica || 0}%</div>
+          </div>
+          <div class="rounded border border-white/5 bg-slate-900/30 p-1.5">
+            <div class="text-[9px] text-slate-500">Naval</div>
+            <div class="text-xs font-semibold text-slate-100">${country.Marinha || 0}%</div>
+          </div>
+        </div>
+      </div>
+
       <div class="flex items-center gap-2 mt-2">
         <span class="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] border ${stabilityInfo.tone}">
           Estabilidade: ${stabilityInfo.label}
@@ -453,8 +546,15 @@ export function renderDetailedCountryPanel(country) {
           ['Modelo Político', country.ModeloPolitico || '—'],
           ['PIB total', pibTotal],
           ['PIB per capita', pibPerCapita],
+          ['Orçamento Nacional', `<span class="text-emerald-400">${formatCurrency(budget)}</span>`],
+          ['Prod. Veículos/turno', `<span class="text-blue-400">${formatCurrency(vehicleProductionCapacity)}</span>`],
+          ['Prod. Aeronaves/turno', `<span class="text-cyan-400">${formatCurrency(aircraftProductionCapacity)}</span>`],
+          ['Prod. Navios/turno', `<span class="text-indigo-400">${formatCurrency(shipProductionCapacity)}</span>`],
           ['População', popTotal],
           ['War Power Index', `${wpi}/100`],
+          ['Burocracia', `${country.Burocracia || 0}%`],
+          ['Combustível', `${country.Combustivel || 0}`],
+          ['Último Turno', `#${country.TurnoUltimaAtualizacao || 0}`],
         ].map(([k,v]) => `
           <div class="flex items-center justify-between rounded-xl border border-white/5 bg-slate-900/40 px-3 py-2 text-[13px]">
             <span class="text-slate-400">${k}</span>
@@ -462,7 +562,11 @@ export function renderDetailedCountryPanel(country) {
           </div>`).join('')}
       </div>
       <div class="mt-3 text-[11px] text-slate-500">
-        * O War Power Index pondera tecnologia e renda per capita.
+        * O War Power Index pondera tecnologia e renda per capita.<br>
+        * Orçamento = PIB × 0,25 × Burocracia × Estabilidade × 1,5<br>
+        * Prod. Veículos = PIB × TecnologiaCivil × Urbanização × Veículos × 0,15<br>
+        * Prod. Aeronaves = PIB × TecnologiaCivil × Urbanização × Aeronáutica × 0,12<br>
+        * Prod. Navios = PIB × TecnologiaCivil × Urbanização × Naval × 0,18
       </div>
       <div class="mt-4 grid grid-cols-2 gap-2">
         <button class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10 transition">Ver Exército</button>

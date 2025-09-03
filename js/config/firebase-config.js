@@ -10,7 +10,10 @@ const firebaseConfig = {
     storageBucket: window.FIREBASE_STORAGE_BUCKET || "war-1954-1799c.firebasestorage.app",
     messagingSenderId: window.FIREBASE_MESSAGING_SENDER_ID || "147967902110",
     appId: window.FIREBASE_APP_ID || "1:147967902110:web:2e2a54b98ef9474d7a968f",
-    measurementId: window.FIREBASE_MEASUREMENT_ID || "G-LQNDE985RB"
+    measurementId: window.FIREBASE_MEASUREMENT_ID || "G-LQNDE985RB",
+    // URL do Realtime Database (opcional). Defina via window.FIREBASE_DATABASE_URL
+    // Exemplo: https://seu-projeto-default-rtdb.firebaseio.com/
+    databaseURL: window.FIREBASE_DATABASE_URL || undefined
 };
 
 // Validação de configuração
@@ -22,6 +25,15 @@ function validateConfig(config) {
         }
     }
     return config;
+}
+
+// Preenche databaseURL automaticamente se estiver faltando e houver PROJECT_ID
+if (!firebaseConfig.databaseURL && firebaseConfig.projectId) {
+    try {
+        const pid = firebaseConfig.projectId;
+        // Tenta padrão .firebaseio.com (funciona para maioria dos projetos)
+        firebaseConfig.databaseURL = `https://${pid}-default-rtdb.firebaseio.com/`;
+    } catch {}
 }
 
 export const FIREBASE_CONFIG = validateConfig(firebaseConfig);

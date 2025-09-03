@@ -23,7 +23,23 @@ const localCatalog = {
   exercito: { label: "Exército", campos: [ { key: "Infantaria", label: "Infantaria", tipo: "inteiro", min: 0 }, { key: "Artilharia", label: "Artilharia", tipo: "inteiro", min: 0 } ] },
   aeronautica: { label: "Aeronáutica", campos: [ { key: "Caca", label: "Caça", tipo: "inteiro", min: 0 }, { key: "CAS", label: "CAS", tipo: "inteiro", min: 0 }, { key: "Bomber", label: "Bombardeiro", tipo: "inteiro", min: 0 } ] },
   marinha: { label: "Marinha", campos: [ { key: "Fragata", label: "Fragata", tipo: "inteiro", min: 0 }, { key: "Destroyer", label: "Destroyer", tipo: "inteiro", min: 0 }, { key: "Submarino", label: "Submarino", tipo: "inteiro", min: 0 }, { key: "Transporte", label: "Transporte", tipo: "inteiro", min: 0 } ] },
-  veiculos: { label: "Veículos", campos: [ { key: "MBT", label: "MBT", tipo: "inteiro", min: 0 }, { key: "IFV", label: "IFV", tipo: "inteiro", min: 0 }, { key: "APC", label: "APC", tipo: "inteiro", min: 0 } ] },
+  inventario: { 
+    label: "Inventário de Veículos", 
+    campos: [ 
+      { key: "cavalos", label: "Cavalos", tipo: "inteiro", min: 0 },
+      { key: "tanquesLeves", label: "Tanques Leves", tipo: "inteiro", min: 0 },
+      { key: "mbt", label: "MBT", tipo: "inteiro", min: 0 },
+      { key: "tanquesPesados", label: "Tanques Pesados", tipo: "inteiro", min: 0 },
+      { key: "caminhoes", label: "Caminhões de Transporte", tipo: "inteiro", min: 0 },
+      { key: "spg", label: "SPG", tipo: "inteiro", min: 0 },
+      { key: "sph", label: "SPH", tipo: "inteiro", min: 0 },
+      { key: "spaa", label: "SPAA", tipo: "inteiro", min: 0 },
+      { key: "apc", label: "APC", tipo: "inteiro", min: 0 },
+      { key: "cacaTanques", label: "Caça-Tanques", tipo: "inteiro", min: 0 },
+      { key: "veiculosEng", label: "Veículos de Engenharia", tipo: "inteiro", min: 0 },
+      { key: "ifv", label: "IFV", tipo: "inteiro", min: 0 }
+    ] 
+  },
   recursos: { label: "Recursos", campos: [ { key: "CombustivelSaldo", label: "Saldo de Combustível", tipo: "inteiro" }, { key: "Metais", label: "Metais", tipo: "inteiro" } ] },
   ocupacao: { label: "Ocupação", campos: [ { key: "PopOcupada", label: "População Ocupada", tipo: "inteiro", min: 0 }, { key: "PIBOcupado", label: "PIB Ocupado", tipo: "moeda", min: 0 } ] },
   arsenal: { label: "Arsenal Especial", campos: [ { key: "Nuclear", label: "Bomba Nuclear", tipo: "inteiro", min: 0 } ] }

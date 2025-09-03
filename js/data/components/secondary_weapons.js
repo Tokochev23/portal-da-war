@@ -1,0 +1,247 @@
+export const secondary_weapons = {
+    // === METRALHADORAS LEVES ===
+    mg_7_62mm: {
+        name: "Metralhadora 7.62mm",
+        caliber: 7.62,
+        weight: 65,
+        cost: 1800,
+        ammunition_weight: 0.022,
+        ammo_capacity: 1500,
+        rate_of_fire: 650,
+        effective_range: 800,
+        reliability: 0.90,
+        tech_requirement: { year: 1940, level: 40 },
+        penetration_armor: 8,
+        mount_options: ["coaxial", "hull", "pintle"],
+        description: "Metralhadora padrão para uso coaxial e defesa de infantaria"
+    },
+
+    mg_7_92mm: {
+        name: "Metralhadora 7.92mm",
+        caliber: 7.92,
+        weight: 70,
+        cost: 1950,
+        ammunition_weight: 0.025,
+        ammo_capacity: 1200,
+        rate_of_fire: 700,
+        effective_range: 900,
+        reliability: 0.88,
+        tech_requirement: { year: 1940, level: 42 },
+        penetration_armor: 10,
+        mount_options: ["coaxial", "hull", "pintle"],
+        description: "Metralhadora de maior calibre, mais poder de parada"
+    },
+
+    mg_8mm: {
+        name: "Metralhadora 8mm",
+        caliber: 8.0,
+        weight: 68,
+        cost: 1900,
+        ammunition_weight: 0.024,
+        ammo_capacity: 1300,
+        rate_of_fire: 620,
+        effective_range: 850,
+        reliability: 0.89,
+        tech_requirement: { year: 1941, level: 41 },
+        penetration_armor: 9,
+        mount_options: ["coaxial", "hull", "pintle"],
+        description: "Metralhadora equilibrada entre poder e economia"
+    },
+    
+    // === METRALHADORAS PESADAS ===
+    mg_12_7mm: {
+        name: "Metralhadora Pesada 12.7mm",
+        caliber: 12.7,
+        weight: 85,
+        cost: 2800,
+        ammunition_weight: 0.108,
+        ammo_capacity: 500,
+        rate_of_fire: 550,
+        effective_range: 1500,
+        aa_capable: true,
+        reliability: 0.88,
+        tech_requirement: { year: 1942, level: 45 },
+        penetration_armor: 20,
+        mount_options: ["turret", "hull", "commander", "aa_mount"],
+        description: "Metralhadora antiaérea, eficaz contra veículos leves"
+    },
+
+    mg_13mm: {
+        name: "Metralhadora Pesada 13mm",
+        caliber: 13.0,
+        weight: 95,
+        cost: 3200,
+        ammunition_weight: 0.125,
+        ammo_capacity: 450,
+        rate_of_fire: 500,
+        effective_range: 1600,
+        aa_capable: true,
+        reliability: 0.86,
+        tech_requirement: { year: 1943, level: 47 },
+        penetration_armor: 24,
+        mount_options: ["turret", "hull", "aa_mount"],
+        description: "Versão mais potente, maior penetração"
+    },
+
+    mg_14_5mm: {
+        name: "Metralhadora Pesada 14.5mm",
+        caliber: 14.5,
+        weight: 120,
+        cost: 3500,
+        ammunition_weight: 0.155,
+        ammo_capacity: 400,
+        rate_of_fire: 450,
+        effective_range: 2000,
+        aa_capable: true,
+        reliability: 0.85,
+        tech_requirement: { year: 1944, level: 50 },
+        penetration_armor: 32,
+        mount_options: ["turret", "hull", "aa_mount"],
+        description: "Metralhadora antitanque leve, muito eficaz contra blindagem leve"
+    },
+
+    mg_15mm: {
+        name: "Metralhadora Pesada 15mm",
+        caliber: 15.0,
+        weight: 130,
+        cost: 3800,
+        ammunition_weight: 0.170,
+        ammo_capacity: 350,
+        rate_of_fire: 400,
+        effective_range: 2200,
+        aa_capable: true,
+        reliability: 0.83,
+        tech_requirement: { year: 1944, level: 52 },
+        penetration_armor: 38,
+        mount_options: ["turret", "aa_mount"],
+        description: "Quase um canhão automático, máxima potência para metralhadora"
+    },
+    
+    // === CANHÕES AUTOMÁTICOS ===
+    autocannon_20mm: {
+        name: "Canhão Automático 20mm",
+        caliber: 20,
+        weight: 180,
+        cost: 5200,
+        ammunition_weight: 0.12,
+        ammo_capacity: 300,
+        rate_of_fire: 350,
+        effective_range: 2500,
+        aa_capable: true,
+        reliability: 0.82,
+        tech_requirement: { year: 1943, level: 55 },
+        penetration_armor: 45,
+        mount_options: ["turret", "aa_mount"],
+        ammunition_types: ["AP", "HE", "HEI"],
+        description: "Canhão automático versátil, excelente contra aeronaves e blindagem leve"
+    },
+
+    autocannon_20mm_rapid: {
+        name: "Canhão Automático 20mm Rápido",
+        caliber: 20,
+        weight: 200,
+        cost: 6200,
+        ammunition_weight: 0.12,
+        ammo_capacity: 400,
+        rate_of_fire: 600,
+        effective_range: 2200,
+        aa_capable: true,
+        reliability: 0.78,
+        tech_requirement: { year: 1944, level: 58 },
+        penetration_armor: 42,
+        mount_options: ["turret", "aa_mount"],
+        ammunition_types: ["AP", "HE", "HEI"],
+        description: "Versão de alta cadência para defesa antiaérea"
+    },
+
+    autocannon_23mm: {
+        name: "Canhão Automático 23mm",
+        caliber: 23,
+        weight: 210,
+        cost: 5800,
+        ammunition_weight: 0.15,
+        ammo_capacity: 280,
+        rate_of_fire: 320,
+        effective_range: 2800,
+        aa_capable: true,
+        reliability: 0.80,
+        tech_requirement: { year: 1944, level: 56 },
+        penetration_armor: 52,
+        mount_options: ["turret", "aa_mount"],
+        ammunition_types: ["AP", "HE", "HEI"],
+        description: "Maior poder de fogo, eficaz contra blindagens médias"
+    },
+
+    autocannon_25mm: {
+        name: "Canhão Automático 25mm",
+        caliber: 25,
+        weight: 220,
+        cost: 6800,
+        ammunition_weight: 0.18,
+        ammo_capacity: 250,
+        rate_of_fire: 280,
+        effective_range: 3000,
+        aa_capable: true,
+        reliability: 0.80,
+        tech_requirement: { year: 1945, level: 60 },
+        penetration_armor: 58,
+        mount_options: ["turret", "aa_mount"],
+        ammunition_types: ["AP", "HE", "HEI", "APCR"],
+        description: "Canhão pesado, capaz de enfrentar tanques médios"
+    },
+
+    autocannon_30mm: {
+        name: "Canhão Automático 30mm",
+        caliber: 30,
+        weight: 280,
+        cost: 8500,
+        ammunition_weight: 0.28,
+        ammo_capacity: 200,
+        rate_of_fire: 200,
+        effective_range: 3500,
+        aa_capable: true,
+        reliability: 0.77,
+        tech_requirement: { year: 1945, level: 65 },
+        penetration_armor: 72,
+        mount_options: ["turret", "aa_mount"],
+        ammunition_types: ["AP", "HE", "HEI", "APCR"],
+        description: "Canhão automático pesado, quase artilharia antitanque"
+    },
+
+    // === ARMAMENTOS ESPECIALIZADOS ===
+    flamethrower: {
+        name: "Lança-Chamas",
+        caliber: 0,
+        weight: 150,
+        cost: 4500,
+        ammunition_weight: 2.5,
+        ammo_capacity: 200,
+        rate_of_fire: 0,
+        effective_range: 150,
+        aa_capable: false,
+        reliability: 0.85,
+        tech_requirement: { year: 1943, level: 45 },
+        penetration_armor: 0,
+        mount_options: ["hull", "turret"],
+        special_effects: ["bunker_clearing", "infantry_terror"],
+        description: "Arma especializada contra fortificações e infantaria"
+    },
+
+    smoke_launcher: {
+        name: "Lançador de Fumaça",
+        caliber: 76,
+        weight: 45,
+        cost: 800,
+        ammunition_weight: 1.2,
+        ammo_capacity: 8,
+        rate_of_fire: 0,
+        effective_range: 400,
+        aa_capable: false,
+        reliability: 0.95,
+        tech_requirement: { year: 1942, level: 35 },
+        penetration_armor: 0,
+        mount_options: ["turret", "hull"],
+        special_effects: ["smoke_screen", "concealment"],
+        description: "Sistema defensivo para criar cortinas de fumaça"
+    }
+};

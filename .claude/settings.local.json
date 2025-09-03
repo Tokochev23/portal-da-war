@@ -5,7 +5,17 @@
       "Bash(del \"C:\\Users\\Administrador\\Downloads\\War1954-main\\War1954-main\\debug-template.js\")",
       "Bash(del \"C:\\Users\\Administrador\\Downloads\\War1954-main\\War1954-main\\test-syntax.js\")",
       "Bash(del \"C:\\Users\\Administrador\\Downloads\\War1954-main\\War1954-main\\test-narrador.html\")",
-      "Bash(del \"C:\\Users\\Administrador\\Downloads\\War1954-main\\War1954-main\\debug-flags.html\")"
+      "Bash(del \"C:\\Users\\Administrador\\Downloads\\War1954-main\\War1954-main\\debug-flags.html\")",
+      "Read(C:\\Users\\Administrador\\Downloads/**)",
+      "Bash(del \"criador-veiculos.html\")",
+      "Bash(del:*)",
+      "Bash(rm:*)",
+      "Bash(cp:*)",
+      "Bash(python:*)",
+      "Bash(dir:*)",
+      "Bash(grep:*)",
+      "Bash(sed:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []

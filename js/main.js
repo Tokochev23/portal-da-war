@@ -249,6 +249,10 @@ async function handleUserLogin(user) {
       if (paisId) {
         const playerData = appState.allCountries.find(c => c.id === paisId);
         if (playerData) {
+          // Store country in localStorage for vehicle creator
+          localStorage.setItem('loggedCountry', playerData.id);
+          console.log('País salvo no localStorage (main):', playerData.id);
+          
           fillPlayerPanel(playerData, appState.gameConfig.turnoAtual);
         }
       } else {
@@ -522,7 +526,11 @@ if (turnoEditor) {
         if (success) {
           showNotification('success', `Turno atualizado para #${newTurn}`);
           appState.gameConfig.turnoAtual = newTurn;
-          fillPlayerPanel(appState.allCountries.find(c => c.Player === auth.currentUser.uid), newTurn);
+          const playerData = appState.allCountries.find(c => c.Player === auth.currentUser.uid);
+          if (playerData) {
+            localStorage.setItem('loggedCountry', playerData.id);
+          }
+          fillPlayerPanel(playerData, newTurn);
         } else {
           showNotification('error', 'Erro ao salvar turno.');
         }
