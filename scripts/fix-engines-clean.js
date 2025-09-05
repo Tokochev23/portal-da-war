@@ -1,0 +1,196 @@
+// Clean engine file reconstruction script
+const fs = require('fs');
+const path = require('path');
+
+const enginesPath = path.join(__dirname, '..', 'js', 'data', 'components', 'engines.js');
+
+const cleanEngines = {
+    // === LIGHT ENGINES (150-400hp) ===
+    gasoline_i4_light: {
+        name: "4 Cilindros Gasolina (180hp)",
+        power: 180,
+        weight: 280,
+        cost: 4500,
+        fuel_type: "gasoline",
+        consumption: 1.0,
+        reliability: 0.92,
+        maintenance_hours: 1.5,
+        category: "light",
+        tech_requirement: { year: 1940, level: 25 },
+        optimal_chassis: ["mbt_light", "wheeled_6x6", "airtransportable"],
+        energy_output: 12 // kW - Generated electrical power
+    },
+
+    gasoline_v6_light: {
+        name: "V6 Gasolina Leve (320hp)",
+        power: 320,
+        weight: 480,
+        cost: 8500,
+        fuel_type: "gasoline",
+        consumption: 1.2,
+        reliability: 0.85,
+        maintenance_hours: 2.0,
+        category: "light",
+        fire_risk: 0.18,
+        cold_start: 0.92,
+        tech_requirement: { year: 1940, level: 35 },
+        torque_curve: { low: 0.65, mid: 1.0, high: 0.85 },
+        operational_temp: { min: -15, max: 45 },
+        energy_output: 18 // kW - Generated electrical power
+    },
+    
+    diesel_i4_light: {
+        name: "I4 Diesel Leve (280hp)",
+        power: 280,
+        weight: 420,
+        cost: 9500,
+        fuel_type: "diesel",
+        consumption: 0.8,
+        reliability: 0.88,
+        maintenance_hours: 1.6,
+        category: "light",
+        fire_risk: 0.08,
+        cold_start: 0.72,
+        tech_requirement: { year: 1941, level: 40 },
+        torque_curve: { low: 1.25, mid: 1.0, high: 0.65 },
+        optimal_chassis: ["mbt_light", "wheeled_6x6", "airtransportable"],
+        energy_output: 16 // kW - Generated electrical power
+    },
+    
+    // === MEDIUM ENGINES (400-700hp) ===
+    gasoline_v8_medium: {
+        name: "V8 Gasolina Médio (450hp)", 
+        power: 450,
+        weight: 650,
+        cost: 12000,
+        fuel_type: "gasoline",
+        consumption: 1.35,
+        reliability: 0.82,
+        maintenance_hours: 2.2,
+        category: "medium",
+        fire_risk: 0.16,
+        cold_start: 0.94,
+        tech_requirement: { year: 1942, level: 42 },
+        torque_curve: { low: 0.72, mid: 1.0, high: 0.88 },
+        optimal_chassis: ["mbt_medium", "tracked_medium", "wheeled_8x8"],
+        energy_output: 24 // kW - Generated electrical power
+    },
+    
+    diesel_v6_medium: {
+        name: "V6 Diesel Médio (520hp)",
+        power: 520,
+        weight: 720,
+        cost: 15000,
+        fuel_type: "diesel",
+        consumption: 1.1,
+        reliability: 0.86,
+        maintenance_hours: 2.0,
+        category: "medium",
+        fire_risk: 0.07,
+        cold_start: 0.75,
+        tech_requirement: { year: 1943, level: 45 },
+        torque_curve: { low: 1.20, mid: 1.0, high: 0.70 },
+        optimal_chassis: ["mbt_medium", "tracked_medium", "amphibious_tracked"],
+        energy_output: 28 // kW - Generated electrical power
+    },
+    
+    // === HEAVY ENGINES (700-1200hp) ===
+    gasoline_v8_supercharged: {
+        name: "V8 Gasolina Supercharger (750hp)",
+        power: 750,
+        weight: 890,
+        cost: 22000,
+        fuel_type: "gasoline",
+        consumption: 1.8,
+        reliability: 0.78,
+        maintenance_hours: 3.2,
+        category: "heavy",
+        fire_risk: 0.22,
+        cold_start: 0.85,
+        tech_requirement: { year: 1944, level: 58 },
+        torque_curve: { low: 0.85, mid: 1.0, high: 0.95 },
+        optimal_chassis: ["mbt_heavy", "mbt_super_heavy", "tracked_heavy"],
+        energy_output: 45 // kW - Generated electrical power
+    },
+    
+    gasoline_v12_heavy: {
+        name: "V12 Gasolina Pesado (950hp)",
+        power: 950,
+        weight: 1280,
+        cost: 35000,
+        fuel_type: "gasoline", 
+        consumption: 2.1,
+        reliability: 0.75,
+        maintenance_hours: 4.0,
+        category: "heavy",
+        fire_risk: 0.20,
+        cold_start: 0.88,
+        tech_requirement: { year: 1946, level: 65 },
+        torque_curve: { low: 0.78, mid: 1.0, high: 0.92 },
+        optimal_chassis: ["mbt_super_heavy", "tracked_heavy"],
+        energy_output: 57 // kW - Generated electrical power
+    },
+    
+    diesel_v8_heavy: {
+        name: "V8 Diesel Pesado (820hp)",
+        power: 820,
+        weight: 1050,
+        cost: 28000,
+        fuel_type: "diesel",
+        consumption: 1.4,
+        reliability: 0.82,
+        maintenance_hours: 2.8,
+        category: "heavy",
+        fire_risk: 0.08,
+        cold_start: 0.68,
+        tech_requirement: { year: 1945, level: 55 },
+        torque_curve: { low: 1.35, mid: 1.0, high: 0.65 },
+        optimal_chassis: ["mbt_heavy", "mbt_super_heavy", "spg_chassis"],
+        energy_output: 54 // kW - Generated electrical power
+    },
+    
+    // === SUPER HEAVY ENGINES (1200hp+) ===
+    diesel_v12_superheavy: {
+        name: "V12 Diesel Super Pesado (1200hp)",
+        power: 1200,
+        weight: 1650,
+        cost: 48000,
+        fuel_type: "diesel",
+        consumption: 1.8,
+        reliability: 0.78,
+        maintenance_hours: 3.5,
+        category: "super_heavy",
+        fire_risk: 0.09,
+        cold_start: 0.65,
+        tech_requirement: { year: 1948, level: 72 },
+        torque_curve: { low: 1.40, mid: 1.0, high: 0.60 },
+        optimal_chassis: ["mbt_super_heavy", "tracked_heavy"],
+        energy_output: 79 // kW - Generated electrical power
+    },
+    
+    gasoline_v16_experimental: {
+        name: "V16 Gasolina Experimental (1450hp)",
+        power: 1450,
+        weight: 1950,
+        cost: 65000,
+        fuel_type: "gasoline",
+        consumption: 2.8,
+        reliability: 0.72,
+        maintenance_hours: 5.0,
+        category: "super_heavy",
+        fire_risk: 0.25,
+        cold_start: 0.82,
+        tech_requirement: { year: 1952, level: 85 },
+        torque_curve: { low: 0.88, mid: 1.0, high: 0.98 },
+        optimal_chassis: ["modular_experimental"],
+        experimental: true,
+        energy_output: 87 // kW - Generated electrical power
+    }
+};
+
+const fileContent = `export const engines = ${JSON.stringify(cleanEngines, null, 4).replace(/"([^"]+)":/g, '$1:')};`;
+
+fs.writeFileSync(enginesPath, fileContent);
+
+console.log('✅ Clean engines.js file created with proper energy_output values');
+console.log('📊 Energy ranges: Light (12-18kW), Medium (24-28kW), Heavy (45-57kW), Super Heavy (79-87kW)');

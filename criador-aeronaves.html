@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>🏗️ Criador de Veículos Blindados Avançado • WAR Era 1954</title>
+  <title>✈️ Criador de Aeronaves • WAR Era 1954</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%23ffb400%22/%3E%3Ctext x=%228%22 y=%2211%22 font-size=%2210%22 text-anchor=%22middle%22 fill=%22%230b1020%22%3EW%3C/text%3E%3C/svg%3E" />
 
   <!-- Tailwind CSS -->
@@ -133,7 +133,7 @@
   <div id="initial-loading" class="fixed inset-0 bg-bg z-50 flex items-center justify-center">
     <div class="text-center">
       <div class="animate-spin w-12 h-12 border-4 border-brand-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-      <p class="text-slate-200 font-medium">Iniciando Criador de Veículos...</p>
+      <p class="text-slate-200 font-medium">Iniciando Criador de Aeronaves...</p>
       <p class="text-slate-400 text-sm mt-2" id="loading-status">Carregando templates...</p>
     </div>
   </div>
@@ -166,19 +166,19 @@
 
   <!-- Scripts -->
   <script src="./js/utils/templateLoader.js" type="module"></script>
-  <script src="./js/components/tabLoaders.js?v=eqp1" type="module"></script>
+  <script src="./js/components/aircraftTabLoaders.js?v=eqp1" type="module"></script>
   <script src="./js/services/firebase.js" type="module"></script>
   <script src="./js/utils/armorFunctions.js"></script>
   <script src="./js/utils/energySystem.js" type="module"></script>
   <script src="./js/utils/performanceSystem.js" type="module"></script>
   <script src="./js/utils/costSystem.js" type="module"></script>
-  <script src="js/vehicleCreator.js?v=eqp1" type="module"></script>
+  <script src="js/aircraftCreator.js?v=eqp1" type="module"></script>
   
   <script>
-    // Sistema de inicialização refatorado
-    class VehicleCreatorApp {
+    // Sistema de inicialização para o Criador de Aeronaves
+    class AircraftCreatorApp {
       constructor() {
-        this.currentTab = 'chassis';
+        this.currentTab = 'airframe'; // Aba inicial é a fuselagem
         this.performanceChart = null;
         this.isInitialized = false;
         this.loadingElement = document.getElementById('initial-loading');
@@ -195,16 +195,10 @@
         try {
           this.updateLoadingStatus('Iniciando carregamento progressivo...');
           
-          // Fase 1: Templates críticos
+          // Fases de carregamento (mantidas)
           await this.loadCriticalComponents();
-          
-          // Fase 2: Templates secundários
           setTimeout(() => this.loadSecondaryComponents(), 100);
-          
-          // Fase 3: Inicializar funcionalidades
           setTimeout(() => this.initializeFeatures(), 300);
-          
-          // Fase 4: Templates finais e cleanup
           setTimeout(() => this.finishInitialization(), 500);
           
         } catch (error) {
@@ -229,7 +223,8 @@
         this.updateLoadingStatus('Carregando sistema de abas...');
         
         const secondaryInjections = [
-          { containerId: 'component-tabs-container', templatePath: 'templates/vehicle-creator/component-tabs.html' },
+          // TODO: Criar templates específicos para aeronaves
+          { containerId: 'component-tabs-container', templatePath: 'templates/aircraft-creator/component-tabs.html' },
           { containerId: 'warnings-container', templatePath: 'templates/vehicle-creator/warnings-section.html' },
           { containerId: 'analysis-container', templatePath: 'templates/vehicle-creator/analysis-section.html' }
         ];
@@ -250,13 +245,12 @@
         
         this.hideLoadingScreen();
         this.isInitialized = true;
-        console.log('✅ Vehicle Creator fully initialized');
+        console.log('✅ Aircraft Creator fully initialized');
       }
 
       async initializeFeatures() {
         this.updateLoadingStatus('Configurando funcionalidades...');
         
-        // Aguardar DOM estar pronto
         await new Promise(resolve => setTimeout(resolve, 100));
         
         this.initializeInterface();
@@ -299,7 +293,7 @@
         if (countryElement) {
           countryElement.textContent = country;
         }
-        this.setActiveTab('chassis');
+        this.setActiveTab('airframe');
       }
 
       setupTabNavigation() {
@@ -333,16 +327,13 @@
         tabContent.innerHTML = '<div class="text-center py-8"><div class="animate-spin w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full mx-auto"></div></div>';
         
         setTimeout(() => {
+          // Abas para Aeronaves
           switch(tabId) {
-            case 'chassis': this.loadChassisTab(); break;
+            case 'airframe': this.loadAirframeTab(); break;
             case 'engine': this.loadEngineTab(); break;
-            case 'transmission': this.loadTransmissionTab(); break;
-            case 'suspension': this.loadSuspensionTab(); break;
-            case 'crew': this.loadCrewTab(); break;
-            case 'armor': this.loadArmorTab(); break;
             case 'weapons': this.loadWeaponsTab(); break;
-            case 'systems': this.loadSystemsTab(); break;
-            case 'equipment': this.loadEquipmentTab(); break;
+            case 'avionics': this.loadAvionicsTab(); break;
+            // Adicionar mais abas conforme necessário
           }
         }, 200);
       }
@@ -358,7 +349,6 @@
           return;
         }
 
-        // Destroy existing chart if it exists
         if (this.performanceChart) {
           this.performanceChart.destroy();
           this.performanceChart = null;
@@ -368,7 +358,7 @@
         this.performanceChart = new Chart(ctx, {
           type: 'radar',
           data: {
-            labels: ['Velocidade', 'Blindagem', 'Potência', 'Confiabilidade', 'Economia', 'Manutenibilidade'],
+            labels: ['Velocidade', 'Agilidade', 'Potência', 'Teto de Serviço', 'Alcance', 'Custo'], // Labels para aeronaves
             datasets: [{
               label: 'Performance',
               data: [0, 0, 0, 0, 0, 0],
@@ -394,91 +384,37 @@
         });
       }
 
-      // Integrated tab loading methods
-      loadChassisTab() { 
-        if (window.tabLoaders) window.tabLoaders.loadChassisTab(); 
+      // Métodos de carregamento de abas para aeronaves
+      loadAirframeTab() { 
+        if (window.tabLoaders) window.tabLoaders.loadAirframeTab(); 
       }
       loadEngineTab() { 
         if (window.tabLoaders) window.tabLoaders.loadEngineTab(); 
       }
-      loadTransmissionTab() { 
-        if (window.tabLoaders) window.tabLoaders.loadTransmissionTab(); 
-      }
-      loadSuspensionTab() { 
-        if (window.tabLoaders) window.tabLoaders.loadSuspensionTab(); 
-      }
-      loadCrewTab() { 
-        if (window.tabLoaders) window.tabLoaders.loadCrewTab(); 
-      }
-      loadArmorTab() { 
-        if (window.tabLoaders) window.tabLoaders.loadArmorTab(); 
-      }
       loadWeaponsTab() { 
         if (window.tabLoaders) window.tabLoaders.loadWeaponsTab(); 
       }
-      loadSystemsTab() { 
-        if (window.tabLoaders) window.tabLoaders.loadSystemsTab(); 
-      }
-      loadEquipmentTab() { 
-        if (window.tabLoaders) window.tabLoaders.loadEquipmentTab(); 
+      loadAvionicsTab() { 
+        if (window.tabLoaders) window.tabLoaders.loadAvionicsTab(); 
       }
     }
 
     // Inicialização global
-    window.vehicleCreatorApp = new VehicleCreatorApp();
+    window.aircraftCreatorApp = new AircraftCreatorApp();
 
     // Iniciar aplicação quando DOM estiver pronto
     document.addEventListener('DOMContentLoaded', () => {
-      console.log('🚗 Starting Vehicle Creator App...');
-      window.vehicleCreatorApp.initialize();
+      console.log('✈️ Starting Aircraft Creator App...');
+      window.aircraftCreatorApp.initialize();
     });
 
     // Fallback para browsers mais antigos
     window.addEventListener('load', () => {
-      if (!window.vehicleCreatorApp.isInitialized) {
+      if (!window.aircraftCreatorApp.isInitialized) {
         console.log('🔄 Fallback initialization...');
-        setTimeout(() => window.vehicleCreatorApp.initialize(), 100);
+        setTimeout(() => window.aircraftCreatorApp.initialize(), 100);
       }
     });
   </script>
-
-  <!-- VEHICLE SUMMARY MODAL -->
-  <div id="vehicle-summary-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-    <div class="bg-slate-900 rounded-2xl shadow-2xl border border-slate-700 w-full max-w-6xl max-h-[90vh] overflow-y-auto">
-      <!-- Modal Header -->
-      <div class="flex items-center justify-between p-6 border-b border-slate-700 sticky top-0 bg-slate-900 rounded-t-2xl">
-        <div class="flex items-center gap-3">
-          <span class="text-3xl">📋</span>
-          <h2 class="text-2xl font-bold text-slate-100">Ficha Técnica do Veículo</h2>
-        </div>
-        <button onclick="hideVehicleSummaryModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors">
-          <span class="text-slate-400 text-xl">×</span>
-        </button>
-      </div>
-
-      <!-- Modal Content -->
-      <div id="vehicle-summary-content" class="p-6">
-        <!-- Content will be populated by JavaScript -->
-      </div>
-
-      <!-- Modal Footer -->
-      <div class="flex items-center justify-between p-6 border-t border-slate-700 bg-slate-800/50 rounded-b-2xl">
-        <div class="text-sm text-slate-400">
-          Ficha gerada automaticamente pelo Sistema de Criação de Veículos War1954
-        </div>
-        <div class="flex gap-3">
-          <button onclick="exportVehicleToPDF()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
-            <span>📄</span>
-            <span>Exportar PDF</span>
-          </button>
-          <button onclick="saveVehicleToFirebase()" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
-            <span>💾</span>
-            <span>Salvar Veículo</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
 </body>
 </html>

@@ -1,5 +1,6 @@
 export const optics_systems = {
     basic_periscope: {
+
         name: "Periscópio Básico",
         weight: 15,
         cost: 800,
@@ -10,9 +11,12 @@ export const optics_systems = {
         tech_requirement: { year: 1935, level: 25 },
         night_vision: false,
         reliability: 0.95
+    ,
+        energy_consumption: 1 // kW - Power required
     },
     
     telescopic_sight: {
+
         name: "Mira Telescópica 4x",
         weight: 35,
         cost: 2500,
@@ -23,9 +27,12 @@ export const optics_systems = {
         tech_requirement: { year: 1940, level: 40 },
         night_vision: false,
         reliability: 0.90
+    ,
+        energy_consumption: 1 // kW - Power required
     },
     
     coincidence_rangefinder: {
+
         name: "Telêmetro de Coincidência",
         weight: 85,
         cost: 8000,
@@ -38,9 +45,12 @@ export const optics_systems = {
         night_vision: false,
         reliability: 0.85,
         requires_training: true
+    ,
+        energy_consumption: 1 // kW - Power required
     },
     
     stereoscopic_rangefinder: {
+
         name: "Telêmetro Estereoscópico",
         weight: 120,
         cost: 15000,
@@ -53,10 +63,13 @@ export const optics_systems = {
         night_vision: false,
         reliability: 0.82,
         requires_training: true
+    ,
+        energy_consumption: 1 // kW - Power required
     },
     
     // INFRARED SYSTEMS
     infrared_sight_basic: {
+
         name: "Mira Infravermelha Básica",
         weight: 150,
         cost: 25000,
@@ -70,9 +83,12 @@ export const optics_systems = {
         reliability: 0.75,
         power_consumption: 800, // watts
         operational_time: 4 // hours per battery
+    ,
+        energy_consumption: 4 // kW - Power required
     },
     
     infrared_sight_advanced: {
+
         name: "Sistema IV Avançado",
         weight: 200,
         cost: 45000,
@@ -87,5 +103,7 @@ export const optics_systems = {
         power_consumption: 1200,
         operational_time: 6,
         experimental: true
-    }
+    ,
+        energy_consumption: 4 // kW - Power required
+    },
 };

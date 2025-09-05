@@ -186,10 +186,12 @@ export const transmissions = {
         description: "Primeira geração de transmissões automáticas militares",
         historical_note: "Baseada em tecnologia da GM Hydra-Matic, adaptada para uso militar",
         optimal_applications: ["heavy_tank", "assault_gun", "self_propelled_artillery"],
-        crew_fatigue_reduction: 0.25
+        crew_fatigue_reduction: 0.25,
+        energy_consumption: 3 // kW - hydraulic control systems
     },
 
     automatic_4speed_advanced: {
+
         name: "Automática Avançada 4 Marchas",
         type: "automatic",
         gears: 4,
@@ -213,10 +215,13 @@ export const transmissions = {
         optimal_applications: ["main_battle_tank", "command_vehicle", "recovery_vehicle"],
         crew_fatigue_reduction: 0.35,
         doctrinal_bonus: { NATO: 0.12 }
+    ,
+        energy_consumption: 3 // kW - Power required
     },
 
     // === TRANSMISSÕES PLANETÁRIAS ===
     planetary_differential_steering: {
+
         name: "Planetário com Direção Diferencial",
         type: "planetary",
         gears: "variable",
@@ -237,7 +242,8 @@ export const transmissions = {
         historical_note: "Usado em tanques alemães Panzer IV tardios e Panther",
         optimal_applications: ["heavy_tank", "tank_destroyer", "assault_gun"],
         doctrinal_bonus: { Warsaw: 0.18 },
-        terrain_performance: { urban: 1.25, forest: 1.15 }
+        terrain_performance: { urban: 1.25, forest: 1.15 },
+        energy_consumption: 4 // kW - Power required
     },
 
     planetary_hydraulic_assist: {
@@ -262,7 +268,8 @@ export const transmissions = {
         description: "Sistema planetário com assistência hidráulica para veículos super-pesados",
         optimal_applications: ["superheavy_tank", "heavy_assault_gun", "bunker_buster"],
         crew_fatigue_reduction: 0.4,
-        doctrinal_bonus: { NATO: 0.08, Warsaw: 0.15 }
+        doctrinal_bonus: { NATO: 0.08, Warsaw: 0.15 },
+        energy_consumption: 4 // kW - Power required
     },
 
     // === TRANSMISSÕES ESPECIAIS ===
@@ -313,7 +320,8 @@ export const transmissions = {
         optimal_applications: ["experimental_vehicle", "stealth_vehicle"],
         special_requirements: ["electric_motor", "battery_pack"],
         stealth_bonus: 0.6,
-        prototype_only: true
+        prototype_only: true,
+        energy_consumption: 8 // kW - Electric motors and control systems
     },
 
     hydrostatic_infinite: {
@@ -337,7 +345,8 @@ export const transmissions = {
         precise_control: true,
         description: "Sistema hidrostático para controle preciso de velocidade",
         optimal_applications: ["engineering_vehicle", "recovery_vehicle", "bridge_layer"],
-        special_capabilities: ["precise_positioning", "variable_speed_pto"]
+        special_capabilities: ["precise_positioning", "variable_speed_pto"],
+        energy_consumption: 5 // kW - Hydraulic pumps and control systems
     }
 };
 
@@ -345,6 +354,7 @@ export const transmissions = {
 export const transmissionCompatibility = {
     // Compatibilidade por tipo de chassi
     chassis_compatibility: {
+
         light_tanks: ["manual_3speed_utility", "manual_4speed_combat", "manual_5speed_advanced", "manual_6speed_racing", "semi_auto_preselector"],
         medium_tanks: ["manual_4speed_combat", "manual_5speed_advanced", "semi_auto_preselector", "semi_auto_synchromesh", "automatic_torque_converter"],
         heavy_tanks: ["manual_4speed_combat", "semi_auto_synchromesh", "automatic_torque_converter", "automatic_4speed_advanced", "planetary_differential_steering"],

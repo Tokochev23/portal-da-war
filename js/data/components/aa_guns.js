@@ -175,6 +175,7 @@ export const aa_fire_control = {
     },
 
     radar_tracking: {
+
         name: "Radar de Rastreamento",
         type: "radar",
         weight: 450,
@@ -186,7 +187,8 @@ export const aa_fire_control = {
         lead_calculation: true,
         automatic_tracking: true,
         detection_range: 15000,
-        description: "Sistema de radar primitivo para rastreamento de alvos"
+        description: "Sistema de radar primitivo para rastreamento de alvos",
+        energy_consumption: 3 // kW - Radar tracking systems
     },
 
     early_computer: {

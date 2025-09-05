@@ -1,0 +1,31 @@
+<!-- COMPONENT SELECTION TABS (Aircraft) -->
+<section class="mb-8">
+  <div class="glass rounded-2xl">
+    <!-- Tab Navigation -->
+    <div class="flex border-b border-slate-700 overflow-x-auto">
+      <button class="tab-button px-6 py-4 font-medium transition-colors border-b-2 border-transparent hover:border-brand-400 hover:text-brand-300" data-tab="airframe">
+        🛩️ Fuselagem
+      </button>
+      <button class="tab-button px-6 py-4 font-medium transition-colors border-b-2 border-transparent hover:border-brand-400 hover:text-brand-300" data-tab="engine">
+        🔧 Grupo Motopropulsor
+      </button>
+      <button class="tab-button px-6 py-4 font-medium transition-colors border-b-2 border-transparent hover:border-brand-400 hover:text-brand-300" data-tab="weapons">
+        🎯 Armamentos
+      </button>
+      <button class="tab-button px-6 py-4 font-medium transition-colors border-b-2 border-transparent hover:border-brand-400 hover:text-brand-300" data-tab="avionics">
+        📡 Aviônicos
+      </button>
+    </div>
+    
+    <!-- Tab Content Panels -->
+    <div id="tab-content" class="p-6">
+      <!-- Dynamic content will be loaded here -->
+    </div>
+  </div>
+  
+  <!-- Performance Radar (optional) -->
+  <div class="mt-6 glass rounded-2xl p-6">
+    <canvas id="performance-radar" height="200"></canvas>
+  </div>
+</section>
+

@@ -269,7 +269,7 @@ function renderDashboard(country) {
         <h4 class="text-sm font-semibold text-slate-100 mt-6">🏗️ Ferramentas de Design</h4>
         <p class="text-xs text-slate-400 mt-1">Crie veículos, aeronaves e navios customizados para seu exército</p>
         <div class="mt-3 grid grid-cols-1 gap-3">
-          <a href="criador-veiculos.html" class="group rounded-lg border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 p-4 transition-all duration-200 hover:border-blue-500/50">
+          <a href="criador-veiculos-refatorado.html" class="group rounded-lg border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 p-4 transition-all duration-200 hover:border-blue-500/50">
             <div class="flex items-center gap-3">
               <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-lg">🚗</div>
               <div class="flex-1">

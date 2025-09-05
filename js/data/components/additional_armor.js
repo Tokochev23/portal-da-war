@@ -195,6 +195,7 @@ export const additional_armor = {
 
     // === BLINDAGENS REATIVAS ===
     era_primitive: {
+
         name: "ERA Primitiva Experimental",
         type: "reactive_armor",
         protection_bonus: 80,
@@ -212,7 +213,8 @@ export const additional_armor = {
         experimental: true,
         reliability: 0.75,
         maintenance_complexity: 2.0,
-        description: "Primeira geração de blindagem reativa explosiva"
+        description: "Primeira geração de blindagem reativa explosiva",
+        energy_consumption: 1 // kW - Detection/triggering systems
     },
 
     era_advanced_prototype: {
@@ -234,7 +236,8 @@ export const additional_armor = {
         prototype_only: true,
         reliability: 0.65,
         maintenance_complexity: 3.0,
-        description: "Protótipo avançado de ERA, tecnologia experimental"
+        description: "Protótipo avançado de ERA, tecnologia experimental",
+        energy_consumption: 2 // kW - Advanced detection systems
     },
 
     // === BLINDAGENS ESPECIAIS ===

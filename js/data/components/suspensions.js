@@ -72,10 +72,12 @@ export const suspensions = {
         variable_height: true,
         stabilization_bonus: 0.25,
         power_requirement: 150, // watts
-        description: "Máximo conforto e performance, muito complexa"
+        description: "Máximo conforto e performance, muito complexa",
+        energy_consumption: 2 // kW - hydraulic pumps and control systems
     },
 
     adaptive_experimental: {
+
         name: "Suspensão Adaptativa Experimental",
         weight: 520,
         cost: 25000,
@@ -91,7 +93,8 @@ export const suspensions = {
         automatic_adjustment: true,
         stabilization_bonus: 0.35,
         power_requirement: 300,
-        description: "Sistema que se adapta automaticamente ao terreno"
+        description: "Sistema que se adapta automaticamente ao terreno",
+        energy_consumption: 3 // kW - Experimental adaptive systems
     },
 
     interleaved_roadwheels: {
