@@ -76,7 +76,10 @@
       "Read(/C:\\Users\\Administrador\\Downloads\\War1954-main\\War1954-main\\js/**)",
       "Read(/C:\\Users\\Administrador\\Downloads\\War1954-main\\War1954-main\\js/**)",
       "Read(/C:\\Users\\Administrador\\Downloads\\War1954-main\\War1954-main\\js/**)",
-      "Read(/C:\\Users\\Administrador\\Downloads\\War1954-main\\War1954-main\\js/**)"
+      "Read(/C:\\Users\\Administrador\\Downloads\\War1954-main\\War1954-main\\js/**)",
+      "Bash(move \"narrador-novo.html\" \"narrador.html\")",
+      "Bash(start narrador.html)",
+      "Bash(start:*)"
     ],
     "deny": [],
     "ask": []

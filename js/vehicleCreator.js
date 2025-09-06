@@ -1520,6 +1520,415 @@ window.hideVehicleSummaryModal = function() {
     document.body.style.overflow = '';
 };
 
+// Detailed component generation functions
+function generateChassisDetails() {
+    if (!currentVehicle.chassis) {
+        return '<div class="text-slate-400 text-sm">Nenhum chassi selecionado</div>';
+    }
+    
+    const chassisData = chassis[currentVehicle.chassis];
+    if (!chassisData) return '<div class="text-slate-400 text-sm">Chassi não encontrado</div>';
+    
+    return `
+        <div class="space-y-3">
+            <h4 class="text-lg font-semibold text-slate-200">Chassi</h4>
+            <div class="bg-slate-900/40 border border-slate-700/30 rounded-lg p-3">
+                <div class="text-sm font-medium text-slate-300 mb-2">${chassisData.name}</div>
+                <div class="grid grid-cols-2 gap-2 text-xs text-slate-400">
+                    <div>Classe: ${chassisData.weight_class || 'N/A'}</div>
+                    <div>Peso Base: ${(chassisData.base_weight/1000).toFixed(1)}t</div>
+                    <div>Velocidade Base: ${chassisData.base_speed || 'N/A'} km/h</div>
+                    <div>Tripulação: ${chassisData.crew_capacity || 'N/A'}</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function generateDrivetrainDetails() {
+    let html = '<h4 class="text-lg font-semibold text-slate-200">Sistema de Propulsão</h4>';
+    
+    // Engine
+    if (currentVehicle.engine) {
+        const engineData = engines[currentVehicle.engine];
+        if (engineData) {
+            const resolvedEngine = getResolvedComponent('engines', currentVehicle.engine);
+            html += `
+                <div class="bg-slate-900/40 border border-slate-700/30 rounded-lg p-3">
+                    <div class="text-sm font-medium text-slate-300 mb-2">🔧 ${engineData.name}</div>
+                    <div class="grid grid-cols-2 gap-2 text-xs text-slate-400">
+                        <div>Potência: ${resolvedEngine?.power || engineData.max_power || 'N/A'} hp</div>
+                        <div>Combustível: ${resolvedEngine?.fuel_type || engineData.fuel_type || 'N/A'}</div>
+                        <div>Consumo: ${resolvedEngine?.consumption || engineData.consumption || 'N/A'} L/h</div>
+                        <div>Peso: ${resolvedEngine?.weight || engineData.weight || 'N/A'} kg</div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    // Transmission
+    if (currentVehicle.transmission) {
+        const transmissionData = transmissions[currentVehicle.transmission];
+        if (transmissionData) {
+            html += `
+                <div class="bg-slate-900/40 border border-slate-700/30 rounded-lg p-3">
+                    <div class="text-sm font-medium text-slate-300 mb-2">⚙️ ${transmissionData.name}</div>
+                    <div class="grid grid-cols-2 gap-2 text-xs text-slate-400">
+                        <div>Tipo: ${transmissionData.type || 'N/A'}</div>
+                        <div>Marchas: ${transmissionData.gears || 'N/A'}</div>
+                        <div>Eficiência: ${Math.round((transmissionData.efficiency || 0.85) * 100)}%</div>
+                        <div>Peso: ${transmissionData.weight || 'N/A'} kg</div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    // Suspension
+    if (currentVehicle.suspension) {
+        const suspensionData = suspensions[currentVehicle.suspension];
+        if (suspensionData) {
+            html += `
+                <div class="bg-slate-900/40 border border-slate-700/30 rounded-lg p-3">
+                    <div class="text-sm font-medium text-slate-300 mb-2">🚗 ${suspensionData.name}</div>
+                    <div class="grid grid-cols-2 gap-2 text-xs text-slate-400">
+                        <div>Tipo: ${suspensionData.type || 'N/A'}</div>
+                        <div>Curso: ${suspensionData.travel || 'N/A'} mm</div>
+                        <div>Conforto: ${suspensionData.comfort_rating || 'N/A'}/5</div>
+                        <div>Peso: ${suspensionData.weight || 'N/A'} kg</div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    return html;
+}
+
+function generateArmamentDetails() {
+    let html = '';
+    
+    // Main Gun
+    if (currentVehicle.main_gun_caliber && currentVehicle.main_gun_caliber > 0) {
+        const caliber = currentVehicle.main_gun_caliber;
+        const length = currentVehicle.main_gun_length_ratio || 40;
+        const ammoType = currentVehicle.ammo_view || 'AP';
+        const penetration = calculateMainGunPenetration();
+        
+        html += `
+            <div class="bg-slate-900/40 border border-slate-700/30 rounded-lg p-3">
+                <div class="text-sm font-medium text-slate-300 mb-2">🎯 Canhão Principal</div>
+                <div class="space-y-1 text-xs text-slate-400">
+                    <div>Calibre: ${caliber}mm</div>
+                    <div>Comprimento: L/${length}</div>
+                    <div>Munição: ${ammoType}</div>
+                    <div>Penetração: ${penetration}mm</div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Secondary Weapons
+    if (currentVehicle.secondary_weapons && currentVehicle.secondary_weapons.length > 0) {
+        currentVehicle.secondary_weapons.forEach(weaponId => {
+            const weaponData = secondary_weapons[weaponId];
+            if (weaponData) {
+                html += `
+                    <div class="bg-slate-900/40 border border-slate-700/30 rounded-lg p-3">
+                        <div class="text-sm font-medium text-slate-300 mb-2">🔫 ${weaponData.name}</div>
+                        <div class="space-y-1 text-xs text-slate-400">
+                            <div>Calibre: ${weaponData.caliber || 'N/A'}mm</div>
+                            <div>ROF: ${weaponData.rate_of_fire || 'N/A'} rpm</div>
+                            <div>Munição: ${weaponData.ammo_capacity || 'N/A'}</div>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+    }
+    
+    // AA Guns
+    if (currentVehicle.aa_gun) {
+        const aaGunData = aa_guns[currentVehicle.aa_gun];
+        if (aaGunData) {
+            html += `
+                <div class="bg-slate-900/40 border border-slate-700/30 rounded-lg p-3">
+                    <div class="text-sm font-medium text-slate-300 mb-2">🎯 ${aaGunData.name}</div>
+                    <div class="space-y-1 text-xs text-slate-400">
+                        <div>Calibre: ${aaGunData.caliber}mm</div>
+                        <div>ROF: ${aaGunData.rate_of_fire} rpm</div>
+                        <div>Alcance: ${aaGunData.effective_range}m</div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    if (!html) {
+        html = '<div class="text-slate-400 text-sm col-span-3">Nenhum armamento selecionado</div>';
+    }
+    
+    return html;
+}
+
+function generateArmorDetails() {
+    let html = '<div class="space-y-3">';
+    
+    // Primary Armor
+    html += '<h4 class="text-lg font-semibold text-slate-200">Blindagem Principal</h4>';
+    
+    const armorThickness = currentVehicle.armorThickness || currentVehicle.armor_thickness || 0;
+    const armorMaterial = currentVehicle.armorMaterial || currentVehicle.armor_material;
+    const armorAngle = currentVehicle.armorAngle;
+    
+    if (armorThickness > 0) {
+        let materialName = 'Aço Padrão';
+        if (armorMaterial && armor_materials[armorMaterial]) {
+            materialName = armor_materials[armorMaterial].name;
+        }
+        
+        let angleName = 'Vertical (90°)';
+        if (armorAngle && armor_angles[armorAngle]) {
+            angleName = armor_angles[armorAngle].name;
+        }
+        
+        html += `
+            <div class="bg-slate-900/40 border border-slate-700/30 rounded-lg p-3">
+                <div class="grid grid-cols-2 gap-2 text-xs text-slate-400">
+                    <div>Espessura: ${armorThickness}mm</div>
+                    <div>Material: ${materialName}</div>
+                    <div>Ângulo: ${angleName}</div>
+                    <div>Proteção Efetiva: ${calculateEffectiveArmor()}mm</div>
+                </div>
+            </div>
+        `;
+    } else {
+        html += '<div class="text-slate-400 text-sm">Blindagem não configurada</div>';
+    }
+    
+    html += '</div>';
+    
+    // Additional Armor
+    const additionalArmor = currentVehicle.additional_armor || currentVehicle.additionalArmor || [];
+    if (additionalArmor.length > 0) {
+        html += '<div class="space-y-3">';
+        html += '<h4 class="text-lg font-semibold text-slate-200">Blindagem Adicional</h4>';
+        
+        additionalArmor.forEach(armorId => {
+            const armorData = additional_armor[armorId];
+            if (armorData) {
+                html += `
+                    <div class="bg-slate-900/40 border border-slate-700/30 rounded-lg p-3">
+                        <div class="text-sm font-medium text-slate-300 mb-2">${armorData.name}</div>
+                        <div class="grid grid-cols-2 gap-2 text-xs text-slate-400">
+                            <div>Proteção: +${armorData.protection_bonus || 0}mm</div>
+                            <div>Peso: +${armorData.weight_penalty || 0}kg</div>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+        
+        html += '</div>';
+    }
+    
+    return html;
+}
+
+function generateSystemsDetails() {
+    let html = '';
+    
+    // Fire Control System
+    if (currentVehicle.fcs) {
+        const fcsData = fire_control[currentVehicle.fcs];
+        if (fcsData) {
+            html += `
+                <div class="bg-slate-900/40 border border-slate-700/30 rounded-lg p-3">
+                    <div class="text-sm font-medium text-slate-300 mb-2">🎯 Controle de Tiro</div>
+                    <div class="text-xs text-slate-200 mb-1">${fcsData.name}</div>
+                    <div class="space-y-1 text-xs text-slate-400">
+                        <div>Tipo: ${fcsData.type || 'N/A'}</div>
+                        <div>Precisão: +${fcsData.accuracy_bonus || 0}%</div>
+                        <div>Consumo: ${fcsData.power_consumption || 0}kW</div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    // Optics System
+    if (currentVehicle.optics) {
+        const opticsData = optics_systems[currentVehicle.optics];
+        if (opticsData) {
+            html += `
+                <div class="bg-slate-900/40 border border-slate-700/30 rounded-lg p-3">
+                    <div class="text-sm font-medium text-slate-300 mb-2">👁️ Sistema Ótico</div>
+                    <div class="text-xs text-slate-200 mb-1">${opticsData.name}</div>
+                    <div class="space-y-1 text-xs text-slate-400">
+                        <div>Zoom: ${opticsData.magnification || 'N/A'}x</div>
+                        <div>Visão Noturna: ${opticsData.night_vision ? 'Sim' : 'Não'}</div>
+                        <div>Termal: ${opticsData.thermal ? 'Sim' : 'Não'}</div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    // Communication System
+    if (currentVehicle.communication) {
+        const commData = communication[currentVehicle.communication];
+        if (commData) {
+            html += `
+                <div class="bg-slate-900/40 border border-slate-700/30 rounded-lg p-3">
+                    <div class="text-sm font-medium text-slate-300 mb-2">📡 Comunicação</div>
+                    <div class="text-xs text-slate-200 mb-1">${commData.name}</div>
+                    <div class="space-y-1 text-xs text-slate-400">
+                        <div>Alcance: ${commData.range || 'N/A'}km</div>
+                        <div>Canais: ${commData.channels || 'N/A'}</div>
+                        <div>Criptografia: ${commData.encrypted ? 'Sim' : 'Não'}</div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    if (!html) {
+        html = '<div class="text-slate-400 text-sm col-span-3">Nenhum sistema eletrônico selecionado</div>';
+    }
+    
+    return html;
+}
+
+function generateCrewDetails() {
+    const crewSize = currentVehicle.crewSize || 3;
+    const trainingLevel = currentVehicle.trainingLevel || 'standard';
+    
+    const trainingNames = {
+        rookie: 'Recruta',
+        standard: 'Padrão', 
+        veteran: 'Veterano',
+        elite: 'Elite'
+    };
+    
+    const crewRoles = {
+        2: ['Motorista', 'Artilheiro'],
+        3: ['Motorista', 'Artilheiro', 'Comandante'],
+        4: ['Motorista', 'Artilheiro', 'Comandante', 'Carregador'],
+        5: ['Motorista', 'Artilheiro', 'Comandante', 'Carregador', 'Operador de Rádio']
+    };
+    
+    let html = `
+        <div class="space-y-3">
+            <h4 class="text-lg font-semibold text-slate-200">Composição</h4>
+            <div class="bg-slate-900/40 border border-slate-700/30 rounded-lg p-3">
+                <div class="grid grid-cols-2 gap-2 text-xs text-slate-400 mb-3">
+                    <div>Tamanho: ${crewSize} membros</div>
+                    <div>Treinamento: ${trainingNames[trainingLevel]}</div>
+                </div>
+                <div class="space-y-1">
+                    ${(crewRoles[crewSize] || crewRoles[3]).map((role, index) => 
+                        `<div class="flex items-center gap-2 text-xs text-slate-300">
+                            <span class="w-5 h-5 bg-brand-900/50 text-brand-300 rounded-full flex items-center justify-center text-xs font-bold">${index + 1}</span>
+                            ${role}
+                        </div>`
+                    ).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Performance impact
+    const trainingBonuses = {
+        rookie: { accuracy: -10, reload: -15, mobility: -5 },
+        standard: { accuracy: 0, reload: 0, mobility: 0 },
+        veteran: { accuracy: 10, reload: 15, mobility: 5 },
+        elite: { accuracy: 20, reload: 25, mobility: 10 }
+    };
+    
+    const bonus = trainingBonuses[trainingLevel];
+    
+    html += `
+        <div class="space-y-3">
+            <h4 class="text-lg font-semibold text-slate-200">Impacto no Desempenho</h4>
+            <div class="bg-slate-900/40 border border-slate-700/30 rounded-lg p-3">
+                <div class="space-y-1 text-xs">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Precisão:</span>
+                        <span class="${bonus.accuracy >= 0 ? 'text-green-400' : 'text-red-400'}">
+                            ${bonus.accuracy > 0 ? '+' : ''}${bonus.accuracy}%
+                        </span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Recarga:</span>
+                        <span class="${bonus.reload >= 0 ? 'text-green-400' : 'text-red-400'}">
+                            ${bonus.reload > 0 ? '+' : ''}${bonus.reload}%
+                        </span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Mobilidade:</span>
+                        <span class="${bonus.mobility >= 0 ? 'text-green-400' : 'text-red-400'}">
+                            ${bonus.mobility > 0 ? '+' : ''}${bonus.mobility}%
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    return html;
+}
+
+function generateSpecialEquipmentSection() {
+    const specialEquipment = currentVehicle.special_equipment || currentVehicle.specialEquipment || [];
+    
+    if (!specialEquipment || specialEquipment.length === 0) {
+        return ''; // Don't show section if no equipment
+    }
+    
+    let html = `
+        <div class="bg-slate-800/40 border border-slate-700 rounded-xl p-6">
+            <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-3">
+                <span class="text-2xl">🛠️</span>
+                Equipamentos Especiais
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    `;
+    
+    specialEquipment.forEach(equipId => {
+        const equipData = special_equipment[equipId];
+        if (equipData) {
+            html += `
+                <div class="bg-slate-900/40 border border-slate-700/30 rounded-lg p-3">
+                    <div class="text-sm font-medium text-slate-300 mb-2">${equipData.name}</div>
+                    <div class="text-xs text-slate-400 mb-2">${equipData.description || ''}</div>
+                    <div class="space-y-1 text-xs text-slate-400">
+                        <div>Peso: ${equipData.weight || 0}kg</div>
+                        <div>Consumo: ${equipData.energy_consumption || 0}kW</div>
+                        <div>Custo: $${(equipData.cost || 0).toLocaleString()}</div>
+                    </div>
+                </div>
+            `;
+        }
+    });
+    
+    html += '</div></div>';
+    return html;
+}
+
+function calculateEffectiveArmor() {
+    const thickness = currentVehicle.armorThickness || currentVehicle.armor_thickness || 0;
+    const angle = currentVehicle.armorAngle;
+    
+    let effectiveness = thickness;
+    
+    if (angle && armor_angles[angle]) {
+        effectiveness *= armor_angles[angle].effectiveness_multiplier || 1.0;
+    }
+    
+    return Math.round(effectiveness);
+}
+
 function generateVehicleSummary() {
     const contentDiv = document.getElementById('vehicle-summary-content');
     if (!contentDiv) return;
@@ -1567,12 +1976,39 @@ function generateVehicleSummary() {
                     </div>
                 </div>
                 
-                <!-- Vehicle Image Placeholder -->
-                <div class="flex items-center justify-center bg-slate-800/40 border-2 border-dashed border-slate-600 rounded-xl p-8">
-                    <div class="text-center">
-                        <div class="text-6xl mb-4">${getVehicleEmoji()}</div>
-                        <p class="text-slate-400">Imagem do Veículo</p>
+                <!-- Vehicle Image Upload -->
+                <div class="relative">
+                    <div id="vehicle-image-container" class="flex items-center justify-center bg-slate-800/40 border-2 border-dashed border-slate-600 rounded-xl p-8 transition-all duration-200 hover:border-brand-500 hover:bg-slate-800/60 cursor-pointer min-h-[200px]" onclick="triggerImageUpload()">
+                        <div class="text-center">
+                            <div id="vehicle-image-preview" class="hidden">
+                                <img id="uploaded-vehicle-image" class="max-w-full max-h-48 rounded-lg object-contain mx-auto mb-4" alt="Imagem do Veículo">
+                            </div>
+                            <div id="vehicle-image-placeholder">
+                                <div class="text-6xl mb-4">${getVehicleEmoji()}</div>
+                                <p class="text-slate-400 mb-2">Clique para adicionar imagem do veículo</p>
+                                <p class="text-xs text-slate-500">PNG, JPG ou GIF até 5MB</p>
+                            </div>
+                        </div>
                     </div>
+                    
+                    <!-- Hidden file input -->
+                    <input 
+                        type="file" 
+                        id="vehicle-image-input" 
+                        class="hidden" 
+                        accept="image/*" 
+                        onchange="handleImageUpload(event)"
+                    >
+                    
+                    <!-- Remove image button (shown when image is uploaded) -->
+                    <button 
+                        id="remove-image-btn" 
+                        onclick="removeVehicleImage()" 
+                        class="hidden absolute top-2 right-2 w-8 h-8 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center transition-colors"
+                        title="Remover imagem"
+                    >
+                        <span class="text-sm">×</span>
+                    </button>
                 </div>
             </div>
             
@@ -1631,16 +2067,70 @@ function generateVehicleSummary() {
                 </div>
             </div>
             
-            <!-- Components Details -->
+            <!-- Detailed Components Sections -->
+            
+            <!-- Chassis & Drivetrain -->
             <div class="bg-slate-800/40 border border-slate-700 rounded-xl p-6">
                 <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-3">
-                    <span class="text-2xl">🔧</span>
-                    Componentes
+                    <span class="text-2xl">🏗️</span>
+                    Chassi e Sistema de Propulsão
                 </h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    ${generateComponentsList()}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-3">
+                        ${generateChassisDetails()}
+                    </div>
+                    <div class="space-y-3">
+                        ${generateDrivetrainDetails()}
+                    </div>
                 </div>
             </div>
+            
+            <!-- Armaments -->
+            <div class="bg-slate-800/40 border border-slate-700 rounded-xl p-6">
+                <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-3">
+                    <span class="text-2xl">🔫</span>
+                    Sistema de Armamento
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    ${generateArmamentDetails()}
+                </div>
+            </div>
+            
+            <!-- Armor System -->
+            <div class="bg-slate-800/40 border border-slate-700 rounded-xl p-6">
+                <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-3">
+                    <span class="text-2xl">🛡️</span>
+                    Sistema de Blindagem
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    ${generateArmorDetails()}
+                </div>
+            </div>
+            
+            <!-- Electronics & Systems -->
+            <div class="bg-slate-800/40 border border-slate-700 rounded-xl p-6">
+                <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-3">
+                    <span class="text-2xl">📡</span>
+                    Sistemas Eletrônicos
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    ${generateSystemsDetails()}
+                </div>
+            </div>
+            
+            <!-- Crew -->
+            <div class="bg-slate-800/40 border border-slate-700 rounded-xl p-6">
+                <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-3">
+                    <span class="text-2xl">👥</span>
+                    Tripulação
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    ${generateCrewDetails()}
+                </div>
+            </div>
+            
+            <!-- Special Equipment -->
+            ${generateSpecialEquipmentSection()}
             
             <!-- Cost & Energy -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1651,12 +2141,12 @@ function generateVehicleSummary() {
                     </h3>
                     <div class="space-y-3">
                         <div class="flex justify-between items-center py-2 border-b border-slate-700/50">
-                            <span class="text-slate-300">Custo Total</span>
-                            <span class="font-semibold text-yellow-400">$${(cost.total || 0).toLocaleString()}</span>
+                            <span class="text-slate-300">Custo por Unidade</span>
+                            <span class="font-semibold text-green-400">$${((cost.perUnit || 0) / 1000).toFixed(0)}K</span>
                         </div>
                         <div class="flex justify-between items-center py-2">
-                            <span class="text-slate-300">Custo por Unidade</span>
-                            <span class="font-semibold text-yellow-400">$${(cost.perUnit || 0).toLocaleString()}</span>
+                            <span class="text-slate-300">Manutenção por Unidade/Ano</span>
+                            <span class="font-semibold text-yellow-400">$${getCostSystemMaintenanceCost().toFixed(0)}K</span>
                         </div>
                     </div>
                 </div>
@@ -1680,6 +2170,19 @@ function generateVehicleSummary() {
             </div>
         </div>
     `;
+    
+    // Initialize image drag & drop after content is loaded
+    setTimeout(() => {
+        setupImageDragDrop();
+        
+        // Load existing image if present
+        if (currentVehicle.vehicleImage) {
+            displayVehicleImage(currentVehicle.vehicleImage);
+        }
+        
+        // Show admin country selection if user is admin/narrator
+        setupAdminCountrySelection();
+    }, 100);
 }
 
 function getChassisDisplayName() {
@@ -1774,6 +2277,18 @@ window.exportVehicleToPDF = function() {
     const printContent = document.createElement('div');
     printContent.innerHTML = document.getElementById('vehicle-summary-content').innerHTML;
     
+    // Include vehicle image in PDF if present
+    let imageHtml = '';
+    if (currentVehicle.vehicleImage) {
+        imageHtml = `
+            <div style="text-align: center; margin: 20px 0;">
+                <img src="${currentVehicle.vehicleImage}" 
+                     style="max-width: 300px; max-height: 300px; border-radius: 8px; border: 1px solid #dee2e6;" 
+                     alt="Imagem do Veículo">
+            </div>
+        `;
+    }
+    
     // Open print dialog
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
@@ -1782,7 +2297,7 @@ window.exportVehicleToPDF = function() {
         <head>
             <title>Ficha do Veículo - ${vehicleName}</title>
             <style>
-                body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
+                body { font-family: Arial, sans-serif; margin: 20px; color: #333; line-height: 1.4; }
                 .space-y-8 > * { margin-bottom: 2rem; }
                 .grid { display: grid; gap: 1rem; }
                 .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
@@ -1793,12 +2308,23 @@ window.exportVehicleToPDF = function() {
                 .text-brand-300 { color: #3b82f6; }
                 .text-yellow-400 { color: #f59e0b; }
                 .text-blue-400 { color: #60a5fa; }
+                .text-green-400 { color: #10b981; }
                 input { border: 1px solid #ccc; padding: 8px; border-radius: 4px; }
+                h1 { color: #1f2937; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
+                .hidden { display: none !important; }
+                @media print {
+                    body { margin: 0; }
+                    .no-print { display: none !important; }
+                }
             </style>
         </head>
         <body>
-            <h1>Ficha Completa do Veículo - ${vehicleName}</h1>
+            <h1>📋 Ficha Completa do Veículo - ${vehicleName}</h1>
+            ${imageHtml}
             ${printContent.innerHTML}
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6; text-align: center; color: #6b7280; font-size: 12px;">
+                Gerado automaticamente pelo Sistema de Criação de Veículos War1954
+            </div>
         </body>
         </html>
     `);
@@ -1861,36 +2387,30 @@ function calculateVehiclePerformance() {
 function calculateTotalCost() {
     if (!currentVehicle) return { total: 0, perUnit: 0 };
     
-    // Use the same CostSystem as the main panel for consistency
+    // Always use CostSystem for consistency with the cost analysis panel
     if (window.CostSystem && typeof window.CostSystem.calculateCosts === 'function') {
         const costs = window.CostSystem.calculateCosts(currentVehicle);
         return {
-            total: Math.round(costs.production / 1000), // Convert to K format
-            perUnit: Math.round(costs.total_ownership / 1000) // Convert to K format  
+            total: Math.round(costs.production), // Keep original values, not converted to K
+            perUnit: Math.round(costs.production) // Use production cost as per unit cost
         };
     }
     
     // Fallback calculation if CostSystem is not available
-    const chassisData = currentVehicle.chassis ? chassis[currentVehicle.chassis] : null;
-    const engineData = currentVehicle.engine ? engines[currentVehicle.engine] : null;
-    const transmissionData = currentVehicle.transmission ? transmissions[currentVehicle.transmission] : null;
-    const suspensionData = currentVehicle.suspension ? suspensions[currentVehicle.suspension] : null;
+    console.warn('CostSystem não disponível, usando cálculo simplificado');
+    return { total: 0, perUnit: 0 };
+}
+
+function getCostSystemMaintenanceCost() {
+    if (!currentVehicle) return 0;
     
-    const chassisCost = (chassisData?.base_cost || 50000) / 1000;
-    const engineCost = (engineData?.cost || 25000) / 1000;
-    const transmissionCost = (transmissionData?.cost || 15000) / 1000;
-    const suspensionCost = (suspensionData?.cost || 10000) / 1000;
+    // Get maintenance cost from CostSystem
+    if (window.CostSystem && typeof window.CostSystem.calculateCosts === 'function') {
+        const costs = window.CostSystem.calculateCosts(currentVehicle);
+        return (costs.maintenance || 0) / 1000; // Convert to K format
+    }
     
-    const mainGunCost = Math.pow((currentVehicle.main_gun_caliber || 75) / 10, 2) * 2;
-    const secondaryCost = (currentVehicle.secondary_weapons?.length || 0) * 5;
-    const aaCost = currentVehicle.aa_gun ? 8 : 0;
-    const armorCost = Math.pow((currentVehicle.armorThickness || 80) / 10, 1.5);
-    
-    const total = Math.round(chassisCost + engineCost + transmissionCost + suspensionCost + 
-                           mainGunCost + secondaryCost + aaCost + armorCost);
-    const perUnit = Math.round(total * 1.3);
-    
-    return { total, perUnit };
+    return 0;
 }
 
 function calculateEnergyConsumption() {
@@ -1920,26 +2440,917 @@ function calculateEnergyConsumption() {
     return { total, efficiency };
 }
 
-// Save to Firebase
-window.saveVehicleToFirebase = function() {
-    const vehicleName = document.getElementById('vehicle-name-input')?.value;
-    if (vehicleName) {
-        currentVehicle.name = vehicleName;
+// Vehicle Image Management
+window.triggerImageUpload = function() {
+    document.getElementById('vehicle-image-input').click();
+};
+
+window.handleImageUpload = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    // Validate file
+    if (!validateImageFile(file)) {
+        return;
     }
     
-    // Placeholder for Firebase integration
-    console.log('Saving vehicle to Firebase:', currentVehicle);
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const imageUrl = e.target.result;
+        
+        // Store image in current vehicle
+        currentVehicle.vehicleImage = imageUrl;
+        
+        // Update UI
+        displayVehicleImage(imageUrl);
+        
+        console.log('Imagem do veículo carregada com sucesso');
+    };
     
-    // Show success message
-    const button = document.querySelector('[onclick="saveVehicleToFirebase()"]');
-    if (button) {
-        const originalText = button.innerHTML;
-        button.innerHTML = '<span class="flex items-center gap-2"><span>✅</span><span>Salvo!</span></span>';
-        button.disabled = true;
+    reader.readAsDataURL(file);
+};
+
+function validateImageFile(file) {
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    
+    if (!validTypes.includes(file.type)) {
+        showImageError('Formato não suportado. Use PNG, JPG, GIF ou WebP.');
+        return false;
+    }
+    
+    if (file.size > maxSize) {
+        showImageError('Imagem muito grande. Máximo 5MB.');
+        return false;
+    }
+    
+    return true;
+}
+
+function displayVehicleImage(imageUrl) {
+    const placeholder = document.getElementById('vehicle-image-placeholder');
+    const preview = document.getElementById('vehicle-image-preview');
+    const image = document.getElementById('uploaded-vehicle-image');
+    const removeBtn = document.getElementById('remove-image-btn');
+    const container = document.getElementById('vehicle-image-container');
+    
+    if (placeholder && preview && image && removeBtn && container) {
+        // Hide placeholder, show preview
+        placeholder.classList.add('hidden');
+        preview.classList.remove('hidden');
+        removeBtn.classList.remove('hidden');
+        
+        // Set image source
+        image.src = imageUrl;
+        
+        // Update container styling
+        container.classList.remove('border-dashed', 'cursor-pointer');
+        container.classList.add('border-solid');
+        container.onclick = null; // Remove click to upload when image is present
+    }
+}
+
+window.removeVehicleImage = function() {
+    const placeholder = document.getElementById('vehicle-image-placeholder');
+    const preview = document.getElementById('vehicle-image-preview');
+    const image = document.getElementById('uploaded-vehicle-image');
+    const removeBtn = document.getElementById('remove-image-btn');
+    const container = document.getElementById('vehicle-image-container');
+    const input = document.getElementById('vehicle-image-input');
+    
+    if (placeholder && preview && image && removeBtn && container && input) {
+        // Show placeholder, hide preview
+        preview.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+        removeBtn.classList.add('hidden');
+        
+        // Clear image source
+        image.src = '';
+        input.value = '';
+        
+        // Remove from vehicle data
+        delete currentVehicle.vehicleImage;
+        
+        // Restore container styling
+        container.classList.add('border-dashed', 'cursor-pointer');
+        container.classList.remove('border-solid');
+        container.onclick = triggerImageUpload;
+        
+        console.log('Imagem do veículo removida');
+    }
+};
+
+function showImageError(message) {
+    // Create temporary error message
+    const container = document.getElementById('vehicle-image-container');
+    if (container) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'absolute top-2 left-2 right-2 bg-red-600 text-white text-xs px-3 py-2 rounded-lg z-10';
+        errorDiv.textContent = message;
+        
+        container.appendChild(errorDiv);
         
         setTimeout(() => {
-            button.innerHTML = originalText;
-            button.disabled = false;
-        }, 2000);
+            if (container.contains(errorDiv)) {
+                container.removeChild(errorDiv);
+            }
+        }, 3000);
     }
+}
+
+// Drag and drop support
+window.setupImageDragDrop = function() {
+    const container = document.getElementById('vehicle-image-container');
+    if (!container) return;
+    
+    container.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        container.classList.add('border-brand-500', 'bg-slate-800/80');
+    });
+    
+    container.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        container.classList.remove('border-brand-500', 'bg-slate-800/80');
+    });
+    
+    container.addEventListener('drop', function(e) {
+        e.preventDefault();
+        container.classList.remove('border-brand-500', 'bg-slate-800/80');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const file = files[0];
+            if (validateImageFile(file)) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imageUrl = e.target.result;
+                    currentVehicle.vehicleImage = imageUrl;
+                    displayVehicleImage(imageUrl);
+                    console.log('Imagem arrastada e carregada com sucesso');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+    });
+};
+
+// Submit vehicle for approval
+window.submitForApproval = async function() {
+    const vehicleName = document.getElementById('vehicle-name-input')?.value;
+    const quantity = parseInt(document.getElementById('vehicle-quantity-input')?.value) || 50;
+    const button = document.getElementById('submit-approval-btn');
+    const statusDiv = document.getElementById('submission-status');
+    
+    // Validation
+    if (!vehicleName || vehicleName.trim().length < 3) {
+        showSubmissionMessage('❌ Nome do veículo deve ter pelo menos 3 caracteres', 'error');
+        return;
+    }
+    
+    if (quantity < 1 || quantity > 1000) {
+        showSubmissionMessage('❌ Quantidade deve estar entre 1 e 1000 unidades', 'error');
+        return;
+    }
+    
+    if (!currentVehicle.chassis || !currentVehicle.engine) {
+        showSubmissionMessage('❌ Chassi e Motor são obrigatórios', 'error');
+        return;
+    }
+    
+    // Update vehicle name
+    currentVehicle.name = vehicleName.trim();
+    
+    // Disable button and show loading
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<span class="flex items-center gap-2"><span class="animate-spin">⏳</span><span>Enviando...</span></span>';
+    }
+    
+    try {
+        // Determine vehicle category
+        const category = determineVehicleCategory(currentVehicle);
+        
+        // Get current user info
+        const user = window.firebase?.auth()?.currentUser;
+        if (!user) {
+            throw new Error('Usuário não está logado');
+        }
+        
+        // Get user's country
+        let userCountry;
+        try {
+            userCountry = await getUserCountry(user.uid);
+            console.log('🏁 País detectado:', userCountry);
+        } catch (countryError) {
+            console.error('Erro ao detectar país:', countryError);
+            throw new Error('Erro ao detectar país do usuário: ' + countryError.message);
+        }
+        
+        // Handle country selection
+        if (!userCountry) {
+            throw new Error('Usuário não está vinculado a um país. Contate o administrador.');
+        }
+        
+        // For admin/narrator, check for manual country selection
+        if (userCountry.id === 'admin-manual') {
+            const selectedCountryId = document.getElementById('vehicle-target-country')?.value;
+            if (selectedCountryId && selectedCountryId !== '') {
+                console.log('🎯 Admin selecionou país:', selectedCountryId);
+                try {
+                    const db = window.firebase.firestore();
+                    const countryDoc = await db.collection('paises').doc(selectedCountryId).get();
+                    if (countryDoc.exists) {
+                        const countryData = countryDoc.data();
+                        userCountry = {
+                            id: selectedCountryId,
+                            name: countryData.Pais || 'País Selecionado'
+                        };
+                        console.log('✅ País resolvido:', userCountry);
+                    } else {
+                        userCountry = {
+                            id: selectedCountryId,
+                            name: selectedCountryId
+                        };
+                        console.log('⚠️ País não encontrado, usando ID:', userCountry);
+                    }
+                } catch (error) {
+                    console.log('💥 Erro ao buscar dados do país selecionado:', error);
+                    userCountry = {
+                        id: selectedCountryId,
+                        name: selectedCountryId
+                    };
+                }
+            } else {
+                throw new Error('Admin/Narrador deve selecionar um país de destino.');
+            }
+        }
+        
+        // Clean and prepare vehicle data (remove functions, undefined values, etc.)
+        const cleanVehicleData = cleanObjectForFirebase({
+            ...currentVehicle,
+            submissionId: generateSubmissionId(),
+            version: '1.0'
+        });
+        
+        // Prepare submission data
+        const submissionData = {
+            // Vehicle data (cleaned)
+            vehicleData: cleanVehicleData,
+            
+            // Submission metadata
+            playerId: user.uid,
+            playerName: user.displayName || user.email || 'Usuário Desconhecido',
+            playerEmail: user.email || '',
+            countryId: userCountry.id,
+            countryName: userCountry.name,
+            
+            // Production info
+            quantity: quantity,
+            category: category,
+            
+            // Status tracking
+            status: 'pending',
+            submittedAt: window.firebase.firestore.Timestamp.now(),
+            lastUpdated: window.firebase.firestore.Timestamp.now(),
+            
+            // Admin fields (empty initially)
+            reviewedBy: null,
+            reviewedAt: null,
+            reviewComments: '',
+            approvedQuantity: 0
+        };
+        
+        // Generate and upload vehicle sheet as image
+        console.log('📸 Gerando captura da ficha técnica...');
+        const sheetResult = await captureAndUploadVehicleSheet(submissionData);
+        
+        // Add both image URL and fallback HTML to submission data
+        if (sheetResult && typeof sheetResult === 'object') {
+            // New format with both PNG and HTML
+            submissionData.imageUrl = sheetResult.pngUrl;
+            submissionData.vehicleSheetImageUrl = sheetResult.htmlUrl || sheetResult.pngUrl;
+            submissionData.hasVisualSheet = !!sheetResult.pngUrl;
+        } else {
+            // Legacy format (HTML only)
+            submissionData.vehicleSheetImageUrl = sheetResult;
+            submissionData.hasVisualSheet = sheetResult && sheetResult.startsWith('http');
+        }
+        
+        console.log('🧹 Dados limpos para envio:', submissionData);
+        console.log('📊 Tamanho dos dados:', JSON.stringify(submissionData).length, 'caracteres');
+        
+        // Submit to Firebase
+        await submitVehicleForApproval(submissionData);
+        
+        // Success feedback
+        showSubmissionMessage(`✅ Veículo "${vehicleName}" enviado para aprovação! (${quantity} unidades)`, 'success');
+        
+        // Reset button after delay
+        setTimeout(() => {
+            if (button) {
+                button.disabled = false;
+                button.innerHTML = '<span class="flex items-center gap-2"><span>📋</span><span>Enviar para Aprovação</span></span>';
+            }
+        }, 3000);
+        
+    } catch (error) {
+        console.error('💥 Erro ao enviar para aprovação:', error);
+        console.error('🔍 Detalhes do erro:', {
+            code: error.code,
+            message: error.message,
+            details: error.details || error.stack
+        });
+        
+        let errorMessage = error.message;
+        if (error.code === 'invalid-argument') {
+            errorMessage = 'Dados do veículo inválidos. Verifique se todos os campos estão preenchidos corretamente.';
+        } else if (error.code === 'permission-denied') {
+            errorMessage = 'Permissão negada. Verifique suas credenciais.';
+        }
+        
+        showSubmissionMessage(`❌ Erro: ${errorMessage}`, 'error');
+        
+        // Reset button
+        if (button) {
+            button.disabled = false;
+            button.innerHTML = '<span class="flex items-center gap-2"><span>📋</span><span>Enviar para Aprovação</span></span>';
+        }
+    }
+};
+
+// Helper functions
+function showSubmissionMessage(message, type) {
+    const statusDiv = document.getElementById('submission-status');
+    if (!statusDiv) return;
+    
+    const bgColor = type === 'success' ? 'bg-green-600/20 border-green-500/50 text-green-300' : 'bg-red-600/20 border-red-500/50 text-red-300';
+    
+    statusDiv.className = `mt-3 rounded-lg p-3 text-sm border ${bgColor}`;
+    statusDiv.textContent = message;
+    statusDiv.classList.remove('hidden');
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        statusDiv.classList.add('hidden');
+    }, 5000);
+}
+
+function determineVehicleCategory(vehicle) {
+    // Logic to determine category based on vehicle specs
+    const weight = calculateTotalWeight(vehicle);
+    const hasMainGun = (vehicle.main_gun_caliber || 0) > 0;
+    const mainGunSize = vehicle.main_gun_caliber || 0;
+    
+    if (hasMainGun && mainGunSize >= 100 && weight > 40) {
+        return 'MBT'; // Main Battle Tank
+    } else if (hasMainGun && mainGunSize >= 70 && weight > 20) {
+        return 'Medium Tank';
+    } else if (hasMainGun && weight < 20) {
+        return 'Light Tank';
+    } else if (vehicle.secondary_weapons?.length > 0) {
+        return 'IFV'; // Infantry Fighting Vehicle
+    } else {
+        return 'APC'; // Armored Personnel Carrier
+    }
+}
+
+function calculateTotalWeight(vehicle) {
+    // Simplified weight calculation
+    const chassisData = chassis[vehicle.chassis];
+    const engineData = engines[vehicle.engine];
+    
+    const baseWeight = chassisData?.base_weight || 20000; // kg
+    const engineWeight = engineData?.weight || 1000;
+    const armorWeight = (vehicle.armorThickness || 50) * 100; // simplified
+    
+    return (baseWeight + engineWeight + armorWeight) / 1000; // return in tons
+}
+
+function generateSubmissionId() {
+    return 'VEH-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
+}
+
+// Clean object for Firebase (remove functions, undefined, etc.)
+function cleanObjectForFirebase(obj, depth = 0) {
+    // Prevent infinite recursion and excessive depth
+    if (depth > 10) {
+        console.warn('⚠️ Máxima profundidade atingida, truncando objeto');
+        return null;
+    }
+    
+    if (obj === null || obj === undefined) {
+        return null;
+    }
+    
+    if (typeof obj === 'function') {
+        return null; // Remove functions
+    }
+    
+    if (typeof obj === 'symbol') {
+        return null; // Remove symbols
+    }
+    
+    if (typeof obj !== 'object') {
+        // Primitive values - check if valid
+        if (typeof obj === 'number') {
+            if (!isFinite(obj)) {
+                return 0; // Replace NaN/Infinity with 0
+            }
+            // Round numbers to avoid precision issues
+            return Math.round(obj * 1000) / 1000;
+        }
+        
+        if (typeof obj === 'string') {
+            // Limit string length to prevent size issues
+            return obj.length > 10000 ? obj.substring(0, 10000) + '...' : obj;
+        }
+        
+        return obj;
+    }
+    
+    // Handle Date objects
+    if (obj instanceof Date) {
+        return obj.toISOString();
+    }
+    
+    // Handle DOM elements or other complex objects
+    if (obj.nodeType || obj instanceof Element || obj instanceof HTMLElement) {
+        return null; // Remove DOM elements
+    }
+    
+    // Handle objects with circular references or special properties
+    try {
+        JSON.stringify(obj);
+    } catch (error) {
+        console.warn('⚠️ Objeto com referências circulares detectado, convertendo para string:', error.message);
+        return obj.toString();
+    }
+    
+    if (Array.isArray(obj)) {
+        const cleanedArray = [];
+        for (let i = 0; i < obj.length && i < 100; i++) { // Limit array size
+            const cleanItem = cleanObjectForFirebase(obj[i], depth + 1);
+            if (cleanItem !== null && cleanItem !== undefined) {
+                cleanedArray.push(cleanItem);
+            }
+        }
+        return cleanedArray;
+    }
+    
+    // Regular object - flatten complex structures
+    const cleaned = {};
+    let propertyCount = 0;
+    
+    for (const [key, value] of Object.entries(obj)) {
+        // Limit number of properties to prevent size issues
+        if (propertyCount >= 50) {
+            console.warn('⚠️ Muitas propriedades, truncando objeto');
+            break;
+        }
+        
+        // Skip problematic keys
+        if (key.startsWith('_') || 
+            key.startsWith('$') || 
+            key.includes('constructor') ||
+            key.includes('prototype') ||
+            key.includes('__')) {
+            continue;
+        }
+        
+        // Validate key name
+        if (typeof key !== 'string' || key.length > 100) {
+            continue;
+        }
+        
+        const cleanValue = cleanObjectForFirebase(value, depth + 1);
+        
+        if (cleanValue !== null && cleanValue !== undefined) {
+            // Convert complex objects to simpler representations
+            if (typeof cleanValue === 'object' && !Array.isArray(cleanValue)) {
+                const objectSize = JSON.stringify(cleanValue).length;
+                if (objectSize > 1000) {
+                    // Convert large objects to summary
+                    cleaned[key] = {
+                        type: 'complex_object',
+                        summary: Object.keys(cleanValue).slice(0, 10),
+                        size: objectSize
+                    };
+                } else {
+                    cleaned[key] = cleanValue;
+                }
+            } else {
+                cleaned[key] = cleanValue;
+            }
+            propertyCount++;
+        }
+    }
+    
+    return cleaned;
+}
+
+async function getUserCountry(userId) {
+    try {
+        console.log('🔍 Buscando país para usuário:', userId);
+        
+        // Check if we have Firebase available
+        if (!window.firebase || !window.firebase.firestore) {
+            throw new Error('Firebase não está disponível');
+        }
+        
+        const db = window.firebase.firestore();
+        
+        // Method 1: Check user document directly for paisId
+        console.log('📋 Verificando documento do usuário...');
+        const userDoc = await db.collection('usuarios').doc(userId).get();
+        
+        if (userDoc.exists) {
+            const userData = userDoc.data();
+            console.log('👤 Dados do usuário:', userData);
+            
+            // Check if admin/narrator - they can submit for any country
+            if (userData.papel === 'admin' || userData.papel === 'narrador') {
+                console.log('🔑 Usuário é admin/narrador - permitindo seleção manual');
+                return {
+                    id: 'admin-manual',
+                    name: 'Admin/Narrador (Seleção Manual)'
+                };
+            }
+            
+            // Regular player - check paisId
+            if (userData.paisId) {
+                console.log('🌍 PaisId encontrado no usuário:', userData.paisId);
+                
+                // Try to get country data
+                try {
+                    const countryDoc = await db.collection('paises').doc(userData.paisId).get();
+                    if (countryDoc.exists) {
+                        const countryData = countryDoc.data();
+                        console.log('✅ Dados do país:', countryData);
+                        return {
+                            id: userData.paisId,
+                            name: countryData.Pais || 'País Desconhecido'
+                        };
+                    }
+                } catch (countryError) {
+                    console.log('⚠️ Erro ao buscar dados do país:', countryError.message);
+                }
+                
+                // Return basic info if country data fetch failed
+                return {
+                    id: userData.paisId,
+                    name: `País: ${userData.paisId}`
+                };
+            }
+        }
+        
+        // Method 2: Search in countries collection for this user
+        console.log('🔎 Buscando na coleção países...');
+        const countriesQuery = await db.collection('paises')
+            .where('Player', '==', userId)
+            .limit(1)
+            .get();
+            
+        if (!countriesQuery.empty) {
+            const countryDoc = countriesQuery.docs[0];
+            const countryData = countryDoc.data();
+            console.log('🎯 País encontrado via busca:', countryDoc.id, countryData);
+            return {
+                id: countryDoc.id,
+                name: countryData.Pais || 'País Desconhecido'
+            };
+        }
+        
+        console.log('❌ Nenhum país encontrado para o usuário');
+        return null;
+    } catch (error) {
+        console.error('💥 Erro ao buscar país do usuário:', error);
+        throw error;
+    }
+}
+
+async function submitVehicleForApproval(submissionData) {
+    if (!window.firebase || !window.firebase.firestore) {
+        throw new Error('Firebase não inicializado');
+    }
+    
+    const db = window.firebase.firestore();
+    
+    // Submit to vehicles_pending collection
+    console.log('📤 Enviando dados para Firebase:', submissionData);
+    const docRef = await db.collection('vehicles_pending').add(submissionData);
+    
+    console.log('✅ Veículo enviado para aprovação com ID:', docRef.id);
+    return docRef.id;
+}
+
+// Setup admin country selection
+async function setupAdminCountrySelection() {
+    try {
+        console.log('⚙️ Configurando seleção de país...');
+        
+        const user = window.firebase?.auth()?.currentUser;
+        if (!user) {
+            console.log('❌ Usuário não logado');
+            return;
+        }
+        
+        const adminCountryDiv = document.getElementById('admin-country-selection');
+        const countrySelect = document.getElementById('vehicle-target-country');
+        
+        if (!adminCountryDiv || !countrySelect) {
+            console.log('❌ Elementos não encontrados');
+            return;
+        }
+        
+        const db = window.firebase.firestore();
+        
+        // Check if user is admin/narrator
+        const userDoc = await db.collection('usuarios').doc(user.uid).get();
+        if (!userDoc.exists) {
+            console.log('❌ Documento do usuário não existe');
+            return;
+        }
+        
+        const userData = userDoc.data();
+        console.log('👤 Papel do usuário:', userData.papel);
+        const isAdminOrNarrator = userData.papel === 'admin' || userData.papel === 'narrador';
+        
+        if (isAdminOrNarrator) {
+            console.log('✅ Mostrando seleção de país para admin/narrador');
+            adminCountryDiv.classList.remove('hidden');
+            
+            // Load countries directly from Firebase
+            console.log('📋 Carregando países...');
+            const countriesQuery = await db.collection('paises').get();
+            
+            // Clear and populate select
+            countrySelect.innerHTML = '<option value="">Selecione um país...</option>';
+            
+            countriesQuery.docs.forEach(doc => {
+                const country = doc.data();
+                const option = document.createElement('option');
+                option.value = doc.id;
+                option.textContent = country.Pais || doc.id;
+                countrySelect.appendChild(option);
+            });
+            
+            console.log(`📊 ${countriesQuery.docs.length} países carregados`);
+            
+            // Pre-select the country that shows in header (pais_1756500489204_93)
+            const headerCountry = document.body.textContent?.match(/pais_\d+_\d+/)?.[0];
+            if (headerCountry) {
+                const headerOption = Array.from(countrySelect.options).find(opt => opt.value === headerCountry);
+                if (headerOption) {
+                    headerOption.selected = true;
+                    console.log('🎯 País do cabeçalho pré-selecionado:', headerCountry);
+                }
+            } else {
+                // Fallback to URSS
+                const urssOption = Array.from(countrySelect.options).find(opt => 
+                    opt.textContent.toLowerCase().includes('urss') || 
+                    opt.textContent.toLowerCase().includes('união soviética') ||
+                    opt.textContent.toLowerCase().includes('soviet')
+                );
+                if (urssOption) {
+                    urssOption.selected = true;
+                    console.log('🎯 URSS pré-selecionada');
+                }
+            }
+            
+        } else {
+            console.log('🔒 Ocultando seleção para jogador normal');
+            adminCountryDiv.classList.add('hidden');
+        }
+    } catch (error) {
+        console.error('💥 Erro ao configurar seleção de país:', error);
+        
+        // Show error in select
+        const countrySelect = document.getElementById('vehicle-target-country');
+        if (countrySelect) {
+            countrySelect.innerHTML = '<option value="">Erro ao carregar países</option>';
+        }
+    }
+}
+
+// Capture vehicle sheet as image and upload to Firebase Storage
+async function captureAndUploadVehicleSheet(submissionData) {
+    try {
+        console.log('🚀 === INICIANDO CAPTURA DE FICHA ===');
+        console.log('📋 Dados da submissão:', submissionData);
+        
+        // Get the modal content (the entire vehicle sheet)
+        const sheetElement = document.getElementById('vehicle-summary-content');
+        console.log('🎯 Elemento da ficha encontrado:', !!sheetElement);
+        if (!sheetElement) {
+            throw new Error('Elemento da ficha não encontrado');
+        }
+        
+        // Check if html2canvas is available
+        console.log('🖼️ html2canvas disponível:', typeof html2canvas !== 'undefined');
+        if (typeof html2canvas === 'undefined') {
+            console.log('⚠️ html2canvas não disponível, usando método alternativo');
+            const htmlResult = await uploadTextBasedSheet(submissionData);
+            return { pngUrl: null, htmlUrl: htmlResult };
+        }
+        
+        // Check Firebase Storage availability
+        console.log('🔥 Firebase disponível:', !!window.firebase);
+        console.log('☁️ Storage disponível:', !!window.firebase?.storage);
+        
+        if (!window.firebase?.storage) {
+            console.error('❌ Firebase Storage não disponível!');
+            const htmlResult = await uploadTextBasedSheet(submissionData);
+            return { pngUrl: null, htmlUrl: htmlResult };
+        }
+        
+        // Configure html2canvas options
+        const options = {
+            backgroundColor: '#1e293b', // Slate-800 background
+            width: 1200,
+            height: Math.max(sheetElement.scrollHeight, 800),
+            useCORS: true,
+            scale: 2, // High resolution
+            logging: false
+        };
+        
+        console.log('🖼️ Capturando imagem da ficha...');
+        const canvas = await html2canvas(sheetElement, options);
+        console.log('✅ Canvas capturado:', canvas.width + 'x' + canvas.height);
+        
+        // Convert canvas to blob
+        console.log('💾 Convertendo para arquivo...');
+        const blob = await new Promise(resolve => {
+            canvas.toBlob(resolve, 'image/png', 0.9);
+        });
+        console.log('✅ Blob criado:', blob?.size, 'bytes');
+        
+        if (!blob) {
+            throw new Error('Falha ao criar blob da imagem');
+        }
+        
+        // Upload to Firebase Storage
+        console.log('☁️ Fazendo upload para Firebase Storage...');
+        const downloadURL = await uploadToFirebaseStorage(blob, submissionData);
+        
+        console.log('✅ Imagem PNG da ficha enviada:', downloadURL);
+        console.log('🔗 URL completa:', downloadURL);
+        
+        // Also generate HTML fallback
+        const htmlUrl = await uploadTextBasedSheet(submissionData);
+        
+        return {
+            pngUrl: downloadURL,
+            htmlUrl: htmlUrl
+        };
+        
+    } catch (error) {
+        console.error('💥 Erro ao capturar ficha PNG:', error);
+        
+        // Fallback: upload text-based version only
+        try {
+            console.log('🔄 Tentando método alternativo (HTML apenas)...');
+            const htmlUrl = await uploadTextBasedSheet(submissionData);
+            return {
+                pngUrl: null,
+                htmlUrl: htmlUrl
+            };
+        } catch (fallbackError) {
+            console.error('💥 Erro no método alternativo:', fallbackError);
+            return null; // Continue without image
+        }
+    }
+}
+
+// Upload blob to Firebase Storage
+async function uploadToFirebaseStorage(blob, submissionData) {
+    console.log('🔥 === INICIANDO UPLOAD PARA FIREBASE STORAGE ===');
+    
+    // Check Firebase availability
+    if (!window.firebase) {
+        throw new Error('Firebase não inicializado');
+    }
+    
+    let storage;
+    try {
+        console.log('🔍 Tentando acessar Firebase Storage...');
+        // Try different ways to access Firebase Storage
+        if (window.firebase.storage) {
+            storage = window.firebase.storage();
+            console.log('✅ Storage acessado via window.firebase.storage()');
+        } else if (window.firebase.app && window.firebase.app().storage) {
+            storage = window.firebase.app().storage();
+            console.log('✅ Storage acessado via window.firebase.app().storage()');
+        } else {
+            throw new Error('Firebase Storage não encontrado');
+        }
+    } catch (error) {
+        console.error('💥 Erro ao acessar Firebase Storage:', error);
+        throw new Error('Firebase Storage não está configurado corretamente');
+    }
+    
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const fileName = `vehicle-sheets/${submissionData.countryId}/${submissionData.vehicleData.name || 'vehicle'}-${timestamp}.png`;
+    
+    console.log('📁 Nome do arquivo:', fileName);
+    console.log('💾 Tamanho do blob:', blob.size, 'bytes');
+    
+    try {
+        // Create storage reference
+        console.log('📂 Criando referência do storage...');
+        const storageRef = storage.ref(fileName);
+        console.log('✅ Referência criada:', storageRef.fullPath);
+        
+        // Upload the blob
+        console.log('⬆️ Iniciando upload...');
+        const uploadTask = await storageRef.put(blob, {
+            contentType: 'image/png',
+            customMetadata: {
+                'vehicleName': submissionData.vehicleData.name || 'Unknown',
+                'countryId': submissionData.countryId,
+                'submissionId': submissionData.vehicleData.submissionId,
+                'uploadedAt': new Date().toISOString()
+            }
+        });
+        console.log('✅ Upload concluído:', uploadTask.state);
+        
+        // Get download URL
+        console.log('🔗 Obtendo URL de download...');
+        const downloadURL = await uploadTask.ref.getDownloadURL();
+        console.log('✅ URL obtida:', downloadURL);
+        
+        return downloadURL;
+        
+    } catch (uploadError) {
+        console.error('💥 Erro durante upload:', uploadError);
+        console.error('🔍 Detalhes do erro:', uploadError.code, uploadError.message);
+        throw uploadError;
+    }
+}
+
+// Fallback: Create text-based sheet (save as data URI instead of upload)
+async function uploadTextBasedSheet(submissionData) {
+    console.log('📝 Gerando ficha em formato texto...');
+    
+    const vehicleData = submissionData.vehicleData;
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Ficha Técnica - ${vehicleData.name}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #1e293b; color: white; }
+        .header { text-align: center; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; margin-bottom: 20px; }
+        .section { margin-bottom: 20px; padding: 15px; background: #334155; border-radius: 8px; }
+        .section h3 { color: #3b82f6; margin-top: 0; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .info-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #475569; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📋 Ficha Técnica do Veículo</h1>
+        <h2>${vehicleData.name || 'Veículo Experimental'}</h2>
+        <p>Submetido para aprovação em ${new Date().toLocaleDateString('pt-BR')}</p>
+        <p>País: ${submissionData.countryName} | Quantidade: ${submissionData.quantity} unidades</p>
+    </div>
+    
+    <div class="section">
+        <h3>🏗️ Especificações Básicas</h3>
+        <div class="info-row"><span>Chassi:</span><span>${vehicleData.chassis || 'N/A'}</span></div>
+        <div class="info-row"><span>Motor:</span><span>${vehicleData.engine || 'N/A'}</span></div>
+        <div class="info-row"><span>Transmissão:</span><span>${vehicleData.transmission || 'N/A'}</span></div>
+        <div class="info-row"><span>Suspensão:</span><span>${vehicleData.suspension || 'N/A'}</span></div>
+    </div>
+    
+    <div class="section">
+        <h3>🔫 Armamento</h3>
+        <div class="info-row"><span>Canhão Principal:</span><span>${vehicleData.main_gun_caliber || 0}mm</span></div>
+        <div class="info-row"><span>Blindagem:</span><span>${vehicleData.armorThickness || vehicleData.armor_thickness || 0}mm</span></div>
+    </div>
+    
+    <div class="section">
+        <h3>📊 Informações da Submissão</h3>
+        <div class="info-row"><span>ID:</span><span>${vehicleData.submissionId}</span></div>
+        <div class="info-row"><span>Categoria:</span><span>${submissionData.category}</span></div>
+        <div class="info-row"><span>Status:</span><span>Pendente de Aprovação</span></div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #475569; color: #94a3b8; font-size: 12px;">
+        Gerado automaticamente pelo Sistema de Criação de Veículos War1954
+    </div>
+</body>
+</html>
+    `;
+    
+    // Convert to data URI (embedded HTML) instead of uploading
+    const dataUri = 'data:text/html;charset=utf-8,' + encodeURIComponent(htmlContent);
+    
+    console.log('✅ Ficha em formato HTML gerada como Data URI');
+    return dataUri;
+}
+
+// Keep the old function for compatibility (but make it redirect)
+window.saveVehicleToFirebase = function() {
+    showSubmissionMessage('⚠️ Use o botão "Enviar para Aprovação" para submeter o veículo', 'error');
 };

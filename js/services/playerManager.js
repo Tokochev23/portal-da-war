@@ -12,27 +12,57 @@ export class PlayerManagerService {
         this.players = [];
         this.countries = [];
         this.listeners = new Map();
+        this.isLoading = false;
     }
 
     /**
      * Carrega todos os jogadores do sistema
      */
     async loadPlayers() {
+        if (this.isLoading) return this.players;
+        
         try {
-            const snapshot = await db.collection('usuarios').get();
-            this.players = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                lastLogin: doc.data().ultimoLogin?.toDate(),
-                createdAt: doc.data().criadoEm?.toDate()
-            }));
+            this.isLoading = true;
+            // Tentar buscar jogadores usando a mesma abordagem que getAllCountries
+            const usuariosRef = db.collection('usuarios');
+            const querySnapshot = await usuariosRef.get();
+            
+            if (querySnapshot.empty) {
+                Logger.warn('Nenhum usuário encontrado na coleção');
+                this.players = [];
+                return this.players;
+            }
+            
+            this.players = querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    lastLogin: data.ultimoLogin?.toDate(),
+                    createdAt: data.criadoEm?.toDate(),
+                    // Adicionar campos derivados
+                    isOnline: data.ultimoLogin ? 
+                        (Date.now() - data.ultimoLogin.toDate().getTime() < 300000) : false // 5 minutos
+                };
+            });
 
             Logger.debug(`${this.players.length} jogadores carregados`);
             return this.players;
 
         } catch (error) {
             Logger.error('Erro ao carregar jogadores:', error);
+            
+            // Se der erro de permissão, tentar uma abordagem alternativa
+            if (error.code === 'permission-denied') {
+                Logger.warn('Acesso negado à coleção usuarios, usando dados limitados');
+                this.players = [];
+                return this.players;
+            }
+            
+            // Re-throw outros erros
             throw error;
+        } finally {
+            this.isLoading = false;
         }
     }
 
@@ -41,11 +71,9 @@ export class PlayerManagerService {
      */
     async loadCountries() {
         try {
-            const snapshot = await db.collection('paises').get();
-            this.countries = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
+            // Usar a função existente getAllCountries que já tem tratamento de erros
+            const { getAllCountries } = await import('./firebase.js');
+            this.countries = await getAllCountries();
 
             Logger.debug(`${this.countries.length} países carregados`);
             return this.countries;
@@ -487,35 +515,32 @@ export class PlayerManagerService {
     }
 
     /**
-     * Inicializa listeners em tempo real
+     * Inicializa listeners em tempo real (desabilitado devido a problemas de permissão)
      */
     setupRealTimeListeners() {
-        // Listener para mudanças em usuários
-        const usersUnsubscribe = db.collection('usuarios')
-            .onSnapshot(snapshot => {
-                this.players = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data(),
-                    lastLogin: doc.data().ultimoLogin?.toDate(),
-                    createdAt: doc.data().criadoEm?.toDate()
-                }));
-                
-                this.broadcastUpdate('players');
-            });
-
-        // Listener para mudanças em países (atribuições)
-        const countriesUnsubscribe = db.collection('paises')
-            .onSnapshot(snapshot => {
-                this.countries = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                
-                this.broadcastUpdate('countries');
-            });
-
-        this.listeners.set('users', usersUnsubscribe);
-        this.listeners.set('countries', countriesUnsubscribe);
+        Logger.info('Real-time listeners desabilitados - usando refresh periódico');
+        
+        // Implementar refresh periódico em vez de listeners em tempo real
+        this.refreshInterval = setInterval(async () => {
+            try {
+                // Só atualizar se não houver carregamento em andamento
+                if (!this.isLoading) {
+                    await this.loadPlayers();
+                    await this.loadCountries();
+                    this.broadcastUpdate('periodic-refresh');
+                }
+            } catch (error) {
+                // Falhas silenciosas para não poluir o console
+                Logger.debug('Erro no refresh periódico (normal):', error.message);
+            }
+        }, 30000); // Refresh a cada 30 segundos
+        
+        // Manter referência para cleanup
+        this.listeners.set('refreshInterval', this.refreshInterval);
+        
+        // REMOVIDO: listeners em tempo real que causavam erros de permissão
+        // const usersUnsubscribe = db.collection('usuarios').onSnapshot(...)
+        // const countriesUnsubscribe = db.collection('paises').onSnapshot(...)
     }
 
     broadcastUpdate(type) {
@@ -525,10 +550,16 @@ export class PlayerManagerService {
     }
 
     /**
-     * Limpa listeners
+     * Limpa listeners e intervals
      */
     cleanup() {
-        this.listeners.forEach(unsubscribe => unsubscribe());
+        this.listeners.forEach((value, key) => {
+            if (key === 'refreshInterval') {
+                clearInterval(value);
+            } else if (typeof value === 'function') {
+                value(); // unsubscribe function
+            }
+        });
         this.listeners.clear();
     }
 }

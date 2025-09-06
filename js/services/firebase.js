@@ -5,9 +5,10 @@ import { FIREBASE_CONFIG, SECURITY_CONFIG } from "../config/firebase-config.js";
 import "https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js";
 import "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js";
 import "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js";
+import "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js";
 
 // === INICIALIZAÇÃO SEGURA DO FIREBASE ===
-let app, auth, db, firebase;
+let app, auth, db, storage, firebase;
 let loginAttempts = new Map(); // Rate limiting por usuário
 
 // Classe para tratamento centralizado de erros Firebase
@@ -70,6 +71,7 @@ try {
     app = firebase.initializeApp(FIREBASE_CONFIG);
     auth = firebase.auth();
     db = firebase.firestore();
+    storage = firebase.storage();
     
     // Configurar persistência offline
     db.enablePersistence({ synchronizeTabs: true })
@@ -85,7 +87,7 @@ const googleProvider = new firebase.auth.GoogleAuthProvider();
 googleProvider.addScope('profile');
 googleProvider.addScope('email');
 
-export { app, auth, db, googleProvider };
+export { app, auth, db, storage, googleProvider };
 
 export async function signInWithGoogle() {
     try {

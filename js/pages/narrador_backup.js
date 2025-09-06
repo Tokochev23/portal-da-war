@@ -5,20 +5,17 @@ import { playerManager } from "../services/playerManager.js";
 import { VehicleApprovalSystem } from "../components/vehicleApproval.js";
 import { InventorySystem } from "../components/inventorySystem.js";
 import { showNotification, Logger, showConfirmBox } from "../utils.js";
-import { initEconomicSimulator } from "../systems/economicSimulator.js";
-import { calculatePIBTotal, formatCurrency, formatPIBPerCapita } from "../utils/pibCalculations.js";
 
 // Catálogo local (fallback). Pode ser salvo no Firestore em configuracoes/campos
 const localCatalog = {
   geral: {
     label: "Geral",
     campos: [
-      { key: "PIBPerCapita", label: "PIB per Capita", tipo: "moeda", min: 0 },
-      { key: "PIB", label: "PIB Total", tipo: "calculado", dependeDe: ["PIBPerCapita", "Populacao"] },
-      { key: "Populacao", label: "População", tipo: "inteiro", min: 0 },
+      { key: "PIB", label: "PIB", tipo: "moeda", min: 0 },
       { key: "Estabilidade", label: "Estabilidade", tipo: "percent", min: 0, max: 100 },
       { key: "Urbanizacao", label: "Urbanização", tipo: "percent", min: 0, max: 100 },
       { key: "Tecnologia", label: "Tecnologia", tipo: "percent", min: 0, max: 100 },
+      { key: "Populacao", label: "População", tipo: "inteiro", min: 0 },
       { key: "ModeloPolitico", label: "Modelo Político", tipo: "texto" },
       { key: "Visibilidade", label: "Visibilidade", tipo: "opcoes", opcoes: ["Público","Privado"] }
     ]
@@ -160,39 +157,19 @@ function renderSelectPaises() {
   if (state.paisSelecionado) el.selectPais.value = state.paisSelecionado;
 }
 
-function inputFor(fieldKey, fieldDef, valor, paisData = null) {
+function inputFor(fieldKey, fieldDef, valor) {
   const wrap = document.createElement('div');
   const label = document.createElement('label');
   label.className = 'block text-xs text-slate-400 mb-1';
   label.textContent = fieldDef.label || fieldKey;
 
   let inp;
-  
-  // Campos calculados (como PIB total)
-  if (fieldDef.tipo === 'calculado') {
-    inp = document.createElement('div');
-    inp.className = 'mt-1 w-full rounded-lg bg-slate-700/50 border border-slate-600 p-2 text-sm text-slate-300 italic';
-    
-    // Calcular valor do PIB baseado em PIB per capita e população
-    if (fieldKey === 'PIB' && paisData) {
-      const populacao = parseFloat(paisData.Populacao) || 0;
-      const pibPerCapita = parseFloat(paisData.PIBPerCapita) || 0;
-      const pibTotal = calculatePIBTotal(populacao, pibPerCapita);
-      inp.textContent = `${formatCurrency(pibTotal)} (calculado: ${populacao.toLocaleString()} × ${formatPIBPerCapita(pibPerCapita)})`;
-      inp.dataset.calculatedValue = pibTotal;
-    } else {
-      inp.textContent = 'Campo calculado';
-    }
-    
-    inp.name = fieldKey;
-  } else if (fieldDef.tipo === 'opcoes' && Array.isArray(fieldDef.opcoes)) {
+  if (fieldDef.tipo === 'opcoes' && Array.isArray(fieldDef.opcoes)) {
     inp = document.createElement('select');
     fieldDef.opcoes.forEach(op => {
       const o = document.createElement('option');
       o.value = op; o.textContent = op; if (valor === op) o.selected = true; inp.appendChild(o);
     });
-    inp.name = fieldKey;
-    inp.className = 'mt-1 w-full rounded-lg bg-bg border border-bg-ring/70 p-2 text-sm focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/50 transition-colors';
   } else {
     inp = document.createElement('input');
     if (fieldDef.tipo === 'percent' || fieldDef.tipo === 'inteiro' || fieldDef.tipo === 'moeda') inp.type = 'number';
@@ -205,13 +182,13 @@ function inputFor(fieldKey, fieldDef, valor, paisData = null) {
     if (fieldDef.tipo === 'moeda') inp.step = '0.01';
     else if (fieldDef.tipo === 'percent') inp.step = '0.1';
     else if (fieldDef.tipo === 'inteiro') inp.step = '1';
-    
-    inp.name = fieldKey;
-    inp.className = 'mt-1 w-full rounded-lg bg-bg border border-bg-ring/70 p-2 text-sm focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/50 transition-colors';
   }
   
-  // Adicionar indicador de mudanças em tempo real (apenas para campos editáveis)
-  if (state.realTimeEnabled && fieldDef.tipo !== 'calculado') {
+  inp.name = fieldKey;
+  inp.className = 'mt-1 w-full rounded-lg bg-bg border border-bg-ring/70 p-2 text-sm focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/50 transition-colors';
+  
+  // Adicionar indicador de mudanças em tempo real
+  if (state.realTimeEnabled) {
     const indicator = document.createElement('div');
     indicator.className = 'absolute -top-1 -right-1 w-2 h-2 bg-emerald-400 rounded-full opacity-0 transition-opacity';
     indicator.id = `indicator-${fieldKey}`;
@@ -221,11 +198,6 @@ function inputFor(fieldKey, fieldDef, valor, paisData = null) {
     
     // Listener para mudanças em tempo real
     inp.addEventListener('input', async (e) => {
-      // Atualizar campos calculados quando dependências mudam
-      if ((fieldKey === 'PIBPerCapita' || fieldKey === 'Populacao') && state.secaoSelecionada === 'geral') {
-        updateCalculatedFields();
-      }
-      
       if (state.autoSave) {
         await handleRealTimeChange(fieldKey, fieldDef, e.target.value, indicator);
       }
@@ -243,42 +215,16 @@ function inputFor(fieldKey, fieldDef, valor, paisData = null) {
   return { 
     wrap, 
     input: inp,
-    get: () => {
-      if (fieldDef.tipo === 'calculado') {
-        return Number(inp.dataset.calculatedValue || 0);
-      }
-      return (fieldDef.tipo==='inteiro'||fieldDef.tipo==='percent'||fieldDef.tipo==='moeda') ? Number(inp.value || 0) : (inp.value ?? '');
-    },
-    set: (value) => { 
-      if (fieldDef.tipo !== 'calculado') {
-        inp.value = value ?? ''; 
-      }
-    },
+    get: () => (fieldDef.tipo==='inteiro'||fieldDef.tipo==='percent'||fieldDef.tipo==='moeda') ? Number(inp.value || 0) : (inp.value ?? ''),
+    set: (value) => { inp.value = value ?? ''; },
     showChange: () => {
       const indicator = wrap.querySelector(`#indicator-${fieldKey}`);
       if (indicator) {
         indicator.style.opacity = '1';
         setTimeout(() => indicator.style.opacity = '0', 2000);
       }
-    },
-    isCalculated: fieldDef.tipo === 'calculado'
+    }
   };
-}
-
-// Função para atualizar campos calculados em tempo real
-function updateCalculatedFields() {
-  const pibPerCapitaInput = document.querySelector('input[name="PIBPerCapita"]');
-  const populacaoInput = document.querySelector('input[name="Populacao"]');
-  const pibDisplay = document.querySelector('div[name="PIB"]');
-  
-  if (pibPerCapitaInput && populacaoInput && pibDisplay) {
-    const populacao = parseFloat(populacaoInput.value) || 0;
-    const pibPerCapita = parseFloat(pibPerCapitaInput.value) || 0;
-    const pibTotal = calculatePIBTotal(populacao, pibPerCapita);
-    
-    pibDisplay.textContent = `${formatCurrency(pibTotal)} (calculado: ${populacao.toLocaleString()} × ${formatPIBPerCapita(pibPerCapita)})`;
-    pibDisplay.dataset.calculatedValue = pibTotal;
-  }
 }
 
 function renderForm() {
@@ -291,7 +237,7 @@ function renderForm() {
 
   const getters = {};
   (sec.campos||[]).forEach(def => {
-    const g = inputFor(def.key, def, dadosSecao[def.key] ?? pais?.[def.key], pais);
+    const g = inputFor(def.key, def, dadosSecao[def.key] ?? pais?.[def.key]);
     el.formSecao.appendChild(g.wrap);
     getters[def.key] = g.get;
     if (el.listaCampos) {
@@ -317,13 +263,6 @@ function renderForm() {
         const payload = {};
         Object.keys(getters).forEach(k => payload[k] = getters[k]());
         
-        // Calcular PIB total a partir de PIB per capita e população
-        if (state.secaoSelecionada === 'geral' && payload.PIBPerCapita && payload.Populacao) {
-          const populacao = parseFloat(payload.Populacao) || 0;
-          const pibPerCapita = parseFloat(payload.PIBPerCapita) || 0;
-          payload.PIB = calculatePIBTotal(populacao, pibPerCapita);
-        }
-        
         // Validações básicas
         const defsByKey = Object.fromEntries((sec.campos||[]).map(d => [d.key, d]));
         for (const [k,v] of Object.entries(payload)) {
@@ -348,7 +287,7 @@ function renderForm() {
         if (state.secaoSelecionada === 'geral') {
           Object.entries(payload).forEach(([key, value]) => {
             // Campos que devem ser sincronizados na raiz
-            if (['PIB', 'PIBPerCapita', 'Populacao', 'Estabilidade', 'Tecnologia', 'Urbanizacao', 'ModeloPolitico', 'Visibilidade'].includes(key)) {
+            if (['PIB', 'Populacao', 'Estabilidade', 'Tecnologia', 'Urbanizacao', 'ModeloPolitico', 'Visibilidade'].includes(key)) {
               updateData[key] = value;
             }
           });
@@ -1805,7 +1744,6 @@ function updateQuickStats() {
 // Sistema de aprovação de veículos
 let vehicleApprovalSystem = null;
 let inventorySystem = null;
-let economicSimulator = null;
 
 async function initVehicleApprovalSystem() {
   try {
@@ -1827,15 +1765,6 @@ async function initInventorySystem() {
   }
 }
 
-async function initEconomicSystem() {
-  try {
-    economicSimulator = await initEconomicSimulator();
-    Logger.info('Sistema econômico inicializado');
-  } catch (error) {
-    Logger.error('Erro ao inicializar sistema econômico:', error);
-  }
-}
-
 // Setup dos event listeners para as ferramentas da aba Tools
 function setupToolsEventListeners() {
   // Event listeners removidos - ferramentas serão refeitas
@@ -1850,8 +1779,7 @@ async function initNarratorSystems() {
     await Promise.all([
       initPlayerManagement(),
       initVehicleApprovalSystem(),
-      initInventorySystem(),
-      initEconomicSystem()
+      initInventorySystem()
     ]);
     
     // Make functions globally available
@@ -1860,7 +1788,6 @@ async function initNarratorSystems() {
     window.playerManager = playerManager;
     window.vehicleApprovalSystem = vehicleApprovalSystem;
     window.inventorySystem = inventorySystem;
-    window.economicSimulator = economicSimulator;
     
     // Setup dos event listeners para ferramentas da aba Tools
     setupToolsEventListeners();

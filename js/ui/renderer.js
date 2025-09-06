@@ -299,8 +299,8 @@ export function renderPublicCountries(countries) {
   }
 
   validCountries.forEach(country => {
-    // Priorizar dados da seção 'geral' se existir, senão usar da raiz
-    const pib = country.geral?.PIB ?? country.PIB ?? 0;
+    // Priorizar dados da raiz (mais atualizados), senão usar da seção 'geral'
+    const pib = country.PIB ?? country.geral?.PIB ?? 0;
     const populacao = country.geral?.Populacao ?? country.Populacao ?? 0;
     const estabilidade = country.geral?.Estabilidade ?? country.Estabilidade ?? 0;
     const tecnologia = country.geral?.Tecnologia ?? country.Tecnologia ?? 0;
@@ -388,7 +388,7 @@ export function renderDetailedCountryPanel(country) {
   if (!DOM.countryPanelContent || !DOM.countryPanelModal) return;
   
   // Priorizar dados da seção 'geral' se existir
-  const pib = country.geral?.PIB ?? country.PIB ?? 0;
+  const pib = country.PIB ?? country.geral?.PIB ?? 0;
   const populacao = country.geral?.Populacao ?? country.Populacao ?? 0;
   const estabilidade = country.geral?.Estabilidade ?? country.Estabilidade ?? 0;
   const tecnologia = country.geral?.Tecnologia ?? country.Tecnologia ?? 0;

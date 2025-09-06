@@ -1,0 +1,140 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===== FUNÇÕES AUXILIARES =====
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+
+    function isStaff() {
+      return isLoggedIn() &&
+        exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.papel in ['narrador', 'admin'];
+    }
+
+    function isNarrator() {
+      return isLoggedIn() &&
+        exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.papel == 'narrador';
+    }
+
+    // ===== PAÍSES - Acesso público para leitura, escrita para staff =====
+    match /paises/{document} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    // ===== USUÁRIOS =====
+    match /usuarios/{userId} {
+      // Usuário pode ler/escrever seus próprios dados
+      allow read, write: if isLoggedIn() && request.auth.uid == userId;
+      
+      // Staff pode ler todos os usuários
+      allow read: if isStaff();
+      
+      // Staff pode atualizar dados de usuários (atribuições, etc.)
+      allow write: if isStaff();
+    }
+
+    // ===== CONFIGURAÇÕES =====
+    match /configuracoes/{document} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    // ===== SISTEMA ECONÔMICO =====
+    
+    // Histórico econômico
+    match /economic_history/{document} {
+      allow read: if isLoggedIn();
+      allow create, update: if isStaff();
+      allow delete: if isStaff();
+    }
+
+    // Histórico de mudanças
+    match /change_history/{document} {
+      allow read: if isLoggedIn();
+      allow create, update: if isStaff();
+      allow delete: if isStaff();
+    }
+
+    // ===== VEÍCULOS =====
+    
+    // Veículos pendentes
+    match /vehicles_pending/{docId} {
+      allow create: if isLoggedIn()
+        && request.resource.data.keys().hasAny(['playerId'])
+        && request.auth.uid == request.resource.data.playerId;
+
+      allow read: if isLoggedIn()
+        && (request.auth.uid == resource.data.playerId || isStaff());
+
+      allow update, delete: if isStaff();
+    }
+
+    // Veículos aprovados
+    match /vehicles_approved/{playerId}/{documents=**} {
+      allow read: if isLoggedIn()
+        && (request.auth.uid == playerId || isStaff());
+
+      allow write: if isStaff();
+    }
+
+    // Veículos rejeitados
+    match /vehicles_rejected/{docId} {
+      allow create: if isStaff();
+      allow read: if isLoggedIn()
+        && (request.auth.uid == resource.data.playerId || isStaff());
+      allow update, delete: if isStaff();
+    }
+
+    // ===== INVENTÁRIO =====
+    match /inventory/{countryId}/{documents=**} {
+      allow read: if isLoggedIn()
+        && (resource.data.ownerUid == request.auth.uid || isStaff());
+
+      allow write: if isStaff();
+    }
+
+    // ===== EVENTOS E NOTIFICAÇÕES =====
+    
+    // Eventos do sistema
+    match /events/{document} {
+      allow read: if isLoggedIn();
+      allow write: if isStaff();
+    }
+
+    // Histórico de eventos
+    match /event_history/{document} {
+      allow read: if isLoggedIn();
+      allow write: if isStaff();
+    }
+
+    // Notificações
+    match /notifications/{document} {
+      allow read: if isLoggedIn();
+      allow write: if isStaff();
+    }
+
+    // ===== DADOS DE JOGO =====
+    
+    // Dados do turno atual
+    match /game_state/{document} {
+      allow read: if isLoggedIn();
+      allow write: if isStaff();
+    }
+
+    // Catálogo de campos
+    match /field_catalog/{document} {
+      allow read: if isLoggedIn();
+      allow write: if isStaff();
+    }
+
+    // ===== FALLBACK - Qualquer outra coleção =====
+    match /{document=**} {
+      allow read: if isLoggedIn();
+      allow write: if isStaff();
+    }
+  }
+}

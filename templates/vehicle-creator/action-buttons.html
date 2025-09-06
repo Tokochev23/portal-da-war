@@ -1,28 +1,95 @@
 <!-- ACTION BUTTONS -->
-<section class="text-center">
-  <div class="flex flex-col sm:flex-row gap-4 justify-center">
+<section class="text-center py-8">
+  <div class="flex flex-col justify-center items-center max-w-md mx-auto">
+    <!-- Main Action Button -->
     <button 
-      id="calculate-btn"
-      class="px-8 py-3 bg-brand-500 hover:bg-brand-600 text-bg font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      onclick="performFullAnalysis()"
+      id="generate-summary-btn"
+      class="w-full px-10 py-4 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-bg font-bold rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-brand-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-bg"
+      onclick="showVehicleSummaryModal()"
     >
-      🧮 Calcular Performance Completa
+      <span class="flex items-center justify-center gap-2">
+        <span class="text-2xl">📋</span>
+        <span>Gerar Ficha Completa</span>
+      </span>
     </button>
     
-    <button 
-      id="save-prototype-btn"
-      class="px-8 py-3 bg-slate-700 hover:bg-slate-600 text-slate-100 font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      onclick="savePrototype()"
-    >
-      💾 Salvar Protótipo
-    </button>
-    
-    <button 
-      id="export-btn"
-      class="px-8 py-3 bg-slate-600 hover:bg-slate-500 text-slate-100 font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      onclick="exportVehicle()"
-    >
-      📄 Exportar Design
-    </button>
+    <!-- Helper Text -->
+    <p class="text-slate-400 text-sm mt-4 leading-relaxed">
+      Configure todos os componentes do seu veículo nas abas acima<br>
+      e gere a ficha técnica completa para submeter à aprovação
+    </p>
+
+    <!-- Requirements indicator -->
+    <div class="mt-4 p-3 bg-slate-800/40 border border-slate-700/50 rounded-lg">
+      <p class="text-xs text-slate-400 mb-2">📝 Requisitos mínimos:</p>
+      <div class="grid grid-cols-2 gap-2 text-xs text-slate-500">
+        <div id="req-chassis" class="flex items-center gap-1">
+          <span class="w-2 h-2 bg-red-500 rounded-full" id="chassis-indicator"></span>
+          <span>Chassi</span>
+        </div>
+        <div id="req-engine" class="flex items-center gap-1">
+          <span class="w-2 h-2 bg-red-500 rounded-full" id="engine-indicator"></span>
+          <span>Motor</span>
+        </div>
+        <div id="req-armor" class="flex items-center gap-1">
+          <span class="w-2 h-2 bg-red-500 rounded-full" id="armor-indicator"></span>
+          <span>Blindagem</span>
+        </div>
+        <div id="req-weapon" class="flex items-center gap-1">
+          <span class="w-2 h-2 bg-red-500 rounded-full" id="weapon-indicator"></span>
+          <span>Armamento</span>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
+
+<script>
+// Update requirements indicators
+function updateRequirements() {
+  const chassisIndicator = document.getElementById('chassis-indicator');
+  const engineIndicator = document.getElementById('engine-indicator');
+  const armorIndicator = document.getElementById('armor-indicator');
+  const weaponIndicator = document.getElementById('weapon-indicator');
+  const generateBtn = document.getElementById('generate-summary-btn');
+  
+  if (!chassisIndicator || !engineIndicator || !armorIndicator || !weaponIndicator || !generateBtn) return;
+  
+  const hasComponents = {
+    chassis: window.currentVehicle?.chassis,
+    engine: window.currentVehicle?.engine,
+    armor: (window.currentVehicle?.armorThickness || window.currentVehicle?.armor_thickness || 0) > 0,
+    weapon: (window.currentVehicle?.main_gun_caliber || 0) > 0
+  };
+  
+  // Update indicators
+  chassisIndicator.className = hasComponents.chassis ? 'w-2 h-2 bg-green-500 rounded-full' : 'w-2 h-2 bg-red-500 rounded-full';
+  engineIndicator.className = hasComponents.engine ? 'w-2 h-2 bg-green-500 rounded-full' : 'w-2 h-2 bg-red-500 rounded-full';
+  armorIndicator.className = hasComponents.armor ? 'w-2 h-2 bg-green-500 rounded-full' : 'w-2 h-2 bg-red-500 rounded-full';
+  weaponIndicator.className = hasComponents.weapon ? 'w-2 h-2 bg-green-500 rounded-full' : 'w-2 h-2 bg-red-500 rounded-full';
+  
+  // Enable/disable button
+  const allRequired = hasComponents.chassis && hasComponents.engine && hasComponents.armor;
+  generateBtn.disabled = !allRequired;
+  
+  if (!allRequired) {
+    generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    generateBtn.classList.remove('hover:scale-105');
+  } else {
+    generateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    generateBtn.classList.add('hover:scale-105');
+  }
+}
+
+// Hook into vehicle updates
+if (window.updateVehicleCalculations) {
+  const originalUpdate = window.updateVehicleCalculations;
+  window.updateVehicleCalculations = function() {
+    originalUpdate.apply(this, arguments);
+    setTimeout(updateRequirements, 100);
+  };
+}
+
+// Initial check
+setTimeout(updateRequirements, 1000);
+</script>
