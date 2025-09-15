@@ -3,12 +3,13 @@
  * Simulação estratégica de investimentos econômicos com mecânicas anti-exploit
  */
 
-import { auth, db } from '../services/firebase.js';
+import { auth, db, getAllCountries } from '../services/firebase.js';
 import { showNotification, Logger } from '../utils.js';
 import EconomicCalculations from './economicCalculations.js';
 import economicDependency from './economicDependency.js';
 import economicFeedback from './economicFeedback.js';
 import { calculateBudgetFromPIB, formatCurrency, formatPIBPerCapita } from '../utils/pibCalculations.js';
+import { POWER_PLANTS } from '../data/power_plants.js';
 
 // Configurações do Sistema Econômico
 const ECONOMIC_CONFIG = {
@@ -48,6 +49,14 @@ const ECONOMIC_CONFIG = {
       examples: ['Complexos industriais', 'Refinarias de petróleo', 'Siderúrgicas']
     },
     
+    exploration: {
+      id: 'exploration',
+      name: '⛏️ Exploração de Recursos',
+      multiplier: 1.0,
+      description: 'Exploração mineral e de recursos primários (petróleo, carvão, metais).',
+      examples: ['Exploração de jazidas', 'Perfuração de poços']
+    },
+
     social: {
       id: 'social',
       name: '🏥 Investimento Social',
@@ -111,19 +120,15 @@ class EconomicSimulator {
   }
 
   // Carregar países do Firebase
-  async loadCountries() {
+    async loadCountries() {
     try {
-      const snapshot = await db.collection('paises').get();
-      this.countries = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      this.countries = await getAllCountries(); // Usar a função centralizada
       
       // Ordenar por nome
       this.countries.sort((a, b) => (a.Pais || '').localeCompare(b.Pais || ''));
       Logger.info(`${this.countries.length} países carregados`);
     } catch (error) {
-      Logger.error('Erro ao carregar países:', error);
+      Logger.error('Erro ao carregar países no EconomicSimulator:', error);
       throw error;
     }
   }
@@ -239,12 +244,20 @@ class EconomicSimulator {
               `).join('')}
             </select>
           </div>
-          
+
+          <div class="text-right">
+            <div class="text-sm text-slate-400">Política Industrial</div>
+            <select id="modal-industrial-policy" class="bg-slate-700 border border-slate-600 rounded-lg px-3 py-1 text-slate-200">
+              <option value="combustivel" ${((country.PoliticaIndustrial || country.Politica) || 'combustivel') === 'combustivel' ? 'selected' : ''}>Combustível</option>
+              <option value="carvao" ${((country.PoliticaIndustrial || country.Politica) || 'combustivel') === 'carvao' ? 'selected' : ''}>Carvão</option>
+            </select>
+          </div>
+
           <div class="text-right">
             <div class="text-sm text-slate-400">Orçamento Disponível</div>
             <div class="text-lg font-semibold text-emerald-400">${budgetFormatted}</div>
           </div>
-          
+
           <button id="close-economic-modal" class="text-slate-400 hover:text-slate-200 text-2xl">
             ×
           </button>
@@ -488,6 +501,23 @@ class EconomicSimulator {
       modal.remove();
       this.showModal(); // Recriar modal com novo país
     });
+
+    // Política industrial selector - atualizar objeto país em memória
+    const policySelect = modal.querySelector('#modal-industrial-policy');
+    if (policySelect) {
+      policySelect.addEventListener('change', (e) => {
+        const countryObj = this.getCountryById(this.selectedCountry);
+        if (countryObj) {
+          countryObj.PoliticaIndustrial = e.target.value;
+          // Persistir imediatamente para refletir no painel
+          try {
+            db.collection('paises').doc(this.selectedCountry).update({ PoliticaIndustrial: e.target.value });
+          } catch (err) {
+            console.warn('Erro ao salvar PoliticaIndustrial:', err);
+          }
+        }
+      });
+    }
 
     // Troca de abas
     modal.querySelectorAll('.economic-tab').forEach(tab => {
@@ -1050,6 +1080,9 @@ class EconomicSimulator {
     try {
       // 1. Atualizar país principal
       const countryRef = db.collection('paises').doc(this.selectedCountry);
+      const country = this.getCountryById(this.selectedCountry) || {};
+
+      // Inicializar updates com PIB
       const countryUpdates = {
         PIB: results.newPIB,
         PIBPerCapita: results.newPIBPerCapita,
@@ -1058,6 +1091,104 @@ class EconomicSimulator {
         'geral.PIB': results.newPIB,
         'geral.PIBPerCapita': results.newPIBPerCapita
       };
+
+      // --- Recursos e Energia: calcular consumo/produção e índices ---
+      // Agregar consumo de recursos por ações industriais
+      let totalCombustivelConsumed = 0;
+      let totalCarvaoConsumed = 0;
+      let energyDemand = 0;
+  let totalCarvaoProduced = 0;
+
+      // Política industrial do país (default: 'combustivel')
+      const politica = country.PoliticaIndustrial || country.Politica || 'combustivel';
+
+  for (const action of actions) {
+        if (action.type === 'industry') {
+          const consume = EconomicCalculations.computeIndustryResourceConsumption(action.value, country);
+          // usar a política definida
+          if (politica === 'carvao') {
+            totalCarvaoConsumed += consume;
+          } else {
+            totalCombustivelConsumed += consume;
+          }
+          // estimativa de demanda de energia: cada 1M investido requer 0.5 unidades
+          energyDemand += (parseFloat(action.value) || 0) * 0.5;
+        }
+
+        // Exploração de recursos -> pode produzir Carvão
+        if (action.type === 'exploration') {
+          // Produção proporcional ao investimento, limitada pelo potencial do país
+          const invested = parseFloat(action.value) || 0; // em milhões
+          const potencial = parseFloat(country.PotencialCarvao || country.Potencial || country.PotencialCarvao || 0) || 0;
+          // regra simples: cada 1M investido produz 0.1 unidades de carvão, mas não pode exceder potencial * 0.1
+          const produced = Math.min(potencial * 0.1, invested * 0.1);
+          totalCarvaoProduced += produced;
+        }
+
+        // Ações de research e social também demandam energia levemente
+        if (action.type === 'research') {
+          energyDemand += (parseFloat(action.value) || 0) * 0.2;
+        }
+      }
+
+      // Calcular nova eficiência industrial: aumenta levemente com investments e tecnologia
+      const currentEfficiency = parseFloat(country.IndustrialEfficiency) || 50;
+      const efficiencyGainFromIndustry = actions.filter(a => a.type === 'industry').length * 0.5; // +0.5 por ação
+      const newEfficiency = Math.min(100, currentEfficiency + efficiencyGainFromIndustry + (results.technologyChanges || 0) * 0.2);
+      countryUpdates.IndustrialEfficiency = newEfficiency;
+
+      // Energia: ler capacidade atual (EnergiaCapacidade) e aplicar penalty se necessário
+      const energyCapacity = parseFloat(country.EnergiaCapacidade) || parseFloat(country.EnergiaDisponivel) || 0;
+      const energyPenalty = EconomicCalculations.computeEnergyPenalty(energyCapacity, energyDemand);
+
+      // Aplicar penalidade de energia reduzindo PIB se déficit for crítico
+      if (energyPenalty < 1.0) {
+        const penaltyPercent = (1 - energyPenalty) * 100;
+        const pibPenalty = results.newPIB * (1 - energyPenalty) * 0.1; // 10% do déficit em PIB
+        results.newPIB = Math.max(results.newPIB - pibPenalty, results.newPIB * 0.95); // Máximo -5% PIB
+        results.newPIBPerCapita = results.newPIB / (parseFloat(country.Populacao) || 1);
+
+        Logger.info(`Penalidade de energia aplicada: ${penaltyPercent.toFixed(1)}% déficit, -${pibPenalty.toFixed(0)} PIB`);
+      }
+
+      // Salvar capacidade atual para comparação
+      countryUpdates.EnergiaCapacidade = energyCapacity;
+
+      // Debitar recursos (garantir não ficar negativo)
+      const currentCombustivel = parseFloat(country.Combustivel) || 0;
+      const currentCarvao = parseFloat(country.CarvaoSaldo || country.Carvao || 0);
+
+      const newCombustivel = Math.max(0, currentCombustivel - totalCombustivelConsumed);
+      // Incluir produção de carvão
+      const newCarvao = Math.max(0, currentCarvao - totalCarvaoConsumed + totalCarvaoProduced);
+
+      countryUpdates.Combustivel = newCombustivel;
+      countryUpdates.CarvaoSaldo = newCarvao;
+
+      // Registrar produção no histórico (opcional)
+      if (totalCarvaoProduced > 0) {
+        historyData.results.producedCarvao = totalCarvaoProduced;
+      }
+
+      // Calcular índice de Bens de Consumo usando o helper
+      const resourcesSnapshot = {
+        Graos: country.Graos || 0,
+        Combustivel: newCombustivel,
+        EnergiaDisponivel: energyCapacity
+      };
+
+      const consumerGoodsIndex = EconomicCalculations.computeConsumerGoodsIndex(country, resourcesSnapshot);
+      countryUpdates.BensDeConsumo = consumerGoodsIndex;
+
+      // Aplicar efeito sobre Estabilidade conforme PRD
+      const currentStab = parseFloat(country.Estabilidade) || 0;
+      if (consumerGoodsIndex > 75) {
+        countryUpdates.Estabilidade = Math.min(100, currentStab + 3);
+        countryUpdates['geral.Estabilidade'] = Math.min(100, currentStab + 3);
+      } else if (consumerGoodsIndex < 25) {
+        countryUpdates.Estabilidade = Math.max(0, currentStab - 3);
+        countryUpdates['geral.Estabilidade'] = Math.max(0, currentStab - 3);
+      }
       
       // Aplicar mudanças de tecnologia e estabilidade
       if (results.technologyChanges > 0) {
@@ -1155,6 +1286,89 @@ class EconomicSimulator {
     } catch (error) {
       Logger.error('Erro ao salvar resultados econômicos:', error);
       throw error;
+    }
+  }
+
+  async buildPowerPlant(countryId, plantTypeId) {
+    try {
+      const country = this.getCountryById(countryId);
+      if (!country) {
+        showNotification('error', 'País não encontrado.');
+        return { success: false, message: 'País não encontrado.' };
+      }
+
+      const plant = POWER_PLANTS[plantTypeId];
+      if (!plant) {
+        showNotification('error', 'Tipo de usina inválido.');
+        return { success: false, message: 'Tipo de usina inválido.' };
+      }
+
+      // 1. Verificar custo
+      if (country.PIB < plant.cost) {
+        showNotification('error', `PIB insuficiente para construir ${plant.name}. Necessário: ${this.formatCurrency(plant.cost)}`);
+        return { success: false, message: 'PIB insuficiente.' };
+      }
+
+      // 2. Verificar requisito tecnológico
+      if (country.Tecnologia < plant.tech_requirement) {
+        showNotification('error', `Tecnologia insuficiente para construir ${plant.name}. Necessário: ${plant.tech_requirement}%`);
+        return { success: false, message: 'Tecnologia insuficiente.' };
+      }
+
+      // 3. Verificar potencial (para hidrelétricas)
+      if (plant.type === 'hydro') {
+        if (!country.PotencialHidreletrico || country.PotencialHidreletrico <= 0) {
+          showNotification('error', `País não possui potencial hidrelétrico para construir ${plant.name}.`);
+          return { success: false, message: 'Potencial hidrelétrico insuficiente.' };
+        }
+        // Decrementar potencial após construção
+        country.PotencialHidreletrico--;
+      }
+
+      // 4. Verificar recurso (para nucleares - Urânio)
+      if (plant.resource_input === 'Uranio') {
+        // Assumindo que Urânio é um recurso como Carvao ou Combustivel
+        if (!country.Uranio || country.Uranio <= 0) {
+          showNotification('error', `País não possui Urânio suficiente para construir ${plant.name}.`);
+          return { success: false, message: 'Urânio insuficiente.' };
+        }
+        // Decrementar Urânio após construção
+        country.Uranio--;
+      }
+
+      // Usar transação para garantir atomicidade
+      await db.runTransaction(async (transaction) => {
+        const countryRef = db.collection('paises').doc(countryId);
+        const currentCountryDoc = await transaction.get(countryRef);
+        const currentCountryData = currentCountryDoc.data();
+
+        // Recalcular PIB e power_plants com base nos dados mais recentes
+        const newPIB = currentCountryData.PIB - plant.cost;
+        const newPowerPlants = [...(currentCountryData.power_plants || []), { id: plantTypeId, built_turn: parseInt(document.getElementById('turno-atual-admin')?.textContent?.replace('#', '')) || 1 }];
+        
+        const updates = {
+          PIB: newPIB,
+          power_plants: newPowerPlants,
+          // Atualizar potencial hidrelétrico e urânio se aplicável
+          ...(plant.type === 'hydro' && { PotencialHidreletrico: country.PotencialHidreletrico }),
+          ...(plant.resource_input === 'Uranio' && { Uranio: country.Uranio }),
+        };
+
+        transaction.update(countryRef, updates);
+      });
+
+      // Atualizar o objeto local do país
+      country.PIB -= plant.cost;
+      country.power_plants.push({ id: plantTypeId, built_turn: parseInt(document.getElementById('turno-atual-admin')?.textContent?.replace('#', '')) || 1 });
+
+      showNotification('success', `${plant.name} construída com sucesso!`);
+      Logger.info(`${plant.name} construída para ${country.Pais}`, { countryId, plantTypeId });
+      return { success: true, message: `${plant.name} construída.` };
+
+    } catch (error) {
+      Logger.error(`Erro ao construir usina ${plantTypeId} para ${countryId}:`, error);
+      showNotification('error', `Erro ao construir usina: ${error.message}`);
+      return { success: false, message: `Erro ao construir usina: ${error.message}` };
     }
   }
 }

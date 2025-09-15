@@ -389,13 +389,43 @@ export async function getAllCountries(useCache = true) {
         
         const countries = querySnapshot.docs.map(doc => {
             const data = doc.data();
-            return {
+            const country = {
                 id: doc.id,
                 ...data,
                 // Sanitizar dados sensíveis se necessário
                 Pais: ValidationUtils.sanitizeInput(data.Pais || '', { maxLength: 100 }),
                 PIB: Math.max(0, Formatter.parseNumber(data.PIB) || 0)
             };
+
+            // Adicionar Carvao e PotencialCarvao se não existirem
+            if (country.Carvao === undefined) {
+                country.Carvao = 0;
+            }
+            if (country.PotencialCarvao === undefined) {
+                // Definir valores padrão e específicos para alguns países
+                switch (country.Pais) {
+                    case 'Alemanha':
+                        country.PotencialCarvao = 10;
+                        break;
+                    case 'Reino Unido':
+                        country.PotencialCarvao = 9;
+                        break;
+                    case 'Brasil':
+                        country.PotencialCarvao = 4;
+                        break;
+                    default:
+                        country.PotencialCarvao = 5; // Valor padrão para outros países
+                }
+            }
+            // Adicionar array para usinas de energia se não existir
+            if (country.power_plants === undefined) {
+                country.power_plants = [];
+            }
+            // Adicionar PotencialHidreletrico se não existir
+            if (country.PotencialHidreletrico === undefined) {
+                country.PotencialHidreletrico = 5; // Valor padrão
+            }
+            return country;
         });
         
         // Cachear resultado por 5 minutos
@@ -513,10 +543,30 @@ export async function updateTurn(newTurn, userId = null) {
         }
         
         await db.collection('configuracoes').doc('jogo').set(updateData, { merge: true });
-        
+
+        // Executar processamento automático do turno
+        try {
+            const { default: TurnProcessor } = await import('../systems/turnProcessor.js');
+
+            // Verificar se turno já foi processado para evitar duplicação
+            const alreadyProcessed = await TurnProcessor.isTurnProcessed(turn);
+
+            if (!alreadyProcessed) {
+                Logger.info(`Iniciando processamento automático do turno ${turn}`);
+                const processingResult = await TurnProcessor.processTurnEnd(turn);
+                Logger.info(`Processamento do turno ${turn} concluído`, processingResult);
+            } else {
+                Logger.info(`Turno ${turn} já foi processado anteriormente`);
+            }
+        } catch (processingError) {
+            // Não falhar a atualização do turno se houver erro no processamento
+            Logger.error('Erro no processamento automático do turno:', processingError);
+            console.warn('⚠️ Erro no processamento automático, mas turno foi atualizado');
+        }
+
         // Limpar cache relacionado
         globalCache.clear();
-        
+
         Logger.info(`Turno atualizado para #${turn}`, { userId, newTurn: turn });
         return { success: true, turno: turn };
     } catch (error) {

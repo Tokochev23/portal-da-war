@@ -259,16 +259,39 @@ export class VehicleApprovalSystem {
 
     async loadApprovedVehicles() {
         try {
-            const snapshot = await db.collection('vehicles_approved')
-                .orderBy('approvalDate', 'desc')
-                .limit(50)
-                .get();
+            console.log('🔄 Carregando veículos aprovados (nova estrutura)...');
             
-            this.approvedVehicles = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                approvalDate: doc.data().approvalDate?.toDate() || new Date()
-            }));
+            // Get all countries with approved vehicles
+            const countriesSnapshot = await db.collection('vehicles_approved').get();
+            
+            this.approvedVehicles = [];
+            
+            for (const countryDoc of countriesSnapshot.docs) {
+                const countryId = countryDoc.id;
+                console.log(`📁 Processando país: ${countryId}`);
+                
+                // Get vehicles for this country
+                const vehiclesSnapshot = await db.collection('vehicles_approved')
+                    .doc(countryId)
+                    .collection('vehicles')
+                    .orderBy('approvalDate', 'desc')
+                    .limit(20) // Limit per country
+                    .get();
+                
+                vehiclesSnapshot.docs.forEach(doc => {
+                    this.approvedVehicles.push({
+                        id: doc.id,
+                        ...doc.data(),
+                        approvalDate: doc.data().approvalDate?.toDate() || new Date()
+                    });
+                });
+            }
+            
+            // Sort all approved vehicles by date
+            this.approvedVehicles.sort((a, b) => (b.approvalDate || 0) - (a.approvalDate || 0));
+            
+            // Keep only top 50 overall
+            this.approvedVehicles = this.approvedVehicles.slice(0, 50);
             
             console.log(`✅ ${this.approvedVehicles.length} veículos aprovados carregados`);
         } catch (error) {
@@ -694,8 +717,14 @@ export class VehicleApprovalSystem {
             
             console.log(`📦 Quantidade original: ${originalQuantity}, aprovada: ${finalQuantity}`);
             
-            // Move to approved collection with updated quantity
-            await db.collection('vehicles_approved').doc(vehicleId).set({
+            // Move to approved collection with updated quantity (NEW STRUCTURE)
+            console.log(`📁 Salvando na nova estrutura: vehicles_approved/${vehicleData.countryId}/vehicles/${vehicleId}`);
+            
+            await db.collection('vehicles_approved')
+                  .doc(vehicleData.countryId)
+                  .collection('vehicles')
+                  .doc(vehicleId)
+                  .set({
                 ...vehicleData,
                 quantity: finalQuantity,
                 originalQuantity: originalQuantity,
@@ -703,7 +732,16 @@ export class VehicleApprovalSystem {
                 status: 'approved'
             });
             
+            console.log('✅ Veículo salvo na nova estrutura Firebase');
+            
             // Add to country inventory with approved quantity
+            console.log('🔍 Dados do veículo antes de adicionar ao inventário:', {
+                countryId: vehicleData.countryId,
+                category: vehicleData.category,
+                vehicleName: vehicleData.vehicleData?.name,
+                quantity: finalQuantity
+            });
+            
             await this.addToInventory({...vehicleData, quantity: finalQuantity});
             
             // Remove from pending
@@ -734,25 +772,70 @@ export class VehicleApprovalSystem {
             
             const vehicleData = vehicleDoc.data();
             
-            // Move to rejected collection
-            await db.collection('vehicles_rejected').doc(vehicleId).set({
-                ...vehicleData,
-                rejectionDate: new Date(),
+            // Delete associated files from Storage before rejecting
+            await this.deleteVehicleFiles(vehicleData);
+            
+            // Log rejection for audit purposes only (no permanent storage)
+            console.log(`🗑️ Veículo rejeitado e arquivos deletados:`, {
+                vehicleId: vehicleId,
+                vehicleName: vehicleData.vehicleData?.name,
+                countryName: vehicleData.countryName,
                 rejectionReason: reason || 'Sem motivo especificado',
-                status: 'rejected'
+                rejectionDate: new Date().toISOString()
             });
             
-            // Remove from pending
+            // Remove from pending (no need to store rejected vehicles)
             await db.collection('vehicles_pending').doc(vehicleId).delete();
             
             // Refresh data
             await this.refreshData();
             
-            console.log(`❌ Veículo ${vehicleId} rejeitado com sucesso`);
+            console.log(`✅ Veículo ${vehicleId} rejeitado e limpo do sistema`);
             
         } catch (error) {
             console.error('❌ Erro ao rejeitar veículo:', error);
             alert('Erro ao rejeitar veículo: ' + error.message);
+        }
+    }
+
+    async deleteVehicleFiles(vehicleData) {
+        try {
+            console.log('🗑️ Iniciando limpeza de arquivos do veículo rejeitado...');
+            
+            if (!window.firebase?.storage) {
+                console.warn('⚠️ Firebase Storage não disponível, pulando limpeza de arquivos');
+                return;
+            }
+
+            const storage = window.firebase.storage();
+            const filesToDelete = [];
+
+            // Collect file URLs to delete
+            if (vehicleData.imageUrl) {
+                filesToDelete.push({ url: vehicleData.imageUrl, type: 'PNG' });
+            }
+            if (vehicleData.vehicleSheetImageUrl && vehicleData.vehicleSheetImageUrl.startsWith('http')) {
+                filesToDelete.push({ url: vehicleData.vehicleSheetImageUrl, type: 'PNG/HTML' });
+            }
+
+            // Delete each file
+            for (const file of filesToDelete) {
+                try {
+                    // Extract file path from URL
+                    const fileRef = storage.refFromURL(file.url);
+                    await fileRef.delete();
+                    console.log(`✅ Arquivo ${file.type} deletado:`, file.url);
+                } catch (deleteError) {
+                    console.warn(`⚠️ Erro ao deletar arquivo ${file.type}:`, deleteError);
+                    // Continue with other files even if one fails
+                }
+            }
+
+            console.log(`✅ Limpeza de arquivos concluída. ${filesToDelete.length} arquivos processados.`);
+
+        } catch (error) {
+            console.error('❌ Erro geral na limpeza de arquivos:', error);
+            // Don't throw error here - rejection should continue even if file cleanup fails
         }
     }
 
@@ -774,18 +857,53 @@ export class VehicleApprovalSystem {
             const vehicleName = vehicleData.vehicleData?.name || vehicleData.vehicleData?.vehicle_name || 'Veículo Sem Nome';
             
             if (!inventory[category][vehicleName]) {
-                inventory[category][vehicleName] = {
-                    quantity: 0,
-                    specs: vehicleData.vehicleData,
-                    cost: vehicleData.vehicleData?.total_cost || vehicleData.vehicleData?.totalCost || 0
+                // Debug cost calculation
+                const possibleCosts = {
+                    'vehicleData.vehicleData?.total_cost': vehicleData.vehicleData?.total_cost,
+                    'vehicleData.vehicleData?.totalCost': vehicleData.vehicleData?.totalCost,
+                    'vehicleData.total_cost': vehicleData.total_cost,
+                    'vehicleData.totalCost': vehicleData.totalCost,
+                    'vehicleData.cost': vehicleData.cost
                 };
+                
+                console.log('🔍 Custos possíveis para', vehicleName, ':', possibleCosts);
+                
+                // Try multiple cost fields
+                const unitCost = vehicleData.vehicleData?.total_cost || 
+                               vehicleData.vehicleData?.totalCost || 
+                               vehicleData.total_cost ||
+                               vehicleData.totalCost ||
+                               vehicleData.cost ||
+                               0;
+                               
+                console.log('💰 Custo unitário calculado:', unitCost);
+
+                // Create clean object without undefined values
+                const inventoryItem = {
+                    quantity: 0,
+                    specs: vehicleData.vehicleData || {},
+                    cost: unitCost,
+                    approvedDate: new Date().toISOString(),
+                    approvedBy: 'narrator'
+                };
+                
+                // Only add URLs if they exist and are valid
+                if (vehicleData.imageUrl || vehicleData.vehicleSheetImageUrl) {
+                    inventoryItem.sheetImageUrl = vehicleData.imageUrl || vehicleData.vehicleSheetImageUrl;
+                }
+                
+                if (vehicleData.vehicleSheetHtmlUrl) {
+                    inventoryItem.sheetHtmlUrl = vehicleData.vehicleSheetHtmlUrl;
+                }
+                
+                inventory[category][vehicleName] = inventoryItem;
             }
             
             inventory[category][vehicleName].quantity += vehicleData.quantity || 1;
             
             await inventoryRef.set(inventory, { merge: true });
             
-            console.log(`📦 ${vehicleData.quantity || 1}x ${vehicleName} adicionado ao inventário de ${vehicleData.countryName}`);
+            console.log(`📦 ${vehicleData.quantity || 1}x ${vehicleName} adicionado ao inventário com ficha de ${vehicleData.countryName}`);
             
         } catch (error) {
             console.error('❌ Erro ao adicionar ao inventário:', error);
@@ -980,13 +1098,17 @@ export class VehicleApprovalSystem {
         
         const reason = prompt('Motivo da rejeição em lote (opcional):');
         
-        if (!confirm(`Rejeitar ${selected.length} veículo(s) selecionado(s)?`)) {
+        if (!confirm(`Rejeitar ${selected.length} veículo(s) selecionado(s)?\n\nTodos os arquivos associados serão removidos para economizar espaço.`)) {
             return;
         }
+        
+        console.log(`🗑️ Iniciando rejeição em lote de ${selected.length} veículos...`);
         
         for (const vehicleId of selected) {
             await this.rejectVehicle(vehicleId);
         }
+        
+        console.log(`✅ Rejeição em lote concluída. ${selected.length} veículos e arquivos removidos.`);
     }
 
     getSelectedVehicles() {

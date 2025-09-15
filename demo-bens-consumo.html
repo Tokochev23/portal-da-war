@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demonstração - Sistema de Bens de Consumo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-mono">
+    <div class="container mx-auto p-6 max-w-4xl">
+        <h1 class="text-3xl font-bold mb-6 text-center text-pink-400">🛍️ Sistema de Bens de Consumo e Estabilidade</h1>
+
+        <!-- Explicação do Sistema -->
+        <div class="bg-slate-900 rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4 text-yellow-400">🎯 Como Funciona</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div class="space-y-2">
+                    <div><strong>Produção:</strong> Capacidade industrial × Tecnologia × Urbanização × PIB × Estabilidade</div>
+                    <div><strong>Demanda:</strong> População × Urbanização × Expectativas (PIB)</div>
+                    <div><strong>Nível:</strong> (Produção ÷ Demanda) × 100%</div>
+                </div>
+                <div class="space-y-2">
+                    <div><strong>Efeito:</strong> Nível de bens afeta estabilidade por turno</div>
+                    <div><strong>Ciclo:</strong> Estabilidade afeta produção no próximo cálculo</div>
+                    <div><strong>Equilibrio:</strong> Países precisam balancear produção vs demanda</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabela de Efeitos -->
+        <div class="bg-slate-800 rounded-lg p-6 mb-6">
+            <h3 class="text-lg font-semibold mb-4 text-pink-400">📊 Efeitos na Estabilidade por Turno</h3>
+            <div class="grid grid-cols-6 gap-2 text-center text-sm">
+                <div class="bg-green-900/50 p-3 rounded border border-green-600">
+                    <div class="text-green-400 font-bold">≥85%</div>
+                    <div class="text-green-300">Excelente</div>
+                    <div class="text-xl text-green-400">+3%</div>
+                    <div class="text-xs">População feliz</div>
+                </div>
+                <div class="bg-lime-900/50 p-3 rounded border border-lime-600">
+                    <div class="text-lime-400 font-bold">70-84%</div>
+                    <div class="text-lime-300">Bom</div>
+                    <div class="text-xl text-lime-400">+2%</div>
+                    <div class="text-xs">População satisfeita</div>
+                </div>
+                <div class="bg-slate-700/50 p-3 rounded border border-slate-600">
+                    <div class="text-slate-400 font-bold">50-69%</div>
+                    <div class="text-slate-300">Adequado</div>
+                    <div class="text-xl text-slate-400">±0%</div>
+                    <div class="text-xs">População neutra</div>
+                </div>
+                <div class="bg-orange-900/50 p-3 rounded border border-orange-600">
+                    <div class="text-orange-400 font-bold">30-49%</div>
+                    <div class="text-orange-300">Ruim</div>
+                    <div class="text-xl text-orange-400">-2%</div>
+                    <div class="text-xs">População insatisfeita</div>
+                </div>
+                <div class="bg-red-900/50 p-3 rounded border border-red-600">
+                    <div class="text-red-400 font-bold">15-29%</div>
+                    <div class="text-red-300">Muito Ruim</div>
+                    <div class="text-xl text-red-400">-3.5%</div>
+                    <div class="text-xs">População revoltada</div>
+                </div>
+                <div class="bg-rose-900/50 p-3 rounded border border-rose-600">
+                    <div class="text-rose-400 font-bold"><15%</div>
+                    <div class="text-rose-300">Crítico</div>
+                    <div class="text-xl text-rose-400">-5%</div>
+                    <div class="text-xs">Crise social</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Exemplos de Países -->
+        <div class="space-y-6">
+            <!-- EUA - País Rico -->
+            <div class="bg-slate-900 rounded-lg p-6 border-l-4 border-green-500">
+                <h3 class="text-lg font-semibold mb-3 text-green-400">🇺🇸 ESTADOS UNIDOS (País Rico)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div class="space-y-2">
+                        <div>População: <span class="text-yellow-300">161 milhões</span></div>
+                        <div>PIB per capita: <span class="text-yellow-300">$2,400 (Ultra Desenvolvido)</span></div>
+                        <div>Urbanização: <span class="text-yellow-300">64%</span></div>
+                        <div>Tecnologia: <span class="text-yellow-300">80 pontos</span></div>
+                        <div>Estabilidade: <span class="text-yellow-300">75%</span></div>
+                    </div>
+                    <div class="space-y-2">
+                        <div>Produção: <span class="text-green-300">19,440 unidades</span></div>
+                        <div>Demanda: <span class="text-blue-300">17,856 unidades</span></div>
+                        <div>Nível: <span class="text-green-400 font-bold">109% (cap. 100%)</span></div>
+                        <div>Efeito: <span class="text-green-400 font-bold">+3% estabilidade/turno</span></div>
+                        <div>Status: <span class="text-green-300">População muito satisfeita</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Brasil - País em Desenvolvimento -->
+            <div class="bg-slate-900 rounded-lg p-6 border-l-4 border-yellow-500">
+                <h3 class="text-lg font-semibold mb-3 text-yellow-400">🇧🇷 BRASIL (Em Desenvolvimento)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div class="space-y-2">
+                        <div>População: <span class="text-yellow-300">54 milhões</span></div>
+                        <div>PIB per capita: <span class="text-yellow-300">$300 (Moderado)</span></div>
+                        <div>Urbanização: <span class="text-yellow-300">36%</span></div>
+                        <div>Tecnologia: <span class="text-yellow-300">25 pontos</span></div>
+                        <div>Estabilidade: <span class="text-yellow-300">60%</span></div>
+                    </div>
+                    <div class="space-y-2">
+                        <div>Produção: <span class="text-green-300">2,387 unidades</span></div>
+                        <div>Demanda: <span class="text-blue-300">3,456 unidades</span></div>
+                        <div>Nível: <span class="text-orange-400 font-bold">69%</span></div>
+                        <div>Efeito: <span class="text-slate-400 font-bold">±0% estabilidade/turno</span></div>
+                        <div>Status: <span class="text-slate-300">População neutra (no limite)</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Etiópia - País Pobre -->
+            <div class="bg-slate-900 rounded-lg p-6 border-l-4 border-red-500">
+                <h3 class="text-lg font-semibold mb-3 text-red-400">🇪🇹 ETIÓPIA (País Pobre)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div class="space-y-2">
+                        <div>População: <span class="text-yellow-300">18 milhões</span></div>
+                        <div>PIB per capita: <span class="text-yellow-300">$50 (Subdesenvolvido)</span></div>
+                        <div>Urbanização: <span class="text-yellow-300">8%</span></div>
+                        <div>Tecnologia: <span class="text-yellow-300">5 pontos</span></div>
+                        <div>Estabilidade: <span class="text-yellow-300">40%</span></div>
+                    </div>
+                    <div class="space-y-2">
+                        <div>Produção: <span class="text-green-300">346 unidades</span></div>
+                        <div>Demanda: <span class="text-blue-300">1,188 unidades</span></div>
+                        <div>Nível: <span class="text-red-400 font-bold">29%</span></div>
+                        <div>Efeito: <span class="text-red-400 font-bold">-3.5% estabilidade/turno</span></div>
+                        <div>Status: <span class="text-red-300">População muito insatisfeita</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Simulação de Turnos -->
+        <div class="bg-slate-900 rounded-lg p-6 mt-6">
+            <h3 class="text-lg font-semibold mb-4 text-purple-400">🔮 Simulação de 5 Turnos</h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- EUA -->
+                <div class="bg-slate-800 rounded-lg p-4">
+                    <div class="text-green-400 font-bold mb-2">🇺🇸 EUA</div>
+                    <div class="space-y-1 text-xs">
+                        <div>Turno 1: 75% → 78% (+3%)</div>
+                        <div>Turno 2: 78% → 81% (+3%)</div>
+                        <div>Turno 3: 81% → 84% (+3%)</div>
+                        <div>Turno 4: 84% → 87% (+3%)</div>
+                        <div>Turno 5: 87% → 90% (+3%)</div>
+                        <div class="border-t border-slate-600 pt-1 mt-2">
+                            <strong>Final: 90% (+15% total)</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Brasil -->
+                <div class="bg-slate-800 rounded-lg p-4">
+                    <div class="text-yellow-400 font-bold mb-2">🇧🇷 Brasil</div>
+                    <div class="space-y-1 text-xs">
+                        <div>Turno 1: 60% → 60% (±0%)</div>
+                        <div>Turno 2: 60% → 60% (±0%)</div>
+                        <div>Turno 3: 60% → 60% (±0%)</div>
+                        <div>Turno 4: 60% → 60% (±0%)</div>
+                        <div>Turno 5: 60% → 60% (±0%)</div>
+                        <div class="border-t border-slate-600 pt-1 mt-2">
+                            <strong>Final: 60% (estável)</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Etiópia -->
+                <div class="bg-slate-800 rounded-lg p-4">
+                    <div class="text-red-400 font-bold mb-2">🇪🇹 Etiópia</div>
+                    <div class="space-y-1 text-xs">
+                        <div>Turno 1: 40% → 36.5% (-3.5%)</div>
+                        <div>Turno 2: 36.5% → 33% (-3.5%)</div>
+                        <div>Turno 3: 33% → 29.5% (-3.5%)</div>
+                        <div>Turno 4: 29.5% → 26% (-3.5%)</div>
+                        <div>Turno 5: 26% → 22.5% (-3.5%)</div>
+                        <div class="border-t border-slate-600 pt-1 mt-2">
+                            <strong>Final: 22.5% (-17.5% total)</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estratégias -->
+        <div class="bg-slate-900 rounded-lg p-6 mt-6">
+            <h3 class="text-lg font-semibold mb-4 text-blue-400">💡 Estratégias para Melhorar Bens de Consumo</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h4 class="font-semibold text-green-400 mb-2">📈 Aumentar Produção</h4>
+                    <ul class="space-y-1 text-sm text-green-300">
+                        <li>• Investir em tecnologia (eficiência industrial)</li>
+                        <li>• Aumentar urbanização (infraestrutura)</li>
+                        <li>• Melhorar PIB per capita (poder de compra)</li>
+                        <li>• Manter estabilidade alta (capacidade produtiva)</li>
+                        <li>• Desenvolver indústria de bens de consumo</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-orange-400 mb-2">📉 Controlar Demanda</h4>
+                    <ul class="space-y-1 text-sm text-orange-300">
+                        <li>• Controlar crescimento populacional</li>
+                        <li>• Urbanização moderada (evitar expectativas altas)</li>
+                        <li>• Políticas de austeridade temporária</li>
+                        <li>• Educação sobre consumo consciente</li>
+                        <li>• Importações estratégicas de bens</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botões de Ação -->
+        <div class="text-center mt-8">
+            <div class="bg-slate-800 rounded-lg p-4">
+                <h4 class="font-semibold text-pink-400 mb-3">🎮 Ações do Narrador</h4>
+                <p class="text-sm text-slate-300 mb-4">Use os botões no painel do narrador para aplicar o sistema:</p>
+                <div class="space-y-2 text-sm">
+                    <div>🛍️ <strong>APLICAR BENS DE CONSUMO E ESTABILIDADE</strong> - Calcula e aplica efeitos para todos os países</div>
+                    <div>📈 <strong>Simular Estabilidade 5 Turnos</strong> - Previsão de evolução da estabilidade</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

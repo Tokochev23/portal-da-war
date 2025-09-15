@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demonstração - Cálculo de Consumo de Recursos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-mono">
+    <div class="container mx-auto p-6 max-w-4xl">
+        <h1 class="text-3xl font-bold mb-6 text-center text-blue-400">📊 Demonstração - Cálculo de Consumo</h1>
+
+        <div class="bg-slate-900 rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4 text-yellow-400">🇧🇷 Exemplo: BRASIL (1954)</h2>
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div><strong>População:</strong> 54 milhões</div>
+                <div><strong>PIB per capita:</strong> $300 USD</div>
+                <div><strong>Urbanização:</strong> 36%</div>
+                <div><strong>Tecnologia:</strong> 25 pontos</div>
+                <div><strong>Zona climática:</strong> Quente/Tropical</div>
+                <div><strong>Status militar:</strong> Paz</div>
+            </div>
+        </div>
+
+        <!-- Fórmula Base -->
+        <div class="bg-slate-800 rounded-lg p-6 mb-6">
+            <h3 class="text-lg font-semibold mb-4 text-green-400">📐 Fórmula Geral</h3>
+            <div class="bg-slate-700 p-4 rounded text-center">
+                <code class="text-blue-300">
+                    Consumo Final = Consumo Base × Desenvolvimento × Urbanização × Industrialização × Clima × Militar
+                </code>
+            </div>
+        </div>
+
+        <!-- Cálculos Detalhados -->
+        <div class="space-y-6">
+            <!-- GRÃOS -->
+            <div class="bg-slate-900 rounded-lg p-6 border-l-4 border-green-500">
+                <h3 class="text-lg font-semibold mb-3 text-green-400">🌾 GRÃOS (Alimentação)</h3>
+
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span>1. Consumo base (150 × 54 milhões):</span>
+                        <span class="text-yellow-300">8,100 unidades</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>2. Multiplicador desenvolvimento (PIB $300 = moderado):</span>
+                        <span class="text-yellow-300">× 1.2</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>3. Modificador urbanização (36% × -0.5%):</span>
+                        <span class="text-yellow-300">× 0.82 (eficiência urbana)</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>4. Sem modificador industrial:</span>
+                        <span class="text-yellow-300">× 1.0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>5. Eficiência tecnológica (25 pontos × -0.4%):</span>
+                        <span class="text-green-300">× 0.9 (mais eficiente)</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>6. Sem modificador climático:</span>
+                        <span class="text-yellow-300">× 1.0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>7. Modificador militar (paz):</span>
+                        <span class="text-yellow-300">× 1.0</span>
+                    </div>
+                    <hr class="border-slate-700 my-2">
+                    <div class="flex justify-between font-bold text-lg">
+                        <span>🌾 CONSUMO FINAL:</span>
+                        <span class="text-green-400">7,173 unidades/mês</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COMBUSTÍVEL -->
+            <div class="bg-slate-900 rounded-lg p-6 border-l-4 border-yellow-500">
+                <h3 class="text-lg font-semibold mb-3 text-yellow-400">⛽ COMBUSTÍVEL (Transporte/Aquecimento)</h3>
+
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span>1. Consumo base (50 × 54 milhões):</span>
+                        <span class="text-yellow-300">2,700 unidades</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>2. Multiplicador desenvolvimento:</span>
+                        <span class="text-yellow-300">× 1.2</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>3. Modificador urbanização (36% × +2%):</span>
+                        <span class="text-yellow-300">× 1.72 (mais veículos)</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>4. Modificador industrial (25 pontos × 3%):</span>
+                        <span class="text-yellow-300">× 1.75</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>5. Eficiência tecnológica (25 × -0.8%):</span>
+                        <span class="text-green-300">× 0.8 (motores eficientes)</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>6. Modificador climático (quente):</span>
+                        <span class="text-yellow-300">× 0.8 (menos aquecimento)</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>7. Modificador militar (paz):</span>
+                        <span class="text-yellow-300">× 1.0</span>
+                    </div>
+                    <hr class="border-slate-700 my-2">
+                    <div class="flex justify-between font-bold text-lg">
+                        <span>⛽ CONSUMO FINAL:</span>
+                        <span class="text-yellow-400">7,096 unidades/mês</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- METAIS -->
+            <div class="bg-slate-900 rounded-lg p-6 border-l-4 border-blue-500">
+                <h3 class="text-lg font-semibold mb-3 text-blue-400">⚙️ METAIS (Infraestrutura/Indústria)</h3>
+
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span>1. Consumo base (30 × 54 milhões):</span>
+                        <span class="text-yellow-300">1,620 unidades</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>2. Multiplicador desenvolvimento:</span>
+                        <span class="text-yellow-300">× 1.2</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>3. Modificador urbanização (36% × +1%):</span>
+                        <span class="text-yellow-300">× 1.36</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>4. Modificador industrial (25 pontos × 4%):</span>
+                        <span class="text-yellow-300">× 2.0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>5. Eficiência tecnológica (25 × -0.6%):</span>
+                        <span class="text-green-300">× 0.85 (ligas melhores)</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>6. Sem modificador climático:</span>
+                        <span class="text-yellow-300">× 1.0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>7. Modificador militar (paz):</span>
+                        <span class="text-yellow-300">× 1.0</span>
+                    </div>
+                    <hr class="border-slate-700 my-2">
+                    <div class="flex justify-between font-bold text-lg">
+                        <span>⚙️ CONSUMO FINAL:</span>
+                        <span class="text-blue-400">4,494 unidades/mês</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARVÃO -->
+            <div class="bg-slate-900 rounded-lg p-6 border-l-4 border-orange-500">
+                <h3 class="text-lg font-semibold mb-3 text-orange-400">🔥 CARVÃO (Energia/Siderurgia)</h3>
+
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span>1. Consumo base (40 × 54 milhões):</span>
+                        <span class="text-yellow-300">2,160 unidades</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>2. Multiplicador desenvolvimento:</span>
+                        <span class="text-yellow-300">× 1.2</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>3. Sem modificador urbanização:</span>
+                        <span class="text-yellow-300">× 1.0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>4. Modificador industrial (25 pontos × 2.5%):</span>
+                        <span class="text-yellow-300">× 1.625</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>5. Eficiência tecnológica (25 × -1%):</span>
+                        <span class="text-green-300">× 0.75 (fornos eficientes)</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>6. Modificador climático (quente):</span>
+                        <span class="text-yellow-300">× 0.6 (menos aquecimento)</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>7. Modificador militar (paz):</span>
+                        <span class="text-yellow-300">× 1.0</span>
+                    </div>
+                    <hr class="border-slate-700 my-2">
+                    <div class="flex justify-between font-bold text-lg">
+                        <span>🔥 CONSUMO FINAL:</span>
+                        <span class="text-orange-400">1,895 unidades/mês</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ENERGIA -->
+            <div class="bg-slate-900 rounded-lg p-6 border-l-4 border-purple-500">
+                <h3 class="text-lg font-semibold mb-3 text-purple-400">⚡ ENERGIA ELÉTRICA</h3>
+
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span>1. Consumo base (100 MW × 54 milhões):</span>
+                        <span class="text-yellow-300">5,400 MW</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>2. Multiplicador desenvolvimento:</span>
+                        <span class="text-yellow-300">× 1.2</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>3. Modificador urbanização (36% × +1.5%):</span>
+                        <span class="text-yellow-300">× 1.54</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>4. Modificador industrial (25 pontos × 2%):</span>
+                        <span class="text-yellow-300">× 1.5</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>5. Eficiência tecnológica (25 × -0.7%):</span>
+                        <span class="text-green-300">× 0.825 (equipamentos eficientes)</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>6. Sem modificador climático:</span>
+                        <span class="text-yellow-300">× 1.0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>7. Sem modificador militar:</span>
+                        <span class="text-yellow-300">× 1.0</span>
+                    </div>
+                    <hr class="border-slate-700 my-2">
+                    <div class="flex justify-between font-bold text-lg">
+                        <span>⚡ CONSUMO FINAL:</span>
+                        <span class="text-purple-400">12,346 MW/mês</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resumo Final -->
+        <div class="bg-slate-800 rounded-lg p-6 mt-8 border-2 border-blue-500">
+            <h3 class="text-xl font-semibold mb-4 text-blue-400">📋 RESUMO - BRASIL 1954</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span>🌾 Grãos:</span>
+                        <span class="text-green-400 font-bold">7,173/mês</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span>⛽ Combustível:</span>
+                        <span class="text-yellow-400 font-bold">7,096/mês</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span>⚙️ Metais:</span>
+                        <span class="text-blue-400 font-bold">4,494/mês</span>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span>🔥 Carvão:</span>
+                        <span class="text-orange-400 font-bold">1,895/mês</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span>⚡ Energia:</span>
+                        <span class="text-purple-400 font-bold">12,346 MW/mês</span>
+                    </div>
+                    <div class="flex justify-between text-sm text-slate-400">
+                        <span>Total recursos físicos:</span>
+                        <span class="font-bold">20,658 unidades/mês</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fatores Importantes -->
+        <div class="bg-slate-900 rounded-lg p-6 mt-6">
+            <h3 class="text-lg font-semibold mb-4 text-red-400">⚠️ Fatores Importantes</h3>
+            <ul class="space-y-2 text-sm text-slate-300">
+                <li><strong>Zona Climática:</strong> Países quentes consomem menos combustível/carvão (menos aquecimento)</li>
+                <li><strong>Urbanização:</strong> Aumenta consumo de combustível e metais, mas reduz grãos (eficiência)</li>
+                <li><strong>Industrialização:</strong> Países industrializados consomem mais recursos para produção</li>
+                <li><strong>Eficiência Tecnológica:</strong> 🆕 Tecnologia civil reduz consumo per capita (motores, fornos, equipamentos eficientes)</li>
+                <li><strong>Desenvolvimento:</strong> PIB per capita multiplica todo o consumo (padrão de vida)</li>
+                <li><strong>Militar:</strong> Guerra pode duplicar consumo de combustível e metais</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

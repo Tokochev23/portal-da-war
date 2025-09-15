@@ -1,0 +1,310 @@
+<div class="aircraft-tab-content" data-tab="engines">
+  <!-- Header Section -->
+  <div class="mb-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h2 class="text-xl font-bold text-slate-100 flex items-center gap-2">
+          <span>🚀</span>
+          <span>Seleção de Motor</span>
+        </h2>
+        <p class="text-sm text-slate-400 mt-1">Escolha o motor que irá propulsionar sua aeronave</p>
+      </div>
+      <div class="text-right">
+        <div class="text-sm text-slate-400">Selecionado:</div>
+        <div class="text-lg font-semibold text-blue-300" id="selected-engine-name">Nenhum</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Engine Requirements Display -->
+  <div id="engine-requirements" class="mb-6 p-4 bg-slate-800/30 rounded-xl border border-slate-700/50">
+    <div class="flex items-center gap-3 mb-3">
+      <span class="text-lg">📋</span>
+      <span class="font-semibold text-slate-200">Requisitos da Fuselagem</span>
+    </div>
+    <div id="engine-requirements-content" class="text-sm text-slate-400">
+      Selecione uma fuselagem primeiro para ver os requisitos de motor
+    </div>
+  </div>
+
+  <!-- Engine Count Selector -->
+  <div id="engine-count-selector" class="hidden mb-6 p-6 bg-blue-900/20 border border-blue-700/50 rounded-xl">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-3">
+        <span class="text-xl">🔢</span>
+        <h3 class="font-semibold text-blue-200">Quantidade de Motores</h3>
+      </div>
+      <div class="text-right">
+        <div class="text-2xl font-bold text-blue-300" id="engine-count-display">1</div>
+        <div class="text-xs text-slate-400">motores</div>
+      </div>
+    </div>
+    
+    <div class="mb-4">
+      <div class="flex items-center gap-4">
+        <span class="text-sm text-slate-400 min-w-0">1</span>
+        <div class="flex-1">
+          <input 
+            type="range" 
+            id="engine-count-slider" 
+            min="1" 
+            max="8" 
+            value="1" 
+            class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider"
+          />
+        </div>
+        <span class="text-sm text-slate-400 min-w-0">8</span>
+      </div>
+      <div class="mt-2 flex justify-between text-xs text-slate-500">
+        <span>Mínimo</span>
+        <span id="engine-count-info" class="text-blue-300">Selecionado: 1 motor</span>
+        <span>Máximo</span>
+      </div>
+    </div>
+
+    <!-- Performance Impact Preview -->
+    <div id="engine-count-impact" class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+      <div class="text-center p-2 bg-slate-800/40 rounded-lg">
+        <div class="text-blue-300 font-semibold" id="total-power-display">0</div>
+        <div class="text-xs text-slate-400">Potência Total</div>
+      </div>
+      <div class="text-center p-2 bg-slate-800/40 rounded-lg">
+        <div class="text-blue-300 font-semibold" id="total-weight-display">0 kg</div>
+        <div class="text-xs text-slate-400">Peso Total</div>
+      </div>
+      <div class="text-center p-2 bg-slate-800/40 rounded-lg">
+        <div class="text-blue-300 font-semibold" id="fuel-consumption-display">0</div>
+        <div class="text-xs text-slate-400">Consumo Total</div>
+      </div>
+      <div class="text-center p-2 bg-slate-800/40 rounded-lg">
+        <div class="text-blue-300 font-semibold" id="reliability-display">0%</div>
+        <div class="text-xs text-slate-400">Confiabilidade</div>
+      </div>
+    </div>
+
+    <!-- Engine Configuration Warning -->
+    <div id="engine-config-warning" class="hidden mt-4 p-3 bg-amber-900/20 border border-amber-800/50 rounded-lg">
+      <div class="flex items-start gap-2">
+        <span class="text-amber-400">⚠️</span>
+        <div class="text-sm text-amber-200">
+          <div class="font-medium mb-1">Configuração Complexa</div>
+          <div id="engine-config-warning-text"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Section -->
+  <div class="mb-6 p-4 bg-slate-800/30 rounded-xl border border-slate-700/50">
+    <div class="flex flex-wrap items-center gap-4">
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-slate-400">Filtrar por:</span>
+      </div>
+      <div class="flex gap-2">
+        <button class="engine-filter-btn active px-3 py-1 rounded-lg text-xs font-medium transition-colors border" data-filter="all">
+          Todos
+        </button>
+        <button class="engine-filter-btn px-3 py-1 rounded-lg text-xs font-medium transition-colors border" data-filter="turbojet_early">
+          Turbojatos
+        </button>
+        <button class="engine-filter-btn px-3 py-1 rounded-lg text-xs font-medium transition-colors border" data-filter="afterburning">
+          Pós-combustão
+        </button>
+        <button class="engine-filter-btn px-3 py-1 rounded-lg text-xs font-medium transition-colors border" data-filter="high_thrust">
+          Alto Empuxo
+        </button>
+        <button class="engine-filter-btn px-3 py-1 rounded-lg text-xs font-medium transition-colors border" data-filter="efficient">
+          Econômicos
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Engines Grid -->
+  <div id="engines-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <!-- Engines will be loaded dynamically here -->
+  </div>
+
+  <!-- Engine Comparison -->
+  <div id="engine-comparison" class="hidden mt-6 p-6 bg-slate-800/40 border border-slate-700/50 rounded-xl">
+    <h3 class="text-lg font-semibold text-slate-100 mb-4 flex items-center gap-2">
+      <span>⚖️</span>
+      <span>Comparação de Performance</span>
+    </h3>
+    <div id="engine-comparison-content">
+      <!-- Comparison charts will be populated here -->
+    </div>
+  </div>
+
+  <!-- Selection Details -->
+  <div id="engine-details" class="hidden mt-6 p-6 bg-slate-800/40 border border-slate-700/50 rounded-xl">
+    <h3 class="text-lg font-semibold text-slate-100 mb-4 flex items-center gap-2">
+      <span>🔧</span>
+      <span>Especificações Técnicas</span>
+    </h3>
+    <div id="engine-details-content">
+      <!-- Details will be populated when an engine is selected -->
+    </div>
+  </div>
+
+  <!-- Performance Impact -->
+  <div id="engine-performance-impact" class="hidden mt-6 p-6 bg-blue-900/20 border border-blue-700/50 rounded-xl">
+    <h3 class="text-lg font-semibold text-blue-200 mb-4 flex items-center gap-2">
+      <span>📈</span>
+      <span>Impacto na Performance</span>
+    </h3>
+    <div id="engine-performance-content">
+      <!-- Performance impact will be shown here -->
+    </div>
+  </div>
+
+  <!-- Compatibility Warnings -->
+  <div id="engine-warnings" class="hidden mt-4">
+    <div class="bg-amber-900/20 border border-amber-800/50 rounded-xl p-4">
+      <div class="flex items-start gap-3">
+        <span class="text-xl">⚠️</span>
+        <div>
+          <h4 class="font-semibold text-amber-300 mb-2">Avisos de Motor</h4>
+          <div id="engine-warnings-list" class="text-sm text-amber-200 space-y-1">
+            <!-- Warnings will be populated here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.engine-filter-btn {
+  @apply bg-slate-700/50 text-slate-300 border-slate-600/50;
+}
+
+.engine-filter-btn:hover {
+  @apply bg-slate-600/50 text-slate-200 border-slate-500/50;
+}
+
+.engine-filter-btn.active {
+  @apply bg-blue-600/20 text-blue-300 border-blue-500/50;
+}
+
+.engine-card {
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.engine-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.engine-card.selected {
+  @apply ring-2 ring-blue-400/60 bg-blue-900/20 border-blue-400/50;
+}
+
+.engine-card.selected .engine-card-title {
+  @apply text-blue-200;
+}
+
+.engine-card.incompatible {
+  @apply opacity-50 pointer-events-none;
+}
+
+.engine-card.incompatible::before {
+  content: "🚫";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 16px;
+}
+
+.thrust-bar {
+  @apply h-3 bg-slate-700/50 rounded-full overflow-hidden;
+}
+
+.thrust-bar-fill {
+  @apply h-full rounded-full transition-all duration-500;
+  background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+}
+
+.afterburner-indicator {
+  @apply inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium;
+  background: linear-gradient(90deg, #f97316, #ea580c);
+  color: white;
+}
+
+.reliability-indicator {
+  @apply flex items-center gap-1 text-xs;
+}
+
+.reliability-dot {
+  @apply w-2 h-2 rounded-full;
+}
+
+.reliability-dot.high {
+  @apply bg-green-400;
+}
+
+.reliability-dot.medium {
+  @apply bg-yellow-400;
+}
+
+.reliability-dot.low {
+  @apply bg-red-400;
+}
+
+/* Custom Slider Styles */
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: 2px solid #1e293b;
+  transition: all 0.2s ease;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  background: #2563eb;
+  transform: scale(1.1);
+}
+
+.slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: 2px solid #1e293b;
+  transition: all 0.2s ease;
+}
+
+.slider::-moz-range-thumb:hover {
+  background: #2563eb;
+  transform: scale(1.1);
+}
+
+.slider::-webkit-slider-track {
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #1e293b 0%, #3b82f6 100%);
+}
+
+.slider::-moz-range-track {
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #1e293b 0%, #3b82f6 100%);
+  border: none;
+}
+
+#engine-count-selector.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+</style>

@@ -1,0 +1,26 @@
+{
+  "name": "war1954-main",
+  "version": "1.0.0",
+  "description": "",
+  "main": "check-data-consistency.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "vitest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Tokochev23/portal-da-war.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Tokochev23/portal-da-war/issues"
+  },
+  "homepage": "https://github.com/Tokochev23/portal-da-war#readme",
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

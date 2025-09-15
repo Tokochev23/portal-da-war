@@ -33,6 +33,7 @@ function getHeroBlurb() {
 const turnPostBtn = document.getElementById('turn-post-button');
 const filterSelect = document.getElementById('filtro-visibilidade');
 const refreshButton = document.getElementById('refresh-paises');
+const searchInput = document.getElementById('search-country-input'); // Adicionado
 const turnoEditor = document.getElementById('turno-editor');
 const lastSyncElement = document.getElementById('last-sync');
 const countryListContainer = document.getElementById('lista-paises-publicos');
@@ -172,8 +173,10 @@ async function loadSiteData() {
 
 function filterAndRenderCountries() {
   const filterValue = filterSelect.value;
+  const searchTerm = searchInput.value.toLowerCase(); // Get search term
   let filteredCountries = [];
 
+  // Apply visibility filter first
   if (filterValue === 'todos') {
     filteredCountries = appState.allCountries;
   } else if (filterValue === 'publicos') {
@@ -186,12 +189,189 @@ function filterAndRenderCountries() {
     filteredCountries = appState.allCountries.filter(c => !c.Player);
   }
 
-  console.log(`Renderizando ${filteredCountries.length} países (filtro: ${filterValue})`);
+  // Apply search term filter
+  if (searchTerm) {
+    filteredCountries = filteredCountries.filter(c => 
+      c.Pais && c.Pais.toLowerCase().includes(searchTerm)
+    );
+  }
+
+  console.log(`Renderizando ${filteredCountries.length} países (filtro: ${filterValue}, busca: ${searchTerm})`);
   renderPublicCountries(filteredCountries);
   
   // Adicionar event listeners para os países após renderizar
   addCountryEventListeners();
 }
+
+// Event Listeners
+authButton.addEventListener('click', () => {
+  console.log("Botão auth clicado");
+  if (auth.currentUser) {
+    console.log("Fazendo logout");
+    auth.signOut();
+  } else {
+    console.log("Abrindo modal de login");
+    showAuthModal('login');
+  }
+});
+
+mainLoginBtn.addEventListener('click', () => {
+  console.log("Botão main login clicado");
+  showAuthModal('login');
+});
+
+loginTab.addEventListener('click', () => {
+  currentAuthMode = 'login';
+  updateAuthModalUI();
+  clearAuthMessages();
+});
+
+registerTab.addEventListener('click', () => {
+  currentAuthMode = 'register';
+  updateAuthModalUI();
+  clearAuthMessages();
+});
+
+closeAuthModal.addEventListener('click', hideAuthModal);
+
+// Fechar modal do país
+closeCountryPanelBtn.addEventListener('click', () => {
+  countryPanelModal.classList.add('hidden');
+});
+
+// Google Login
+googleLoginBtn.addEventListener('click', async () => {
+  console.log("Tentando login com Google");
+  clearAuthMessages();
+
+  try {
+    const result = await signInWithGoogle();
+    console.log("Resultado do login Google:", result);
+    if (result.success) {
+      hideAuthModal();
+      showNotification('success', `Bem-vindo, ${result.user.displayName}!`);
+    } else {
+      console.error("Erro no login Google:", result.error);
+      showAuthError(result.error ? result.error.message : 'Erro no login com Google.');
+    }
+  } catch (error) {
+    console.error("Erro inesperado no login Google:", error);
+    showAuthError('Erro inesperado no login com Google.');
+  }
+});
+
+// Login Form
+loginForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  console.log("Submetendo form de login");
+  clearAuthMessages();
+
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+
+  console.log("Tentando login com email:", email);
+
+  try {
+    const result = await signInWithEmailPassword(email, password);
+    console.log("Resultado do login:", result);
+    if (result.success) {
+      hideAuthModal();
+      showNotification('success', 'Login realizado com sucesso!');
+    } else {
+      console.error("Erro no login:", result.error);
+      showAuthError(result.error ? result.error.message : 'Erro no login.');
+    }
+  } catch (error) {
+    console.error("Erro inesperado no login:", error);
+    showAuthError('Erro inesperado no login.');
+  }
+});
+
+// Register Form
+registerForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  console.log("Submetendo form de registro");
+  clearAuthMessages();
+
+  const name = document.getElementById('register-name').value;
+  const email = document.getElementById('register-email').value;
+  const password = document.getElementById('register-password').value;
+  const confirmPassword = document.getElementById('register-confirm-password').value;
+
+  // Validações
+  if (password !== confirmPassword) {
+    showAuthError('As senhas não coincidem.');
+    return;
+  }
+
+  if (password.length < 6) {
+    showAuthError('A senha deve ter pelo menos 6 caracteres.');
+    return;
+  }
+
+  console.log("Tentando registro com email:", email);
+
+  try {
+    const result = await registerWithEmailPassword(email, password, name);
+    console.log("Resultado do registro:", result);
+    if (result.success) {
+      showAuthSuccess('Conta criada com sucesso! Redirecionando...');
+      setTimeout(() => {
+        hideAuthModal();
+        showNotification('success', `Bem-vindo ao WAR, ${name}!`);
+      }, 1500);
+    } else {
+      console.error("Erro no registro:", result.error);
+      showAuthError(result.error ? result.error.message : 'Erro no registro.');
+    }
+  } catch (error) {
+    console.error("Erro inesperado no registro:", error);
+    showAuthError('Erro inesperado no registro.');
+  }
+});
+
+// Fechar modal ao clicar fora
+authModal.addEventListener('click', (e) => {
+  if (e.target === authModal) {
+    hideAuthModal();
+  }
+});
+
+countryPanelModal.addEventListener('click', (e) => {
+  if (e.target === countryPanelModal) {
+    countryPanelModal.classList.add('hidden');
+  }
+});
+
+// Abrir painel detalhado ao clicar em qualquer card (delegação)
+if (countryListContainer) {
+  countryListContainer.addEventListener('click', (e) => {
+    const button = e.target.closest('.country-card-button');
+    if (!button) return;
+    e.preventDefault();
+    const countryId = button.dataset.countryId;
+    const countryData = appState.allCountries.find(c => c.id === countryId);
+    if (countryData) {
+      renderDetailedCountryPanel(countryData);
+    }
+  });
+}
+
+// Esc para fechar modal
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (!authModal.classList.contains('hidden')) {
+      hideAuthModal();
+    }
+    if (!countryPanelModal.classList.contains('hidden')) {
+      countryPanelModal.classList.add('hidden');
+    }
+  }
+});
+
+filterSelect.addEventListener('change', filterAndRenderCountries);
+searchInput.addEventListener('input', filterAndRenderCountries); // Add event listener for search input
+refreshButton.addEventListener('click', loadSiteData);
 
 // NOVA FUNÇÃO: Adicionar event listeners para os botões dos países
 function addCountryEventListeners() {

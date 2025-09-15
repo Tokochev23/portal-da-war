@@ -3,10 +3,12 @@ import { realTimeUpdates } from "../services/realTimeUpdates.js";
 import { changeHistory } from "../services/changeHistory.js";
 import { playerManager } from "../services/playerManager.js";
 import { VehicleApprovalSystem } from "../components/vehicleApproval.js";
+import { NavalProductionSystem } from "../components/navalProduction.js";
 import { InventorySystem } from "../components/inventorySystem.js";
 import { showNotification, Logger, showConfirmBox } from "../utils.js";
 import { initEconomicSimulator } from "../systems/economicSimulator.js";
 import { calculatePIBTotal, formatCurrency, formatPIBPerCapita } from "../utils/pibCalculations.js";
+import { runAdvancedEconomyMigration } from '../../scripts/migrate-advanced-economy.js';
 
 // Catálogo local (fallback). Pode ser salvo no Firestore em configuracoes/campos
 const localCatalog = {
@@ -43,7 +45,13 @@ const localCatalog = {
       { key: "ifv", label: "IFV", tipo: "inteiro", min: 0 }
     ] 
   },
-  recursos: { label: "Recursos", campos: [ { key: "CombustivelSaldo", label: "Saldo de Combustível", tipo: "inteiro" }, { key: "Metais", label: "Metais", tipo: "inteiro" } ] },
+  recursos: { label: "Recursos", campos: [
+    { key: "Graos", label: "Graos (estoque)", tipo: "inteiro", min: 0 },
+    { key: "Combustivel", label: "Combustível (unidades)", tipo: "inteiro", min: 0 },
+    { key: "CombustivelSaldo", label: "Saldo de Combustível", tipo: "inteiro" },
+    { key: "Metais", label: "Metais", tipo: "inteiro" },
+    { key: "PotencialCarvao", label: "Potencial de Carvão (Jazidas)", tipo: "inteiro", min: 0 }
+  ] },
   ocupacao: { label: "Ocupação", campos: [ { key: "PopOcupada", label: "População Ocupada", tipo: "inteiro", min: 0 }, { key: "PIBOcupado", label: "PIB Ocupado", tipo: "moeda", min: 0 } ] },
   arsenal: { label: "Arsenal Especial", campos: [ { key: "Nuclear", label: "Bomba Nuclear", tipo: "inteiro", min: 0 } ] }
 };
@@ -76,24 +84,11 @@ const el = {
   btnCarregarCatalogo: document.getElementById('btn-carregar-catalogo'),
   btnAdicionarCampo: document.getElementById('btn-adicionar-campo'),
   logout: document.getElementById('logout-link'),
-  // Novos elementos para tempo real e histórico
   realTimeToggle: document.getElementById('realtime-toggle'),
   autoSaveToggle: document.getElementById('autosave-toggle'),
   historyList: document.getElementById('history-list'),
   historyRefresh: document.getElementById('history-refresh'),
   exportHistory: document.getElementById('export-history'),
-  // Deltas
-  deltaPib: document.getElementById('delta-pib'),
-  deltaTec: document.getElementById('delta-tec'),
-  deltaEst: document.getElementById('delta-est'),
-  deltaPaises: document.getElementById('delta-paises'),
-  deltaReason: document.getElementById('delta-reason'),
-  deltaPreview: document.getElementById('delta-preview'),
-  deltaAplicar: document.getElementById('delta-aplicar'),
-  deltaSelecionarTodos: document.getElementById('delta-selecionar-todos'),
-  deltaLimpar: document.getElementById('delta-limpar'),
-  selectedCount: document.getElementById('selected-count'),
-  // Player management elements
   playersList: document.getElementById('players-list'),
   availableCountries: document.getElementById('available-countries'),
   playerCount: document.getElementById('player-count'),
@@ -101,26 +96,19 @@ const el = {
   refreshPlayers: document.getElementById('refresh-players'),
   assignRandom: document.getElementById('assign-random'),
   clearAllAssignments: document.getElementById('clear-all-assignments'),
-  playerAnalytics: document.getElementById('player-analytics'),
-  bulkAssignments: document.getElementById('bulk-assignments'),
-  sendAnnouncement: document.getElementById('send-announcement'),
-  // Event simulator elements
-  createEvent: document.getElementById('create-event'),
-  scenarioTemplates: document.getElementById('scenario-templates'),
-  eventHistory: document.getElementById('event-history'),
-  eventType: document.getElementById('event-type'),
-  eventIntensity: document.getElementById('event-intensity'),
-  intensityValue: document.getElementById('intensity-value'),
-  eventScope: document.getElementById('event-scope'),
-  generateEvent: document.getElementById('generate-event'),
 };
-
-function $(sel, ctx=document) { return ctx.querySelector(sel); }
 
 async function carregarCatalogo() {
   try {
     const doc = await db.collection('configuracoes').doc('campos').get();
-    catalog = doc.exists ? doc.data() : localCatalog;
+    const remote = doc.exists ? doc.data() : {};
+    // merge missing sections from localCatalog so UI always has sensible fields
+    catalog = Object.assign({}, localCatalog, remote);
+    // ensure nested sections are merged (avoid overwriting local campos with empty remote)
+    Object.keys(localCatalog).forEach(k => {
+      if (!catalog[k]) catalog[k] = localCatalog[k];
+      else if (!catalog[k].campos || catalog[k].campos.length === 0) catalog[k].campos = localCatalog[k].campos;
+    });
   } catch (e) {
     console.warn('Falha ao carregar catálogo, usando local.', e);
     catalog = localCatalog;
@@ -136,10 +124,13 @@ function renderMenuSecoes() {
     btn.type = 'button';
     btn.className = `w-full text-left rounded-md px-2 py-1.5 text-sm ${state.secaoSelecionada===secKey? 'bg-white/5 border border-slate-600/40' : 'border border-transparent hover:bg-white/5'}`;
     btn.textContent = s.label || secKey;
-    btn.onclick = () => { state.secaoSelecionada = secKey; renderMenuSecoes(); renderForm(); };
+    btn.onclick = () => { 
+      state.secaoSelecionada = secKey; 
+      renderMenuSecoes(); 
+      renderForm(); 
+    };
     el.menuSecoes.appendChild(btn);
   });
-  // Preenche também o select secundário se existir
   if (el.selectSecao) {
     el.selectSecao.innerHTML = Object.keys(catalog).map(key => `<option value="${key}" ${key===state.secaoSelecionada? 'selected':''}>${catalog[key].label||key}</option>`).join('');
   }
@@ -165,25 +156,19 @@ function inputFor(fieldKey, fieldDef, valor, paisData = null) {
   const label = document.createElement('label');
   label.className = 'block text-xs text-slate-400 mb-1';
   label.textContent = fieldDef.label || fieldKey;
-
   let inp;
-  
-  // Campos calculados (como PIB total)
   if (fieldDef.tipo === 'calculado') {
     inp = document.createElement('div');
     inp.className = 'mt-1 w-full rounded-lg bg-slate-700/50 border border-slate-600 p-2 text-sm text-slate-300 italic';
-    
-    // Calcular valor do PIB baseado em PIB per capita e população
     if (fieldKey === 'PIB' && paisData) {
       const populacao = parseFloat(paisData.Populacao) || 0;
       const pibPerCapita = parseFloat(paisData.PIBPerCapita) || 0;
       const pibTotal = calculatePIBTotal(populacao, pibPerCapita);
-      inp.textContent = `${formatCurrency(pibTotal)} (calculado: ${populacao.toLocaleString()} × ${formatPIBPerCapita(pibPerCapita)})`;
+      inp.textContent = `${formatCurrency(pibTotal)} (calculado)`;
       inp.dataset.calculatedValue = pibTotal;
     } else {
       inp.textContent = 'Campo calculado';
     }
-    
     inp.name = fieldKey;
   } else if (fieldDef.tipo === 'opcoes' && Array.isArray(fieldDef.opcoes)) {
     inp = document.createElement('select');
@@ -200,46 +185,14 @@ function inputFor(fieldKey, fieldDef, valor, paisData = null) {
     inp.value = valor ?? '';
     if (fieldDef.min != null) inp.min = String(fieldDef.min);
     if (fieldDef.max != null) inp.max = String(fieldDef.max);
-    
-    // Adicionar step apropriado para diferentes tipos
     if (fieldDef.tipo === 'moeda') inp.step = '0.01';
     else if (fieldDef.tipo === 'percent') inp.step = '0.1';
     else if (fieldDef.tipo === 'inteiro') inp.step = '1';
-    
     inp.name = fieldKey;
     inp.className = 'mt-1 w-full rounded-lg bg-bg border border-bg-ring/70 p-2 text-sm focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/50 transition-colors';
   }
-  
-  // Adicionar indicador de mudanças em tempo real (apenas para campos editáveis)
-  if (state.realTimeEnabled && fieldDef.tipo !== 'calculado') {
-    const indicator = document.createElement('div');
-    indicator.className = 'absolute -top-1 -right-1 w-2 h-2 bg-emerald-400 rounded-full opacity-0 transition-opacity';
-    indicator.id = `indicator-${fieldKey}`;
-    
-    wrap.style.position = 'relative';
-    wrap.appendChild(indicator);
-    
-    // Listener para mudanças em tempo real
-    inp.addEventListener('input', async (e) => {
-      // Atualizar campos calculados quando dependências mudam
-      if ((fieldKey === 'PIBPerCapita' || fieldKey === 'Populacao') && state.secaoSelecionada === 'geral') {
-        updateCalculatedFields();
-      }
-      
-      if (state.autoSave) {
-        await handleRealTimeChange(fieldKey, fieldDef, e.target.value, indicator);
-      }
-    });
-    
-    // Debounce para evitar muitas chamadas
-    inp.addEventListener('blur', async (e) => {
-      await handleRealTimeChange(fieldKey, fieldDef, e.target.value, indicator);
-    });
-  }
-  
   wrap.appendChild(label);
   wrap.appendChild(inp);
-
   return { 
     wrap, 
     input: inp,
@@ -249,36 +202,7 @@ function inputFor(fieldKey, fieldDef, valor, paisData = null) {
       }
       return (fieldDef.tipo==='inteiro'||fieldDef.tipo==='percent'||fieldDef.tipo==='moeda') ? Number(inp.value || 0) : (inp.value ?? '');
     },
-    set: (value) => { 
-      if (fieldDef.tipo !== 'calculado') {
-        inp.value = value ?? ''; 
-      }
-    },
-    showChange: () => {
-      const indicator = wrap.querySelector(`#indicator-${fieldKey}`);
-      if (indicator) {
-        indicator.style.opacity = '1';
-        setTimeout(() => indicator.style.opacity = '0', 2000);
-      }
-    },
-    isCalculated: fieldDef.tipo === 'calculado'
   };
-}
-
-// Função para atualizar campos calculados em tempo real
-function updateCalculatedFields() {
-  const pibPerCapitaInput = document.querySelector('input[name="PIBPerCapita"]');
-  const populacaoInput = document.querySelector('input[name="Populacao"]');
-  const pibDisplay = document.querySelector('div[name="PIB"]');
-  
-  if (pibPerCapitaInput && populacaoInput && pibDisplay) {
-    const populacao = parseFloat(populacaoInput.value) || 0;
-    const pibPerCapita = parseFloat(pibPerCapitaInput.value) || 0;
-    const pibTotal = calculatePIBTotal(populacao, pibPerCapita);
-    
-    pibDisplay.textContent = `${formatCurrency(pibTotal)} (calculado: ${populacao.toLocaleString()} × ${formatPIBPerCapita(pibPerCapita)})`;
-    pibDisplay.dataset.calculatedValue = pibTotal;
-  }
 }
 
 function renderForm() {
@@ -294,89 +218,41 @@ function renderForm() {
     const g = inputFor(def.key, def, dadosSecao[def.key] ?? pais?.[def.key], pais);
     el.formSecao.appendChild(g.wrap);
     getters[def.key] = g.get;
-    if (el.listaCampos) {
-      const li = document.createElement('div');
-      li.className = 'text-slate-300 text-sm';
-      li.textContent = `${def.label || def.key} (${def.tipo})`;
-      el.listaCampos.appendChild(li);
-    }
   });
 
-  // Sistema de salvamento em tempo real ou manual
   if (el.btnSalvarSecao) {
-    // Atualizar texto do botão baseado no modo
-    el.btnSalvarSecao.textContent = state.realTimeEnabled ? 'Aplicar Todas' : 'Salvar Seção';
-    
     el.btnSalvarSecao.onclick = async () => {
       if (!pais) return;
-      
       try {
         el.btnSalvarSecao.disabled = true;
         el.btnSalvarSecao.textContent = 'Salvando...';
-        
         const payload = {};
         Object.keys(getters).forEach(k => payload[k] = getters[k]());
-        
-        // Calcular PIB total a partir de PIB per capita e população
         if (state.secaoSelecionada === 'geral' && payload.PIBPerCapita && payload.Populacao) {
-          const populacao = parseFloat(payload.Populacao) || 0;
-          const pibPerCapita = parseFloat(payload.PIBPerCapita) || 0;
-          payload.PIB = calculatePIBTotal(populacao, pibPerCapita);
+          payload.PIB = calculatePIBTotal(payload.Populacao, payload.PIBPerCapita);
         }
-        
-        // Validações básicas
-        const defsByKey = Object.fromEntries((sec.campos||[]).map(d => [d.key, d]));
-        for (const [k,v] of Object.entries(payload)) {
-          const d = defsByKey[k];
-          if (!d) continue;
-          if (d.min != null && v < d.min) { 
-            showNotification('error', `Campo ${d.label||k}: mínimo ${d.min}`);
-            return; 
-          }
-          if (d.max != null && v > d.max) { 
-            showNotification('error', `Campo ${d.label||k}: máximo ${d.max}`);
-            return; 
-          }
-        }
-        
-        // Sempre usar modo direto e sincronizar raiz com geral
-        const updateData = {
-          [`${state.secaoSelecionada}`]: payload
-        };
-        
-        // Se estamos editando a seção "geral", também atualizar campos na raiz
+        const updateData = { [`${state.secaoSelecionada}`]: payload };
         if (state.secaoSelecionada === 'geral') {
-          Object.entries(payload).forEach(([key, value]) => {
-            // Campos que devem ser sincronizados na raiz
-            if (['PIB', 'PIBPerCapita', 'Populacao', 'Estabilidade', 'Tecnologia', 'Urbanizacao', 'ModeloPolitico', 'Visibilidade'].includes(key)) {
-              updateData[key] = value;
-            }
-          });
+          Object.assign(updateData, payload);
         }
-        
         await db.collection('paises').doc(pais.id).update(updateData);
-        
         showNotification('success', 'Seção salva com sucesso');
-        
       } catch (e) {
         Logger.error('Erro ao salvar seção:', e);
         showNotification('error', `Erro ao salvar: ${e.message}`);
       } finally {
         el.btnSalvarSecao.disabled = false;
-        el.btnSalvarSecao.textContent = state.realTimeEnabled ? 'Aplicar Todas' : 'Salvar Seção';
+        el.btnSalvarSecao.textContent = 'Salvar Seção';
       }
     };
   }
 }
 
-// carregarTudo definido no final do arquivo com funcionalidades adicionais
-
 async function gatekeeper(user) {
   if (!user) { window.location.href = 'index.html'; return; }
   try {
     const perms = await checkUserPermissions(user.uid);
-    const allowed = perms.isNarrator || perms.isAdmin;
-    if (!allowed) {
+    if (!perms.isNarrator && !perms.isAdmin) {
       if (el.gate) el.gate.classList.remove('hidden');
       el.adminRoot?.classList.add('hidden');
       return;
@@ -392,539 +268,6 @@ async function gatekeeper(user) {
   }
 }
 
-// Eventos básicos
-if (el.selectPais) el.selectPais.addEventListener('change', (e)=> { state.paisSelecionado = e.target.value; renderForm(); });
-if (el.selectSecao) el.selectSecao.addEventListener('change', (e)=> { state.secaoSelecionada = e.target.value; renderMenuSecoes(); renderForm(); });
-if (el.btnRecarregar) el.btnRecarregar.addEventListener('click', carregarTudo);
-if (el.btnSalvarTurno) el.btnSalvarTurno.addEventListener('click', async ()=>{
-  const n = Number(el.turnoInput?.value||'');
-  if (Number.isNaN(n) || n < 0) { alert('Informe um número de turno válido.'); return; }
-  const ok = await updateTurn(n);
-  if (ok) { alert(`Turno atualizado para #${n}`); await carregarTudo(); }
-  else { alert('Erro ao salvar turno.'); }
-});
-if (el.btnSalvarCatalogo) el.btnSalvarCatalogo.addEventListener('click', async ()=>{
-  try { await db.collection('configuracoes').doc('campos').set(catalog || localCatalog, { merge: false }); alert('Catálogo salvo no servidor.'); }
-  catch (e) { console.error(e); alert('Erro ao salvar catálogo.'); }
-});
-if (el.btnCarregarCatalogo) el.btnCarregarCatalogo.addEventListener('click', async ()=>{ await carregarCatalogo(); renderMenuSecoes(); renderForm(); });
-if (el.btnAdicionarCampo) el.btnAdicionarCampo.addEventListener('click', ()=>{
-  const sec = catalog[state.secaoSelecionada]; if (!sec) return;
-  const key = prompt('Chave do campo (sem espaços, ex: LanchaTorpedeira)'); if (!key) return;
-  const label = prompt('Rótulo (ex: Lancha torpedeira)') || key;
-  const tipo = prompt('Tipo (inteiro|percent|moeda|texto|opcoes)', 'inteiro') || 'inteiro';
-  const opcoes = (tipo==='opcoes') ? (prompt('Opções separadas por vírgula', 'Público,Privado')||'').split(',').map(s=>s.trim()) : undefined;
-  sec.campos.push({ key, label, tipo, ...(opcoes?{opcoes}:{} )});
-  renderForm();
-  renderMenuSecoes();
-});
-if (el.logout) el.logout.addEventListener('click', (e)=>{ e.preventDefault(); auth.signOut(); });
-
-// Função para lidar com mudanças em tempo real (DESABILITADA)
-async function handleRealTimeChange(fieldKey, fieldDef, value, indicator) {
-  // Auto-save desabilitado para evitar problemas - use o botão "Salvar Seção"
-  return;
-  
-  try {
-    // Converter valor baseado no tipo
-    let processedValue;
-    if (fieldDef.tipo === 'inteiro' || fieldDef.tipo === 'percent' || fieldDef.tipo === 'moeda') {
-      processedValue = Number(value || 0);
-    } else {
-      processedValue = value ?? '';
-    }
-    
-    // Validação rápida
-    if (fieldDef.min != null && processedValue < fieldDef.min) return;
-    if (fieldDef.max != null && processedValue > fieldDef.max) return;
-    
-    // Aplicar mudança em tempo real
-    await realTimeUpdates.updateField({
-      countryId: state.paisSelecionado,
-      section: state.secaoSelecionada,
-      field: fieldKey,
-      value: processedValue,
-      reason: 'Edição em tempo real'
-    });
-    
-    // Mostrar indicador visual
-    if (indicator) {
-      indicator.style.opacity = '1';
-      setTimeout(() => indicator.style.opacity = '0', 2000);
-    }
-    
-  } catch (error) {
-    Logger.warn('Erro na mudança em tempo real:', error);
-    // Em caso de erro, não mostrar notificação para não incomodar o usuário
-  }
-}
-
-// Função para configurar listeners de tempo real
-function setupRealTimeListeners() {
-  // Limpar listeners existentes
-  state.listeners.forEach(unsubscribe => unsubscribe());
-  state.listeners.clear();
-  
-  if (!state.paisSelecionado) return;
-  
-  // Listener para mudanças no país atual
-  const countryUnsubscribe = realTimeUpdates.subscribeToCountryChanges(
-    state.paisSelecionado,
-    (changeData) => {
-      // Atualizar formulário se necessário
-      updateFormFromRealTimeData(changeData.data);
-    }
-  );
-  
-  state.listeners.set('country', countryUnsubscribe);
-  
-  // Listener para histórico
-  const { unsubscribe: historyUnsubscribe } = realTimeUpdates.subscribeToHistory(
-    { countryId: state.paisSelecionado, limit: 20 },
-    (changes) => {
-      updateHistoryDisplay(changes);
-    }
-  );
-  
-  state.listeners.set('history', historyUnsubscribe);
-}
-
-// Função para atualizar formulário com dados em tempo real
-function updateFormFromRealTimeData(countryData) {
-  if (!countryData || !catalog || !state.secaoSelecionada) return;
-  
-  const sectionData = countryData[state.secaoSelecionada] || {};
-  const section = catalog[state.secaoSelecionada];
-  
-  (section.campos || []).forEach(field => {
-    const input = document.querySelector(`input[name="${field.key}"], select[name="${field.key}"]`);
-    if (input && sectionData[field.key] !== undefined) {
-      const newValue = sectionData[field.key];
-      if (input.value != newValue) {
-        input.value = newValue;
-        
-        // Mostrar indicador de mudança externa
-        const indicator = document.querySelector(`#indicator-${field.key}`);
-        if (indicator) {
-          indicator.style.backgroundColor = '#3b82f6'; // azul para mudanças externas
-          indicator.style.opacity = '1';
-          setTimeout(() => {
-            indicator.style.backgroundColor = '#10b981'; // volta ao verde
-            indicator.style.opacity = '0';
-          }, 3000);
-        }
-      }
-    }
-  });
-}
-
-// Função para atualizar display do histórico
-function updateHistoryDisplay(changes) {
-  const historyList = document.getElementById('history-list');
-  if (!historyList) return;
-  
-  historyList.innerHTML = '';
-  
-  changes.forEach(change => {
-    const item = document.createElement('div');
-    item.className = 'flex items-center justify-between p-3 bg-bg-soft/50 rounded-lg border border-bg-ring/30';
-    
-    const timeAgo = formatTimeAgo(change.timestamp);
-    const fieldLabel = catalog[change.section]?.campos?.find(f => f.key === change.field)?.label || change.field;
-    
-    item.innerHTML = `
-      <div class="flex-1">
-        <div class="text-sm font-medium text-slate-200">
-          ${fieldLabel} (${catalog[change.section]?.label})
-        </div>
-        <div class="text-xs text-slate-400">
-          ${change.oldValue} → ${change.newValue} • ${change.userName}
-        </div>
-        ${change.reason ? `<div class="text-xs text-slate-500 mt-1">${change.reason}</div>` : ''}
-      </div>
-      <div class="flex items-center gap-2 text-xs text-slate-400">
-        <span>${timeAgo}</span>
-        ${!change.rolledBack ? `<button onclick="rollbackSingle('${change.id}')" class="text-red-400 hover:text-red-300">↶</button>` : '<span class="text-slate-500">Revertido</span>'}
-      </div>
-    `;
-    
-    historyList.appendChild(item);
-  });
-}
-
-// Função para rollback individual
-window.rollbackSingle = async function(changeId) {
-  try {
-    const confirmed = await showConfirmBox(
-      'Confirmar Rollback',
-      'Tem certeza que deseja reverter esta mudança?',
-      'Reverter',
-      'Cancelar'
-    );
-    
-    if (!confirmed) return;
-    
-    await changeHistory.rollbackChange(changeId, 'Revertido via interface do narrador');
-    showNotification('success', 'Mudança revertida com sucesso');
-    
-  } catch (error) {
-    Logger.error('Erro no rollback:', error);
-    showNotification('error', `Erro: ${error.message}`);
-  }
-};
-
-// Função auxiliar para formatar tempo
-function formatTimeAgo(date) {
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  
-  if (diffMins < 1) return 'agora';
-  if (diffMins < 60) return `${diffMins}min`;
-  
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h`;
-  
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d`;
-}
-
-// Setup de event listeners para controles de tempo real
-function setupRealTimeControls() {
-  // Toggle de tempo real
-  if (el.realTimeToggle) {
-    el.realTimeToggle.addEventListener('change', (e) => {
-      state.realTimeEnabled = e.target.checked;
-      renderForm(); // Re-render para aplicar/remover listeners
-      
-      if (state.realTimeEnabled) {
-        showNotification('info', 'Sistema de tempo real ativado');
-      } else {
-        showNotification('info', 'Sistema de tempo real desativado');
-      }
-    });
-  }
-  
-  // Toggle de auto save
-  if (el.autoSaveToggle) {
-    el.autoSaveToggle.addEventListener('change', (e) => {
-      state.autoSave = e.target.checked;
-      if (state.autoSave && state.realTimeEnabled) {
-        showNotification('info', 'Auto-salvamento ativado');
-      } else if (!state.autoSave) {
-        showNotification('info', 'Auto-salvamento desativado');
-      }
-    });
-  }
-  
-  // Controles de histórico
-  if (el.historyRefresh) {
-    el.historyRefresh.addEventListener('click', () => {
-      setupRealTimeListeners(); // Recarrega o histórico
-    });
-  }
-  
-  if (el.exportHistory) {
-    el.exportHistory.addEventListener('click', exportHistoryToCSV);
-  }
-  
-  // Controles de deltas em massa
-  setupDeltaControls();
-}
-
-// Setup dos controles de deltas
-function setupDeltaControls() {
-  if (el.deltaSelecionarTodos) {
-    el.deltaSelecionarTodos.addEventListener('click', () => {
-      const checkboxes = el.deltaPaises.querySelectorAll('input[type="checkbox"]');
-      checkboxes.forEach(cb => cb.checked = true);
-      updateSelectedCount();
-    });
-  }
-  
-  if (el.deltaLimpar) {
-    el.deltaLimpar.addEventListener('click', () => {
-      const checkboxes = el.deltaPaises.querySelectorAll('input[type="checkbox"]');
-      checkboxes.forEach(cb => cb.checked = false);
-      updateSelectedCount();
-      
-      // Limpar inputs
-      if (el.deltaPib) el.deltaPib.value = '';
-      if (el.deltaTec) el.deltaTec.value = '';
-      if (el.deltaEst) el.deltaEst.value = '';
-      if (el.deltaReason) el.deltaReason.value = '';
-    });
-  }
-  
-  if (el.deltaPreview) {
-    el.deltaPreview.addEventListener('click', previewDeltas);
-  }
-  
-  if (el.deltaAplicar) {
-    el.deltaAplicar.addEventListener('click', applyMassDeltas);
-  }
-}
-
-// Atualiza contador de países selecionados
-function updateSelectedCount() {
-  const checkboxes = el.deltaPaises.querySelectorAll('input[type="checkbox"]:checked');
-  const count = checkboxes.length;
-  
-  if (el.selectedCount) {
-    el.selectedCount.textContent = `${count} países selecionados`;
-  }
-  
-  // Habilitar/desabilitar botão aplicar
-  if (el.deltaAplicar) {
-    el.deltaAplicar.disabled = count === 0;
-  }
-}
-
-// Renderiza lista de países para deltas
-function renderDeltaCountries() {
-  if (!el.deltaPaises) return;
-  
-  el.deltaPaises.innerHTML = '';
-  
-  state.paises.forEach(pais => {
-    const item = document.createElement('label');
-    item.className = 'flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors';
-    
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.value = pais.id;
-    checkbox.className = 'rounded border-bg-ring/70 bg-bg text-brand-500 focus:ring-brand-500/50';
-    checkbox.addEventListener('change', updateSelectedCount);
-    
-    const label = document.createElement('span');
-    label.className = 'text-sm text-slate-300';
-    label.textContent = pais.Pais || pais.id;
-    
-    item.appendChild(checkbox);
-    item.appendChild(label);
-    el.deltaPaises.appendChild(item);
-  });
-  
-  updateSelectedCount();
-}
-
-// Prévia dos deltas
-async function previewDeltas() {
-  const selectedCountries = getSelectedCountriesForDelta();
-  const deltas = getDeltaValues();
-  
-  if (selectedCountries.length === 0) {
-    showNotification('warning', 'Selecione pelo menos um país');
-    return;
-  }
-  
-  if (!hasValidDeltas(deltas)) {
-    showNotification('warning', 'Informe pelo menos um valor de delta');
-    return;
-  }
-  
-  try {
-    // Criar modal de prévia
-    const previewModal = createPreviewModal(selectedCountries, deltas);
-    document.body.appendChild(previewModal);
-    
-  } catch (error) {
-    Logger.error('Erro na prévia:', error);
-    showNotification('error', `Erro: ${error.message}`);
-  }
-}
-
-// Aplicar deltas em massa
-async function applyMassDeltas() {
-  const selectedCountries = getSelectedCountriesForDelta();
-  const deltas = getDeltaValues();
-  const reason = el.deltaReason?.value || 'Aplicação de deltas em massa';
-  
-  if (selectedCountries.length === 0) {
-    showNotification('warning', 'Selecione pelo menos um país');
-    return;
-  }
-  
-  if (!hasValidDeltas(deltas)) {
-    showNotification('warning', 'Informe pelo menos um valor de delta');
-    return;
-  }
-  
-  try {
-    const confirmed = await showConfirmBox(
-      'Confirmar Deltas em Massa',
-      `Aplicar deltas em ${selectedCountries.length} países?\n\nEsta ação será registrada no histórico e pode ser revertida.`,
-      'Aplicar',
-      'Cancelar'
-    );
-    
-    if (!confirmed) return;
-    
-    el.deltaAplicar.disabled = true;
-    el.deltaAplicar.textContent = 'Aplicando...';
-    
-    const countryIds = selectedCountries.map(country => country.id);
-    const deltaObject = {
-      geral: {}
-    };
-    
-    if (deltas.pib !== 0) deltaObject.geral.PIB = deltas.pib;
-    if (deltas.tecnologia !== 0) deltaObject.geral.Tecnologia = deltas.tecnologia;
-    if (deltas.estabilidade !== 0) deltaObject.geral.Estabilidade = deltas.estabilidade;
-    
-    const batchId = await realTimeUpdates.applyMassDeltas({
-      countryIds,
-      deltas: deltaObject,
-      reason
-    });
-    
-    showNotification('success', `Deltas aplicados com sucesso! Batch ID: ${batchId}`);
-    
-    // Limpar formulário
-    el.deltaLimpar.click();
-    
-  } catch (error) {
-    Logger.error('Erro ao aplicar deltas:', error);
-    showNotification('error', `Erro: ${error.message}`);
-  } finally {
-    el.deltaAplicar.disabled = false;
-    el.deltaAplicar.textContent = '⚡ Aplicar em Tempo Real';
-  }
-}
-
-// Funções auxiliares
-function getSelectedCountriesForDelta() {
-  const checkboxes = el.deltaPaises.querySelectorAll('input[type="checkbox"]:checked');
-  return Array.from(checkboxes).map(cb => {
-    return state.paises.find(p => p.id === cb.value);
-  }).filter(Boolean);
-}
-
-function getDeltaValues() {
-  return {
-    pib: parseFloat(el.deltaPib?.value) || 0,
-    tecnologia: parseFloat(el.deltaTec?.value) || 0,
-    estabilidade: parseFloat(el.deltaEst?.value) || 0
-  };
-}
-
-function hasValidDeltas(deltas) {
-  return deltas.pib !== 0 || deltas.tecnologia !== 0 || deltas.estabilidade !== 0;
-}
-
-function createPreviewModal(countries, deltas) {
-  const modal = document.createElement('div');
-  modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4';
-  
-  const content = document.createElement('div');
-  content.className = 'bg-bg-soft border border-bg-ring/70 rounded-2xl p-6 max-w-2xl w-full max-h-96 overflow-y-auto';
-  
-  content.innerHTML = `
-    <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-semibold text-slate-200">Prévia dos Deltas</h3>
-      <button onclick="this.closest('.fixed').remove()" class="text-slate-400 hover:text-slate-200">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    </div>
-    
-    <div class="space-y-4">
-      <div class="grid grid-cols-3 gap-4 p-3 bg-bg/50 rounded-lg">
-        <div class="text-center">
-          <div class="text-xs text-slate-400">PIB</div>
-          <div class="font-semibold ${deltas.pib > 0 ? 'text-emerald-400' : deltas.pib < 0 ? 'text-red-400' : 'text-slate-500'}">
-            ${deltas.pib !== 0 ? (deltas.pib > 0 ? '+' : '') + deltas.pib + '%' : '—'}
-          </div>
-        </div>
-        <div class="text-center">
-          <div class="text-xs text-slate-400">Tecnologia</div>
-          <div class="font-semibold ${deltas.tecnologia > 0 ? 'text-emerald-400' : deltas.tecnologia < 0 ? 'text-red-400' : 'text-slate-500'}">
-            ${deltas.tecnologia !== 0 ? (deltas.tecnologia > 0 ? '+' : '') + deltas.tecnologia : '—'}
-          </div>
-        </div>
-        <div class="text-center">
-          <div class="text-xs text-slate-400">Estabilidade</div>
-          <div class="font-semibold ${deltas.estabilidade > 0 ? 'text-emerald-400' : deltas.estabilidade < 0 ? 'text-red-400' : 'text-slate-500'}">
-            ${deltas.estabilidade !== 0 ? (deltas.estabilidade > 0 ? '+' : '') + deltas.estabilidade : '—'}
-          </div>
-        </div>
-      </div>
-      
-      <div>
-        <div class="text-sm font-medium text-slate-300 mb-2">Países Afetados (${countries.length}):</div>
-        <div class="grid grid-cols-2 gap-2 text-sm text-slate-400">
-          ${countries.map(c => `<div>• ${c.Pais || c.id}</div>`).join('')}
-        </div>
-      </div>
-    </div>
-    
-    <div class="mt-6 flex gap-3 justify-end">
-      <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 rounded-lg border border-bg-ring/70 text-slate-300 hover:bg-white/5">
-        Fechar
-      </button>
-      <button onclick="this.closest('.fixed').remove(); document.getElementById('delta-aplicar').click()" class="px-4 py-2 rounded-lg bg-emerald-500 text-slate-950 font-semibold hover:bg-emerald-400">
-        Aplicar Agora
-      </button>
-    </div>
-  `;
-  
-  modal.appendChild(content);
-  return modal;
-}
-
-// Exportar histórico para CSV
-async function exportHistoryToCSV() {
-  if (!state.paisSelecionado) {
-    showNotification('warning', 'Selecione um país primeiro');
-    return;
-  }
-  
-  try {
-    const history = await changeHistory.getChangeHistory({
-      countryId: state.paisSelecionado,
-      limit: 1000 // Exportar até 1000 registros
-    });
-    
-    if (history.length === 0) {
-      showNotification('info', 'Nenhum histórico encontrado para exportar');
-      return;
-    }
-    
-    const csvContent = [
-      ['Data', 'Seção', 'Campo', 'Valor Anterior', 'Valor Novo', 'Usuário', 'Motivo'].join(','),
-      ...history.map(h => [
-        h.timestamp.toISOString(),
-        h.section,
-        h.field,
-        h.oldValue,
-        h.newValue,
-        h.userName,
-        h.reason || ''
-      ].map(field => `"${field}"`).join(','))
-    ].join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', `historico_${state.paisSelecionado}_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    showNotification('success', 'Histórico exportado com sucesso');
-    
-  } catch (error) {
-    Logger.error('Erro ao exportar histórico:', error);
-    showNotification('error', `Erro na exportação: ${error.message}`);
-  }
-}
-
-// Carregamento atualizado
 async function carregarTudo() {
   const cfg = await getGameConfig();
   if (cfg && cfg.turnoAtual && el.turnoAtual) el.turnoAtual.textContent = `#${cfg.turnoAtual}`;
@@ -935,877 +278,360 @@ async function carregarTudo() {
   renderSelectPaises();
   renderMenuSecoes();
   renderForm();
-  renderDeltaCountries(); // Renderizar lista de países para deltas
-  setupRealTimeControls(); // Setup dos controles de tempo real
-  
-  // Update header stats AFTER loading countries
-  updateHeaderStats(cfg);
-  
-  // Inicializar gerenciamento de jogadores
-  await initPlayerManagement();
-  
-  // Update quick stats
-  updateQuickStats();
-  
-  // Force update após um breve delay para garantir que os valores permaneçam
-  setTimeout(() => {
-    console.log('🔄 Forçando atualização final dos stats...');
-    updateHeaderStats(cfg);
-    updateQuickStats();
-  }, 1000);
+  // energy UI removed from narrador: dashboard handles energy display
 }
 
+// --- Inicialização e Event Listeners ---
+
 auth.onAuthStateChanged(gatekeeper);
-
-// Event listeners para mudanças de país/seção
-if (el.selectPais) el.selectPais.addEventListener('change', (e) => { 
+if (el.selectPais) el.selectPais.addEventListener('change', async (e) => { 
   state.paisSelecionado = e.target.value; 
-  setupRealTimeListeners();
   renderForm(); 
+  try {
+    await activateEnergyForSelectedCountry();
+  } catch (err) {
+    Logger.warn('Erro ao ativar EnergyManager após mudança de país:', err);
+  }
 });
-
 if (el.selectSecao) el.selectSecao.addEventListener('change', (e) => { 
   state.secaoSelecionada = e.target.value; 
-  setupRealTimeListeners();
   renderMenuSecoes(); 
   renderForm(); 
 });
-
-// Inicializaçãoo do gerenciamento de jogadores
-async function initPlayerManagement() {
-  try {
-    console.log('🔄 Carregando jogadores...');
-    await playerManager.loadPlayers();
-    console.log(`✅ ${playerManager.players.length} jogadores carregados`);
-    
-    console.log('🔄 Carregando países...');
-    await playerManager.loadCountries();
-    console.log(`✅ ${playerManager.countries.length} países carregados`);
-    
-    playerManager.setupRealTimeListeners();
-    
-    renderPlayersList();
-    renderAvailableCountries();
-    setupPlayerManagementListeners();
-    
-    Logger.info('Sistema de gerenciamento de jogadores inicializado');
-  } catch (error) {
-    console.error('❌ Erro ao inicializar gerenciamento de jogadores:', error);
-    Logger.error('Erro ao inicializar gerenciamento de jogadores:', error);
-    
-    // Fallback: mostrar mensagens de erro nas interfaces
-    showPlayerManagementError();
-  }
-}
-
-// Função para mostrar erro no painel de jogadores
-function showPlayerManagementError() {
-  if (el.playersList) {
-    el.playersList.innerHTML = `
-      <div class="text-sm text-red-400 text-center py-8">
-        <div class="mb-2">❌ Erro ao carregar dados de jogadores</div>
-        <div class="text-xs text-slate-500">Verifique as permissões do Firebase</div>
-      </div>
-    `;
-  }
-  
-  if (el.availableCountries) {
-    el.availableCountries.innerHTML = `
-      <div class="text-sm text-red-400 text-center py-8">
-        <div class="mb-2">❌ Erro ao carregar países</div>
-        <div class="text-xs text-slate-500">Usando dados básicos do sistema</div>
-      </div>
-    `;
-  }
-  
-  if (el.playerCount) {
-    el.playerCount.textContent = 'Erro ao carregar';
-  }
-  
-  if (el.availableCount) {
-    el.availableCount.textContent = 'Erro ao carregar';
-  }
-}
-
-// Setup dos event listeners para gerenciamento de jogadores
-function setupPlayerManagementListeners() {
-  if (el.refreshPlayers) {
-    el.refreshPlayers.addEventListener('click', async () => {
-      await playerManager.loadPlayers();
-      await playerManager.loadCountries();
-      renderPlayersList();
-      renderAvailableCountries();
+// Energia UI removed from narrador. Dashboard shows country energy data.
+if (el.btnRecarregar) el.btnRecarregar.addEventListener('click', carregarTudo);
+if (el.btnSalvarTurno) el.btnSalvarTurno.addEventListener('click', async ()=>{
+  const n = Number(el.turnoInput?.value||'');
+  if (Number.isNaN(n) || n < 0) { alert('Informe um número de turno válido.'); return; }
+  await updateTurn(n);
+  alert(`Turno atualizado para #${n}`);
+  await carregarTudo();
+});
+if (el.logout) el.logout.addEventListener('click', (e)=>{ e.preventDefault(); auth.signOut(); });
+document.addEventListener('DOMContentLoaded', () => {
+  const migrationButton = document.getElementById('btn-run-migration');
+  if (migrationButton) {
+    migrationButton.addEventListener('click', () => {
+      runAdvancedEconomyMigration();
     });
   }
-  
-  if (el.assignRandom) {
-    el.assignRandom.addEventListener('click', async () => {
-      await playerManager.assignRandomCountries();
-      renderPlayersList();
-      renderAvailableCountries();
-    });
-  }
-  
-  if (el.clearAllAssignments) {
-    el.clearAllAssignments.addEventListener('click', async () => {
-      await playerManager.clearAllAssignments();
-      renderPlayersList();
-      renderAvailableCountries();
-    });
-  }
-  
-  if (el.playerAnalytics) {
-    el.playerAnalytics.addEventListener('click', showPlayerAnalytics);
-  }
-  
-  if (el.sendAnnouncement) {
-    el.sendAnnouncement.addEventListener('click', showAnnouncementModal);
-  }
-  
-  // Listener para updates em tempo real
-  window.addEventListener('playerManager:update', (e) => {
-    if (e.detail.type === 'players') {
-      renderPlayersList();
-    } else if (e.detail.type === 'countries') {
-      renderAvailableCountries();
-    }
-  });
-}
 
-// Renderiza lista de jogadores
-function renderPlayersList() {
-  if (!el.playersList) {
-    console.warn('❌ Elemento players-list não encontrado');
-    return;
-  }
-  
-  if (!playerManager || !playerManager.players) {
-    console.warn('❌ PlayerManager não inicializado');
-    el.playersList.innerHTML = `
-      <div class="text-sm text-yellow-400 text-center py-8">
-        <div class="mb-2">⏳ Carregando dados...</div>
-        <div class="text-xs text-slate-500">Aguarde a inicialização</div>
-      </div>
-    `;
-    return;
-  }
-  
-  console.log(`🔄 Renderizando lista de jogadores. Total: ${playerManager.players.length}`);
-  
-  let players = [];
-  let playersCount = 0;
-  
-  if (playerManager.players.length > 0) {
-    // Se temos dados de players, usar normalmente
-    players = playerManager.players.filter(p => p.paisId);
-    playersCount = players.length;
-    console.log(`📊 Jogadores com países atribuídos: ${playersCount}`);
-  } else {
-    // Fallback: contar países com jogadores atribuídos
-    playersCount = state.paises ? state.paises.filter(c => c.Player).length : 0;
-    console.log(`📊 Fallback - Países com Player: ${playersCount}`);
-  }
-  
-  if (el.playerCount) {
-    el.playerCount.textContent = `${playersCount} jogadores`;
-    console.log(`📊 playerCount definido para: ${playersCount} jogadores`);
-  }
-  
-  if (playersCount === 0) {
-    el.playersList.innerHTML = `
-      <div class="text-sm text-slate-500 text-center py-4">
-        Nenhum jogador com país atribuído
-      </div>
-    `;
-    return;
-  }
-  
-  // Se não temos dados detalhados dos players mas sabemos que há países com jogadores
-  if (players.length === 0 && playersCount > 0) {
-    el.playersList.innerHTML = `
-      <div class="text-sm text-yellow-400 text-center py-4">
-        <div class="mb-2">🔐 ${playersCount} jogadores ativos</div>
-        <div class="text-xs text-slate-500">Dados limitados devido às permissões do Firebase</div>
-        <div class="text-xs text-slate-500 mt-1">Aplique as regras atualizadas para ver detalhes</div>
-      </div>
-    `;
-    return;
-  }
-  
-  const playersHtml = players.map(player => {
-    const country = playerManager.countries.find(c => c.id === player.paisId);
-    const lastLoginText = player.lastLogin ? 
-      formatTimeAgo(player.lastLogin) : 'Nunca';
-    
-    return `
-      <div class="flex items-center justify-between p-2 rounded-lg border border-bg-ring/30 hover:bg-white/5">
-        <div class="flex-1">
-          <div class="text-sm font-medium text-slate-200">
-            ${player.nome || 'Sem nome'}
-          </div>
-          <div class="text-xs text-slate-400">
-            ${country?.Pais || 'País não encontrado'} • ${lastLoginText}
-          </div>
-        </div>
-        <div class="flex gap-1">
-          <button onclick="unassignPlayer('${player.paisId}')" 
-                  class="text-red-400 hover:text-red-300 text-xs px-2 py-1 rounded transition-colors"
-                  title="Remover atribuição">
-            ❌
-          </button>
-        </div>
-      </div>
-    `;
-  }).join('');
-  
-  el.playersList.innerHTML = playersHtml;
-}
+  const energyButton = document.getElementById('btn-process-energy');
+  if (energyButton) {
+    energyButton.addEventListener('click', async () => {
+      try {
+        energyButton.disabled = true;
+        energyButton.textContent = '⏳ Processando...';
 
-// Renderiza países disponíveis
-function renderAvailableCountries() {
-  if (!el.availableCountries) {
-    console.warn('❌ Elemento available-countries não encontrado');
-    return;
-  }
-  
-  if (!playerManager || !playerManager.countries) {
-    console.warn('❌ PlayerManager ou countries não inicializados');
-    el.availableCountries.innerHTML = `
-      <div class="text-sm text-yellow-400 text-center py-8">
-        <div class="mb-2">⏳ Carregando países...</div>
-        <div class="text-xs text-slate-500">Aguarde a inicialização</div>
-      </div>
-    `;
-    return;
-  }
-  
-  const availableCountries = playerManager.countries.filter(c => !c.Player);
-  
-  if (el.availableCount) {
-    el.availableCount.textContent = `${availableCountries.length} países`;
-  }
-  
-  if (availableCountries.length === 0) {
-    el.availableCountries.innerHTML = `
-      <div class="text-sm text-slate-500 text-center py-4">
-        Todos os países estão atribuídos
-      </div>
-    `;
-    return;
-  }
-  
-  const countriesHtml = availableCountries.map(country => {
-    const gdp = country.geral?.PIB;
-    const stability = country.geral?.Estabilidade;
-    
-    return `
-      <div class="flex items-center justify-between p-2 rounded-lg border border-bg-ring/30 hover:bg-white/5">
-        <div class="flex-1">
-          <div class="text-sm font-medium text-slate-200">
-            ${country.Pais || country.id}
-          </div>
-          <div class="text-xs text-slate-400">
-            PIB: ${gdp ? (typeof gdp === 'number' ? gdp.toLocaleString() : gdp) : '-'} • 
-            Est: ${stability || '-'}%
-          </div>
-        </div>
-        <div class="flex gap-1">
-          <button onclick="quickAssignCountry('${country.id}')" 
-                  class="text-emerald-400 hover:text-emerald-300 text-xs px-2 py-1 rounded transition-colors"
-                  title="Atribuição rápida">
-            ➕
-          </button>
-        </div>
-      </div>
-    `;
-  }).join('');
-  
-  el.availableCountries.innerHTML = countriesHtml;
-}
+        const { processEnergySystemTurn } = await import('../systems/energyPenaltyProcessor.js');
+        await processEnergySystemTurn();
 
-// Funções globais para os botões
-window.unassignPlayer = async function(countryId) {
-  try {
-    await playerManager.unassignCountry(countryId);
-    renderPlayersList();
-    renderAvailableCountries();
-  } catch (error) {
-    Logger.error('Erro ao remover atribuição:', error);
-  }
-};
-
-window.quickAssignCountry = async function(countryId) {
-  const playersWithoutCountries = playerManager.players.filter(p => 
-    p.papel !== 'admin' && p.papel !== 'narrador' && !p.paisId
-  );
-  
-  if (playersWithoutCountries.length === 0) {
-    showNotification('warning', 'Nenhum jogador disponível para atribuição');
-    return;
-  }
-  
-  // Mostrar modal de seleção de jogador
-  showPlayerSelectionModal(countryId, playersWithoutCountries);
-};
-
-// Modal de seleção de jogador
-function showPlayerSelectionModal(countryId, players) {
-  const country = playerManager.countries.find(c => c.id === countryId);
-  if (!country) return;
-  
-  const modal = document.createElement('div');
-  modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4';
-  
-  const content = document.createElement('div');
-  content.className = 'bg-bg-soft border border-bg-ring/70 rounded-2xl p-6 max-w-md w-full';
-  
-  content.innerHTML = `
-    <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-semibold text-slate-200">Atribuir ${country.Pais}</h3>
-      <button onclick="this.closest('.fixed').remove()" class="text-slate-400 hover:text-slate-200">
-        ✕
-      </button>
-    </div>
-    
-    <div class="mb-4">
-      <label class="text-sm text-slate-400 mb-2 block">Selecionar jogador:</label>
-      <select id="player-select" class="w-full rounded-lg bg-bg border border-bg-ring/70 p-2 text-sm">
-        <option value="">-- Escolha um jogador --</option>
-        ${players.map(p => `<option value="${p.id}">${p.nome || p.id}</option>`).join('')}
-      </select>
-    </div>
-    
-    <div class="mb-4">
-      <label class="text-sm text-slate-400 mb-2 block">Motivo (opcional):</label>
-      <input id="assignment-reason" type="text" class="w-full rounded-lg bg-bg border border-bg-ring/70 p-2 text-sm" placeholder="Ex.: Atribuição manual, substituição, etc." />
-    </div>
-    
-    <div class="flex gap-3 justify-end">
-      <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 rounded-lg border border-bg-ring/70 text-slate-300 hover:bg-white/5">
-        Cancelar
-      </button>
-      <button onclick="confirmPlayerAssignment('${countryId}', this.closest('.fixed'))" class="px-4 py-2 rounded-lg bg-emerald-500 text-slate-950 font-semibold hover:bg-emerald-400">
-        Atribuir
-      </button>
-    </div>
-  `;
-  
-  modal.appendChild(content);
-  document.body.appendChild(modal);
-}
-
-window.confirmPlayerAssignment = async function(countryId, modal) {
-  const playerSelect = modal.querySelector('#player-select');
-  const reasonInput = modal.querySelector('#assignment-reason');
-  
-  const playerId = playerSelect.value;
-  const reason = reasonInput.value;
-  
-  if (!playerId) {
-    showNotification('warning', 'Selecione um jogador');
-    return;
-  }
-  
-  try {
-    await playerManager.assignCountryToPlayer(playerId, countryId, reason);
-    renderPlayersList();
-    renderAvailableCountries();
-    modal.remove();
-  } catch (error) {
-    Logger.error('Erro na atribuição:', error);
-  }
-};
-
-// Mostrar analytics de jogadores
-function showPlayerAnalytics() {
-  const analytics = playerManager.getPlayerAnalytics();
-  
-  const modal = document.createElement('div');
-  modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4';
-  
-  const content = document.createElement('div');
-  content.className = 'bg-bg-soft border border-bg-ring/70 rounded-2xl p-6 max-w-4xl w-full max-h-96 overflow-y-auto';
-  
-  content.innerHTML = `
-    <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-semibold text-slate-200">📊 Analytics de Jogadores</h3>
-      <button onclick="this.closest('.fixed').remove()" class="text-slate-400 hover:text-slate-200">✕</button>
-    </div>
-    
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <div class="bg-bg/50 rounded-lg p-4 border border-blue-500/20">
-        <h4 class="text-sm font-semibold text-blue-200 mb-3">👥 Jogadores</h4>
-        <div class="space-y-2 text-sm">
-          <div class="flex justify-between"><span class="text-slate-400">Total:</span><span class="text-slate-200">${analytics.players.total}</span></div>
-          <div class="flex justify-between"><span class="text-slate-400">Com país:</span><span class="text-emerald-400">${analytics.players.active}</span></div>
-          <div class="flex justify-between"><span class="text-slate-400">Sem país:</span><span class="text-red-400">${analytics.players.inactive}</span></div>
-          <div class="flex justify-between"><span class="text-slate-400">Ativos hoje:</span><span class="text-blue-400">${analytics.players.recentlyActive}</span></div>
-        </div>
-      </div>
-      
-      <div class="bg-bg/50 rounded-lg p-4 border border-green-500/20">
-        <h4 class="text-sm font-semibold text-green-200 mb-3">🌍 Países</h4>
-        <div class="space-y-2 text-sm">
-          <div class="flex justify-between"><span class="text-slate-400">Total:</span><span class="text-slate-200">${analytics.countries.total}</span></div>
-          <div class="flex justify-between"><span class="text-slate-400">Atribuídos:</span><span class="text-emerald-400">${analytics.countries.assigned}</span></div>
-          <div class="flex justify-between"><span class="text-slate-400">Disponíveis:</span><span class="text-red-400">${analytics.countries.available}</span></div>
-          <div class="flex justify-between"><span class="text-slate-400">Taxa:</span><span class="text-blue-400">${analytics.countries.assignmentRate}%</span></div>
-        </div>
-      </div>
-      
-      <div class="bg-bg/50 rounded-lg p-4 border border-purple-500/20">
-        <h4 class="text-sm font-semibold text-purple-200 mb-3">⚖️ Administração</h4>
-        <div class="space-y-2 text-sm">
-          <div class="flex justify-between"><span class="text-slate-400">Admins:</span><span class="text-purple-400">${analytics.players.admins}</span></div>
-          <div class="flex justify-between"><span class="text-slate-400">Narradores:</span><span class="text-purple-400">${analytics.players.narrators}</span></div>
-          <div class="flex justify-between"><span class="text-slate-400">Semanais:</span><span class="text-purple-400">${analytics.players.weeklyActive}</span></div>
-        </div>
-      </div>
-    </div>
-    
-    <div class="mt-6 flex gap-3 justify-end">
-      <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 rounded-lg bg-slate-600 text-slate-200 hover:bg-slate-500">Fechar</button>
-    </div>
-  `;
-  
-  modal.appendChild(content);
-  document.body.appendChild(modal);
-}
-
-// Modal de anúncios
-function showAnnouncementModal() {
-  const modal = document.createElement('div');
-  modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4';
-  
-  const content = document.createElement('div');
-  content.className = 'bg-bg-soft border border-bg-ring/70 rounded-2xl p-6 max-w-md w-full';
-  
-  content.innerHTML = `
-    <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-semibold text-slate-200">📢 Enviar Anúncio</h3>
-      <button onclick="this.closest('.fixed').remove()" class="text-slate-400 hover:text-slate-200">✕</button>
-    </div>
-    
-    <div class="space-y-4">
-      <div>
-        <label class="text-sm text-slate-400 mb-2 block">Título:</label>
-        <input id="announcement-title" type="text" class="w-full rounded-lg bg-bg border border-bg-ring/70 p-2 text-sm" placeholder="Título do anúncio" />
-      </div>
-      
-      <div>
-        <label class="text-sm text-slate-400 mb-2 block">Mensagem:</label>
-        <textarea id="announcement-message" rows="4" class="w-full rounded-lg bg-bg border border-bg-ring/70 p-2 text-sm" placeholder="Conteúdo da mensagem..."></textarea>
-      </div>
-      
-      <div>
-        <label class="text-sm text-slate-400 mb-2 block">Destinatários:</label>
-        <select id="announcement-target" class="w-full rounded-lg bg-bg border border-bg-ring/70 p-2 text-sm">
-          <option value="all">Todos os jogadores</option>
-          <option value="active">Apenas jogadores com países</option>
-          <option value="inactive">Apenas jogadores sem países</option>
-        </select>
-      </div>
-      
-      <div>
-        <label class="text-sm text-slate-400 mb-2 block">Prioridade:</label>
-        <select id="announcement-priority" class="w-full rounded-lg bg-bg border border-bg-ring/70 p-2 text-sm">
-          <option value="normal">Normal</option>
-          <option value="high">Alta</option>
-          <option value="urgent">Urgente</option>
-        </select>
-      </div>
-    </div>
-    
-    <div class="mt-6 flex gap-3 justify-end">
-      <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 rounded-lg border border-bg-ring/70 text-slate-300 hover:bg-white/5">Cancelar</button>
-      <button onclick="sendAnnouncementConfirm(this.closest('.fixed'))" class="px-4 py-2 rounded-lg bg-blue-500 text-white font-semibold hover:bg-blue-400">Enviar</button>
-    </div>
-  `;
-  
-  modal.appendChild(content);
-  document.body.appendChild(modal);
-}
-
-window.sendAnnouncementConfirm = async function(modal) {
-  const title = modal.querySelector('#announcement-title').value;
-  const message = modal.querySelector('#announcement-message').value;
-  const target = modal.querySelector('#announcement-target').value;
-  const priority = modal.querySelector('#announcement-priority').value;
-  
-  if (!title.trim() || !message.trim()) {
-    showNotification('warning', 'Título e mensagem são obrigatórios');
-    return;
-  }
-  
-  try {
-    await playerManager.sendAnnouncement({
-      title: title.trim(),
-      message: message.trim(),
-      targetPlayers: target,
-      priority
-    });
-    
-    modal.remove();
-  } catch (error) {
-    Logger.error('Erro ao enviar anúncio:', error);
-  }
-};
-
-// Inicialização do simulador de eventos
-// Funções dos sistemas antigos removidas
-
-// Setup dos event listeners para simulador de eventos
-function setupEventSimulatorListeners() {
-  // Slider de intensidade
-  if (el.eventIntensity && el.intensityValue) {
-    el.eventIntensity.addEventListener('input', (e) => {
-      el.intensityValue.textContent = e.target.value;
-    });
-  }
-  
-  // Gerador de eventos
-  if (el.generateEvent) {
-    el.generateEvent.addEventListener('click', generateRandomEvent);
-  }
-  
-  // Botões principais
-  if (el.createEvent) {
-    el.createEvent.addEventListener('click', showEventCreatorModal);
-  }
-  
-  if (el.scenarioTemplates) {
-    el.scenarioTemplates.addEventListener('click', showScenarioTemplatesModal);
-  }
-  
-  if (el.eventHistory) {
-    el.eventHistory.addEventListener('click', showEventHistoryModal);
-  }
-}
-
-// Gerar evento aleatório
-async function generateRandomEvent() {
-  try {
-    const type = el.eventType?.value || 'random';
-    const intensity = parseInt(el.eventIntensity?.value || '5');
-    const scope = el.eventScope?.value || 'single';
-    
-    el.generateEvent.disabled = true;
-    el.generateEvent.textContent = 'Gerando...';
-    
-    const event = eventSimulator.generateRandomEvent(type, intensity, scope);
-    
-    // Mostrar preview do evento antes de aplicar
-    showEventPreview(event);
-    
-  } catch (error) {
-    Logger.error('Erro ao gerar evento:', error);
-    showNotification('error', `Erro: ${error.message}`);
-  } finally {
-    el.generateEvent.disabled = false;
-    el.generateEvent.textContent = '🎲 Gerar Evento';
-  }
-}
-
-// Preview do evento
-function showEventPreview(event) {
-  const modal = document.createElement('div');
-  modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4';
-  
-  const content = document.createElement('div');
-  content.className = 'bg-bg-soft border border-bg-ring/70 rounded-2xl p-6 max-w-md w-full';
-  
-  const effectsText = Object.entries(event.effects || {})
-    .map(([field, effect]) => `${field}: ${effect}`)
-    .join(', ');
-  
-  const intensityColor = event.intensity >= 7 ? 'text-red-400' : 
-                        event.intensity >= 4 ? 'text-yellow-400' : 'text-green-400';
-  
-  content.innerHTML = `
-    <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-semibold text-slate-200">🎲 Evento Gerado</h3>
-      <button onclick="this.closest('.fixed').remove()" class="text-slate-400 hover:text-slate-200">✕</button>
-    </div>
-    
-    <div class="space-y-4">
-      <div class="bg-bg/50 rounded-lg p-3 border border-orange-500/20">
-        <div class="text-lg font-semibold text-orange-200 mb-2">
-          ${event.isPositive ? '✨' : '⚡'} ${event.name}
-        </div>
-        <div class="text-sm text-slate-300 mb-3">
-          ${event.description}
-        </div>
-        
-        <div class="grid grid-cols-2 gap-3 text-xs">
-          <div>
-            <span class="text-slate-400">Tipo:</span>
-            <span class="text-slate-200 ml-1 capitalize">${event.type}</span>
-          </div>
-          <div>
-            <span class="text-slate-400">Intensidade:</span>
-            <span class="${intensityColor} ml-1 font-semibold">${event.intensity}/10</span>
-          </div>
-          <div class="col-span-2">
-            <span class="text-slate-400">Alcance:</span>
-            <span class="text-slate-200 ml-1 capitalize">${event.scope}</span>
-          </div>
-        </div>
-        
-        <div class="mt-3 pt-3 border-t border-bg-ring/30">
-          <div class="text-xs text-slate-400 mb-1">Efeitos:</div>
-          <div class="text-sm ${event.isPositive ? 'text-emerald-300' : 'text-red-300'}">
-            ${effectsText || 'Nenhum efeito definido'}
-          </div>
-        </div>
-      </div>
-      
-      <div class="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-3">
-        <div class="text-yellow-200 text-sm font-medium mb-1">⚠️ Confirmação</div>
-        <div class="text-yellow-100 text-xs">
-          Este evento será aplicado ${event.scope === 'global' ? 'globalmente' : 
-          event.scope === 'regional' ? 'regionalmente' : 
-          event.scope === 'single' ? 'em um país' : 'nos países selecionados'}.
-        </div>
-      </div>
-    </div>
-    
-    <div class="mt-6 flex gap-3 justify-end">
-      <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 rounded-lg border border-bg-ring/70 text-slate-300 hover:bg-white/5">
-        Cancelar
-      </button>
-      <button onclick="applyGeneratedEvent('${event.id}', this.closest('.fixed'))" class="px-4 py-2 rounded-lg bg-orange-500 text-slate-950 font-semibold hover:bg-orange-400">
-        Aplicar Evento
-      </button>
-    </div>
-  `;
-  
-  modal.appendChild(content);
-  document.body.appendChild(modal);
-  
-  // Armazenar evento temporariamente
-  window.tempEvent = event;
-}
-
-window.applyGeneratedEvent = async function(eventId, modal) {
-  try {
-    const event = window.tempEvent;
-    if (!event || event.id !== eventId) {
-      showNotification('error', 'Evento não encontrado');
-      return;
-    }
-    
-    await eventSimulator.applyEvent(event);
-    modal.remove();
-    
-    // Atualizar displays se necessário
-    await advancedTools.refresh();
-    
-  } catch (error) {
-    Logger.error('Erro ao aplicar evento:', error);
-    showNotification('error', `Erro: ${error.message}`);
-  }
-};
-
-// Modal de templates de cenários
-function showScenarioTemplatesModal() {
-  const modal = document.createElement('div');
-  modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4';
-  
-  const content = document.createElement('div');
-  content.className = 'bg-bg-soft border border-bg-ring/70 rounded-2xl p-6 max-w-4xl w-full max-h-96 overflow-y-auto';
-  
-  const scenarios = {
-    oil_crisis: '🛢️ Crise do Petróleo - Reduz PIB global',
-    tech_revolution: '💻 Revolução Tecnológica - Beneficia países desenvolvidos', 
-    cold_war_intensifies: '🚀 Guerra Fria Intensifica - Reduz estabilidade global',
-    economic_boom: '📈 Boom Econômico - Crescimento para países sortudos',
-    global_pandemic: '🦠 Pandemia Global - Afeta todos os países'
-  };
-  
-  const scenarioButtons = Object.entries(scenarios)
-    .map(([key, description]) => `
-      <button onclick="applyScenario('${key}', this.closest('.fixed'))" 
-              class="w-full text-left p-3 rounded-lg border border-bg-ring/50 hover:bg-white/5 transition-colors mb-2">
-        <div class="font-medium text-sm text-orange-200">${description}</div>
-      </button>
-    `).join('');
-  
-  content.innerHTML = `
-    <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-semibold text-slate-200">📚 Templates de Cenários</h3>
-      <button onclick="this.closest('.fixed').remove()" class="text-slate-400 hover:text-slate-200">✕</button>
-    </div>
-    
-    <div class="space-y-2">
-      ${scenarioButtons}
-    </div>
-    
-    <div class="mt-6 flex gap-3 justify-end">
-      <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 rounded-lg bg-slate-600 text-slate-200 hover:bg-slate-500">
-        Fechar
-      </button>
-    </div>
-  `;
-  
-  modal.appendChild(content);
-  document.body.appendChild(modal);
-}
-
-window.applyScenario = async function(scenarioKey, modal) {
-  try {
-    const confirmed = await showConfirmBox(
-      'Aplicar Cenário',
-      `Tem certeza que deseja aplicar este cenário? Esta ação afetará múltiplos países.`,
-      'Aplicar',
-      'Cancelar'
-    );
-    
-    if (!confirmed) return;
-    
-    await eventSimulator.applyScenario(scenarioKey);
-    modal.remove();
-    
-    // Atualizar displays
-    await advancedTools.refresh();
-    
-  } catch (error) {
-    Logger.error('Erro ao aplicar cenário:', error);
-    showNotification('error', `Erro: ${error.message}`);
-  }
-};
-
-// Modal de histórico de eventos
-function showEventHistoryModal() {
-  const modal = document.createElement('div');
-  modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4';
-  
-  const content = document.createElement('div');
-  content.className = 'bg-bg-soft border border-bg-ring/70 rounded-2xl p-6 max-w-6xl w-full max-h-96 overflow-y-auto';
-  
-  const history = eventSimulator.getEventHistory();
-  
-  const historyItems = history.length > 0 ? history.map(event => `
-    <div class="bg-bg/50 rounded-lg p-3 border border-orange-500/20 mb-3">
-      <div class="flex items-center justify-between mb-2">
-        <div class="font-medium text-orange-200">${event.name}</div>
-        <div class="text-xs text-slate-400">${formatTimeAgo(new Date(event.appliedAt))}</div>
-      </div>
-      <div class="text-sm text-slate-300 mb-2">${event.description}</div>
-      <div class="text-xs text-slate-400">
-        Afetou ${event.affectedCountries?.length || 0} países
-      </div>
-    </div>
-  `).join('') : '<div class="text-center text-slate-400 py-8">Nenhum evento aplicado ainda</div>';
-  
-  content.innerHTML = `
-    <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-semibold text-slate-200">📊 Histórico de Eventos</h3>
-      <div class="flex gap-2">
-        <button onclick="eventSimulator.clearEventHistory(); this.closest('.fixed').remove()" 
-                class="text-red-400 hover:text-red-300 text-sm px-3 py-1.5 rounded border border-red-500/30 hover:bg-red-500/10">
-          🗑️ Limpar
-        </button>
-        <button onclick="this.closest('.fixed').remove()" class="text-slate-400 hover:text-slate-200">✕</button>
-      </div>
-    </div>
-    
-    <div class="max-h-80 overflow-y-auto">
-      ${historyItems}
-    </div>
-    
-    <div class="mt-6 flex gap-3 justify-end">
-      <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 rounded-lg bg-slate-600 text-slate-200 hover:bg-slate-500">
-        Fechar
-      </button>
-    </div>
-  `;
-  
-  modal.appendChild(content);
-  document.body.appendChild(modal);
-}
-
-// Modal de criação de evento personalizado
-function showEventCreatorModal() {
-  showNotification('info', 'Criador de eventos personalizados em desenvolvimento');
-}
-
-// Update header statistics
-function updateHeaderStats(config) {
-  const headerTurno = document.getElementById('header-turno');
-  const headerPlayers = document.getElementById('header-players');
-  const headerPending = document.getElementById('header-pending');
-
-  if (headerTurno && config?.turnoAtual) {
-    headerTurno.textContent = `#${config.turnoAtual}`;
-  }
-
-  const headerPlayersElement = document.getElementById('header-players');
-  console.log('📊 Elemento header-players encontrado:', !!headerPlayersElement);
-  
-  if (headerPlayersElement) {
-    if (playerManager?.players && playerManager.players.length > 0) {
-      // Se temos dados de players, mostrar jogadores ativos (com país)
-      const activePlayers = playerManager.players.filter(p => p.paisId).length;
-      console.log(`📊 Players com paisId: ${activePlayers} de ${playerManager.players.length} total`);
-      headerPlayersElement.textContent = activePlayers.toString();
-      console.log(`📊 Valor definido no header-players: ${activePlayers}`);
-    } else {
-      // Fallback: contar países com jogadores atribuídos
-      const assignedCountries = state.paises ? state.paises.filter(c => c.Player).length : 0;
-      const totalCountries = state.paises ? state.paises.length : 0;
-      console.log(`📊 Países com Player: ${assignedCountries} de ${totalCountries} total`);
-      if (assignedCountries > 0) {
-        const sampleCountry = state.paises.find(c => c.Player);
-        console.log(`📊 Exemplo de país com jogador:`, sampleCountry?.Pais, 'Player:', sampleCountry?.Player);
+        alert('Turno de energia processado com sucesso!');
+        await carregarTudo();
+      } catch (error) {
+        console.error('Erro ao processar energia:', error);
+        alert('Erro ao processar energia: ' + error.message);
+      } finally {
+        energyButton.disabled = false;
+        energyButton.textContent = '⚡ Processar Turno de Energia';
       }
-      headerPlayersElement.textContent = assignedCountries.toString();
-      console.log(`📊 Valor definido no header-players: ${assignedCountries}`);
-    }
+    });
   }
 
-  if (headerPending && vehicleApprovalSystem?.pendingVehicles) {
-    headerPending.textContent = vehicleApprovalSystem.pendingVehicles.length.toString();
-  }
-}
+  const resourceButton = document.getElementById('btn-assign-resources');
+  if (resourceButton) {
+    resourceButton.addEventListener('click', async () => {
+      try {
+        resourceButton.disabled = true;
+        resourceButton.textContent = '⏳ Processando...';
 
-// Update quick stats in the sidebar
-function updateQuickStats() {
-  const quickVehiclesPending = document.getElementById('quick-vehicles-pending');
-  const quickChangesToday = document.getElementById('quick-changes-today');
+        const { assignResourcePotentials } = await import('../../scripts/assign-resource-potentials.js');
+        await assignResourcePotentials();
 
-  const quickPlayersElement = document.getElementById('quick-players-online');
-  console.log('📊 Elemento quick-players-online encontrado:', !!quickPlayersElement);
-  
-  if (quickPlayersElement) {
-    if (playerManager?.players && playerManager.players.length > 0) {
-      // Se temos dados de players, mostrar jogadores ativos (com país)
-      const activePlayers = playerManager.players.filter(p => p.paisId).length;
-      console.log(`📊 Quick stats - Players com paisId: ${activePlayers}`);
-      quickPlayersElement.textContent = activePlayers.toString();
-      console.log(`📊 Valor definido no quick-players-online: ${activePlayers}`);
-    } else {
-      // Fallback: contar países com jogadores atribuídos
-      const assignedCountries = state.paises ? state.paises.filter(c => c.Player).length : 0;
-      console.log(`📊 Quick stats - Países com Player: ${assignedCountries}`);
-      quickPlayersElement.textContent = assignedCountries.toString();
-      console.log(`📊 Valor definido no quick-players-online: ${assignedCountries}`);
-    }
+        await carregarTudo();
+      } catch (error) {
+        console.error('Erro ao atribuir recursos:', error);
+        alert('Erro ao atribuir recursos: ' + error.message);
+      } finally {
+        resourceButton.disabled = false;
+        resourceButton.textContent = '🌍 Atribuir Potenciais de Recursos';
+      }
+    });
   }
 
-  if (quickVehiclesPending && vehicleApprovalSystem?.pendingVehicles) {
-    quickVehiclesPending.textContent = vehicleApprovalSystem.pendingVehicles.length.toString();
+  const reportButton = document.getElementById('btn-resource-report');
+  if (reportButton) {
+    reportButton.addEventListener('click', async () => {
+      try {
+        const { generateResourceReport } = await import('../../scripts/assign-resource-potentials.js');
+        generateResourceReport();
+        alert('Relatório de recursos gerado no console (F12)');
+      } catch (error) {
+        console.error('Erro ao gerar relatório:', error);
+        alert('Erro ao gerar relatório: ' + error.message);
+      }
+    });
   }
 
-  if (quickChangesToday) {
-    // This would need to be calculated from change history
-    quickChangesToday.textContent = '–';
-  }
-}
+  const consumptionButton = document.getElementById('btn-apply-consumption');
+  if (consumptionButton) {
+    consumptionButton.addEventListener('click', async () => {
+      try {
+        consumptionButton.disabled = true;
+        consumptionButton.textContent = '⏳ Calculando...';
 
-// Sistema de aprovação de veículos
+        const { applyResourceConsumption } = await import('../scripts/apply-resource-consumption.js');
+        await applyResourceConsumption();
+
+        await carregarTudo();
+      } catch (error) {
+        console.error('Erro ao calcular consumo:', error);
+        alert('Erro ao calcular consumo: ' + error.message);
+      } finally {
+        consumptionButton.disabled = false;
+        consumptionButton.textContent = '🍽️ Calcular Consumo de Recursos';
+      }
+    });
+  }
+
+  // Botão para aplicar consumo a todos os países
+  const applyAllButton = document.getElementById('btn-apply-consumption-all');
+  if (applyAllButton) {
+    applyAllButton.addEventListener('click', async () => {
+      try {
+        const confirmed = await showConfirmBox(
+          'Aplicar Consumo a Todos os Países',
+          'Esta ação irá calcular e definir o consumo mensal de recursos para TODOS os países baseado em suas características (população, PIB, tecnologia, etc.). Esta operação pode ser executada múltiplas vezes. Continuar?',
+          'Sim, aplicar',
+          'Cancelar'
+        );
+
+        if (!confirmed) {
+          showNotification('info', 'Operação cancelada pelo usuário.');
+          return;
+        }
+
+        applyAllButton.disabled = true;
+        applyAllButton.textContent = '⏳ Aplicando a todos os países...';
+
+        const { applyResourceConsumption } = await import('../../scripts/apply-resource-consumption.js');
+        await applyResourceConsumption();
+
+        showNotification('success', '🎉 Consumo aplicado a todos os países! Recarregue o dashboard para ver os novos valores.');
+        await carregarTudo();
+      } catch (error) {
+        console.error('Erro ao aplicar consumo:', error);
+        showNotification('error', 'Erro ao aplicar consumo: ' + error.message);
+      } finally {
+        applyAllButton.disabled = false;
+        applyAllButton.textContent = '🚀 APLICAR CONSUMO A TODOS OS PAÍSES';
+      }
+    });
+  }
+
+  // Botão para aplicar produção a todos os países
+  const applyProductionButton = document.getElementById('btn-apply-production-all');
+  if (applyProductionButton) {
+    applyProductionButton.addEventListener('click', async () => {
+      try {
+        const confirmed = await showConfirmBox(
+          'Aplicar Produção a Todos os Países',
+          'Esta ação irá calcular e definir a produção mensal de recursos para TODOS os países baseado em suas características (população, PIB, tecnologia, geografia, clima). Esta operação pode ser executada múltiplas vezes. Continuar?',
+          'Sim, aplicar',
+          'Cancelar'
+        );
+
+        if (!confirmed) {
+          showNotification('info', 'Operação cancelada pelo usuário.');
+          return;
+        }
+
+        applyProductionButton.disabled = true;
+        applyProductionButton.textContent = '⏳ Aplicando produção a todos os países...';
+
+        const { applyResourceProduction } = await import('../../scripts/apply-resource-production.js');
+        await applyResourceProduction();
+
+        showNotification('success', '🎉 Produção aplicada a todos os países! Recarregue o dashboard para ver os novos valores.');
+        await carregarTudo();
+      } catch (error) {
+        console.error('Erro ao aplicar produção:', error);
+        showNotification('error', 'Erro ao aplicar produção: ' + error.message);
+      } finally {
+        applyProductionButton.disabled = false;
+        applyProductionButton.textContent = '🏭 APLICAR PRODUÇÃO A TODOS OS PAÍSES';
+      }
+    });
+  }
+
+  // Botão para simular produção
+  const simulateProductionButton = document.getElementById('btn-simulate-production');
+  if (simulateProductionButton) {
+    simulateProductionButton.addEventListener('click', async () => {
+      try {
+        simulateProductionButton.disabled = true;
+        simulateProductionButton.textContent = '⏳ Simulando...';
+
+        const { simulateProductionTurns } = await import('../../scripts/apply-resource-production.js');
+        await simulateProductionTurns(6);
+
+        await carregarTudo();
+      } catch (error) {
+        console.error('Erro ao simular produção:', error);
+        showNotification('error', 'Erro na simulação: ' + error.message);
+      } finally {
+        simulateProductionButton.disabled = false;
+        simulateProductionButton.textContent = '📊 Simular Produção 6 Turnos';
+      }
+    });
+  }
+
+  // Botão para aplicar bens de consumo e efeitos de estabilidade
+  const applyConsumerGoodsButton = document.getElementById('btn-apply-consumer-goods');
+  if (applyConsumerGoodsButton) {
+    applyConsumerGoodsButton.addEventListener('click', async () => {
+      try {
+        const confirmed = await showConfirmBox(
+          'Aplicar Bens de Consumo e Estabilidade',
+          'Esta ação irá calcular os bens de consumo para TODOS os países e aplicar os efeitos de estabilidade (+3% até -5%). Esta operação deve ser executada a cada turno. Continuar?',
+          'Sim, aplicar',
+          'Cancelar'
+        );
+
+        if (!confirmed) {
+          showNotification('info', 'Operação cancelada pelo usuário.');
+          return;
+        }
+
+        applyConsumerGoodsButton.disabled = true;
+        applyConsumerGoodsButton.textContent = '⏳ Aplicando bens de consumo...';
+
+        const { applyConsumerGoodsEffects } = await import('../../scripts/apply-consumer-goods.js');
+        await applyConsumerGoodsEffects();
+
+        showNotification('success', '🎉 Bens de consumo e efeitos de estabilidade aplicados! Recarregue o dashboard.');
+        await carregarTudo();
+      } catch (error) {
+        console.error('Erro ao aplicar bens de consumo:', error);
+        showNotification('error', 'Erro ao aplicar bens de consumo: ' + error.message);
+      } finally {
+        applyConsumerGoodsButton.disabled = false;
+        applyConsumerGoodsButton.textContent = '🛍️ APLICAR BENS DE CONSUMO E ESTABILIDADE';
+      }
+    });
+  }
+
+  // Botão para simular bens de consumo
+  const simulateConsumerGoodsButton = document.getElementById('btn-simulate-consumer-goods');
+  if (simulateConsumerGoodsButton) {
+    simulateConsumerGoodsButton.addEventListener('click', async () => {
+      try {
+        simulateConsumerGoodsButton.disabled = true;
+        simulateConsumerGoodsButton.textContent = '⏳ Simulando...';
+
+        const { simulateConsumerGoodsOverTime } = await import('../../scripts/apply-consumer-goods.js');
+        await simulateConsumerGoodsOverTime(5);
+
+        await carregarTudo();
+      } catch (error) {
+        console.error('Erro ao simular bens de consumo:', error);
+        showNotification('error', 'Erro na simulação: ' + error.message);
+      } finally {
+        simulateConsumerGoodsButton.disabled = false;
+        simulateConsumerGoodsButton.textContent = '📈 Simular Estabilidade 5 Turnos';
+      }
+    });
+  }
+
+  // Botão para testar processamento de turno
+  const testTurnButton = document.getElementById('btn-test-turn-processing');
+  if (testTurnButton) {
+    testTurnButton.addEventListener('click', async () => {
+      try {
+        testTurnButton.disabled = true;
+        testTurnButton.textContent = '⏳ Testando...';
+
+        const { default: TurnProcessor } = await import('../../js/systems/turnProcessor.js');
+        const results = await TurnProcessor.testTurnProcessing();
+
+        showNotification('success', `Teste concluído: ${results.length} países analisados. Veja o console (F12) para detalhes.`);
+      } catch (error) {
+        console.error('Erro no teste:', error);
+        showNotification('error', 'Erro no teste: ' + error.message);
+      } finally {
+        testTurnButton.disabled = false;
+        testTurnButton.textContent = '🧪 Testar Processamento de Turno';
+      }
+    });
+  }
+
+  // Botão para reprocessar turno atual
+  const reprocessTurnButton = document.getElementById('btn-reprocess-turn');
+  if (reprocessTurnButton) {
+    reprocessTurnButton.addEventListener('click', async () => {
+      try {
+        const confirmed = await showConfirmBox(
+          'Reprocessar Turno Atual',
+          'Esta ação irá forçar o reprocessamento do turno atual, aplicando novamente todos os efeitos de bens de consumo e estabilidade. Use apenas se necessário. Continuar?',
+          'Sim, reprocessar',
+          'Cancelar'
+        );
+
+        if (!confirmed) {
+          showNotification('info', 'Operação cancelada.');
+          return;
+        }
+
+        reprocessTurnButton.disabled = true;
+        reprocessTurnButton.textContent = '⏳ Reprocessando...';
+
+        // Obter turno atual
+        const gameConfig = await getGameConfig();
+        const currentTurn = gameConfig.turnoAtual || 1;
+
+        const { default: TurnProcessor } = await import('../../js/systems/turnProcessor.js');
+        const result = await TurnProcessor.reprocessTurn(currentTurn);
+
+        showNotification('success', `Turno ${currentTurn} reprocessado: ${result.processedCount} países atualizados!`);
+        await carregarTudo();
+      } catch (error) {
+        console.error('Erro no reprocessamento:', error);
+        showNotification('error', 'Erro no reprocessamento: ' + error.message);
+      } finally {
+        reprocessTurnButton.disabled = false;
+        reprocessTurnButton.textContent = '🔄 Reprocessar Turno Atual';
+      }
+    });
+  }
+
+  const simulateButton = document.getElementById('btn-simulate-consumption');
+  if (simulateButton) {
+    simulateButton.addEventListener('click', async () => {
+      try {
+        simulateButton.disabled = true;
+        simulateButton.textContent = '⏳ Simulando...';
+
+        const { simulateConsumptionTurns } = await import('../scripts/apply-resource-consumption.js');
+        await simulateConsumptionTurns(3);
+
+        alert('Simulação concluída! Veja os resultados no console (F12)');
+      } catch (error) {
+        console.error('Erro na simulação:', error);
+        alert('Erro na simulação: ' + error.message);
+      } finally {
+        simulateButton.disabled = false;
+        simulateButton.textContent = '🔮 Simular 3 Turnos';
+      }
+    });
+  }
+});
+
+// --- Gerenciadores de Sistemas ---
 let vehicleApprovalSystem = null;
+let navalProductionSystem = null;
 let inventorySystem = null;
 let economicSimulator = null;
+// energyManager intentionally not initialized here; dashboard handles energy
 
 async function initVehicleApprovalSystem() {
   try {
@@ -1814,6 +640,16 @@ async function initVehicleApprovalSystem() {
     Logger.info('Sistema de aprovação de veículos inicializado');
   } catch (error) {
     Logger.error('Erro ao inicializar sistema de aprovação de veículos:', error);
+  }
+}
+
+async function initNavalProductionSystem() {
+  try {
+    navalProductionSystem = new NavalProductionSystem();
+    await navalProductionSystem.initialize();
+    Logger.info('Sistema de produção naval inicializado');
+  } catch (error) {
+    Logger.error('Erro ao inicializar sistema de produção naval:', error);
   }
 }
 
@@ -1836,48 +672,40 @@ async function initEconomicSystem() {
   }
 }
 
-// Setup dos event listeners para as ferramentas da aba Tools
-function setupToolsEventListeners() {
-  // Event listeners removidos - ferramentas serão refeitas
+async function initPlayerManagement() {
+  try {
+    // playerManager is exported singleton from services/playerManager.js
+    if (playerManager && typeof playerManager.loadPlayers === 'function') {
+      await playerManager.loadPlayers();
+      await playerManager.loadCountries();
+      playerManager.setupRealTimeListeners?.();
+      Logger.info('Player management inicializado');
+    } else {
+      Logger.warn('playerManager não disponível para inicialização');
+    }
+  } catch (error) {
+    Logger.error('Erro ao inicializar player management:', error);
+  }
 }
 
-// Inicialização completa do sistema
+// Energy activation removed from narrador; use country dashboard instead.
+
 async function initNarratorSystems() {
   try {
     console.log('🔧 Inicializando sistemas do narrador...');
-    
-    // Inicializar sistemas em paralelo quando possível
     await Promise.all([
       initPlayerManagement(),
       initVehicleApprovalSystem(),
+      initNavalProductionSystem(),
       initInventorySystem(),
-      initEconomicSystem()
+  initEconomicSystem()
     ]);
     
-    // Make functions globally available
-    window.updateHeaderStats = updateHeaderStats;
-    window.updateQuickStats = updateQuickStats;
     window.playerManager = playerManager;
     window.vehicleApprovalSystem = vehicleApprovalSystem;
+    window.navalProductionSystem = navalProductionSystem;
     window.inventorySystem = inventorySystem;
-    window.economicSimulator = economicSimulator;
-    
-    // Setup dos event listeners para ferramentas da aba Tools
-    setupToolsEventListeners();
-    
-    // Setup periodic updates (DESABILITADO TEMPORARIAMENTE - estava sobrescrevendo valores)
-    /* setInterval(() => {
-      updateHeaderStats({ turnoAtual: document.getElementById('turno-atual-admin')?.textContent?.replace('#', '') });
-      updateQuickStats();
-      
-      // Update tab badges
-      if (window.updateTabBadges) {
-        window.updateTabBadges({
-          vehiclesPending: vehicleApprovalSystem?.pendingVehicles?.length || 0,
-          playersOnline: playerManager?.players?.filter(p => p.isOnline).length || 0
-        });
-      }
-    }, 5000); // Update every 5 seconds */
+  window.economicSimulator = economicSimulator;
     
     console.log('✅ Todos os sistemas do narrador inicializados');
   } catch (error) {

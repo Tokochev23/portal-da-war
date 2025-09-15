@@ -1,0 +1,261 @@
+<div class="aircraft-tab-content" data-tab="weapons">
+  <!-- Header Section -->
+  <div class="mb-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h2 class="text-xl font-bold text-slate-100 flex items-center gap-2">
+          <span>🎯</span>
+          <span>Sistema de Armamento</span>
+        </h2>
+        <p class="text-sm text-slate-400 mt-1">Configure as armas e cargas da sua aeronave</p>
+      </div>
+      <div class="text-right">
+        <div class="text-sm text-slate-400">Selecionados:</div>
+        <div class="text-lg font-semibold text-red-300" id="selected-weapons-count">0 itens</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hardpoints Display -->
+  <div id="hardpoints-display" class="mb-6 p-4 bg-slate-800/30 rounded-xl border border-slate-700/50">
+    <div class="flex items-center gap-3 mb-3">
+      <span class="text-lg">🔗</span>
+      <span class="font-semibold text-slate-200">Pontos de Fixação</span>
+    </div>
+    <div id="hardpoints-content" class="text-sm text-slate-400">
+      Selecione uma fuselagem primeiro para ver os pontos de fixação disponíveis
+    </div>
+  </div>
+
+  <!-- Weapon Categories -->
+  <div class="mb-6">
+    <div class="flex flex-wrap gap-3">
+      <button class="weapon-category-btn active" data-category="all">
+        <span class="icon">🎯</span>
+        <span class="label">Todos</span>
+      </button>
+      <button class="weapon-category-btn" data-category="cannon">
+        <span class="icon">🔫</span>
+        <span class="label">Canhões</span>
+      </button>
+      <button class="weapon-category-btn" data-category="bomb">
+        <span class="icon">💣</span>
+        <span class="label">Bombas</span>
+      </button>
+      <button class="weapon-category-btn" data-category="rocket">
+        <span class="icon">🚀</span>
+        <span class="label">Foguetes</span>
+      </button>
+      <button class="weapon-category-btn" data-category="missile">
+        <span class="icon">🎯</span>
+        <span class="label">Mísseis</span>
+      </button>
+      <button class="weapon-category-btn" data-category="fuel">
+        <span class="icon">⛽</span>
+        <span class="label">Tanques</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Weapons Grid -->
+  <div id="weapons-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+    <!-- Weapons will be loaded dynamically here -->
+  </div>
+
+  <!-- Loadout Configuration -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Current Loadout -->
+    <div class="p-6 bg-slate-800/40 border border-slate-700/50 rounded-xl">
+      <h3 class="text-lg font-semibold text-slate-100 mb-4 flex items-center gap-2">
+        <span>📦</span>
+        <span>Configuração Atual</span>
+      </h3>
+      <div id="current-loadout" class="space-y-3">
+        <div class="text-center text-slate-400 py-8">
+          <span class="text-4xl">🎯</span>
+          <p class="mt-2">Nenhum armamento selecionado</p>
+        </div>
+      </div>
+      <div class="mt-4 pt-4 border-t border-slate-700/50">
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          <div class="flex justify-between">
+            <span class="text-slate-400">Peso Total:</span>
+            <span class="text-slate-200 font-semibold" id="total-weapon-weight">0 kg</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Custo Total:</span>
+            <span class="text-slate-200 font-semibold" id="total-weapon-cost">$0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mission Presets -->
+    <div class="p-6 bg-slate-800/40 border border-slate-700/50 rounded-xl">
+      <h3 class="text-lg font-semibold text-slate-100 mb-4 flex items-center gap-2">
+        <span>🎮</span>
+        <span>Configurações de Missão</span>
+      </h3>
+      <div class="space-y-3">
+        <button class="mission-preset-btn" data-preset="air_superiority">
+          <div class="flex items-center gap-3">
+            <span class="text-lg">🛡️</span>
+            <div class="text-left">
+              <div class="font-semibold text-slate-200">Superioridade Aérea</div>
+              <div class="text-xs text-slate-400">Combate ar-ar, interceptação</div>
+            </div>
+          </div>
+        </button>
+        <button class="mission-preset-btn" data-preset="ground_attack">
+          <div class="flex items-center gap-3">
+            <span class="text-lg">💥</span>
+            <div class="text-left">
+              <div class="font-semibold text-slate-200">Ataque ao Solo</div>
+              <div class="text-xs text-slate-400">CAS, interdição</div>
+            </div>
+          </div>
+        </button>
+        <button class="mission-preset-btn" data-preset="multi_role">
+          <div class="flex items-center gap-3">
+            <span class="text-lg">⚖️</span>
+            <div class="text-left">
+              <div class="font-semibold text-slate-200">Multi-Propósito</div>
+              <div class="text-xs text-slate-400">Configuração balanceada</div>
+            </div>
+          </div>
+        </button>
+        <button class="mission-preset-btn" data-preset="ferry">
+          <div class="flex items-center gap-3">
+            <span class="text-lg">✈️</span>
+            <div class="text-left">
+              <div class="font-semibold text-slate-200">Ferry/Transporte</div>
+              <div class="text-xs text-slate-400">Máximo alcance</div>
+            </div>
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Weapon Performance Impact -->
+  <div id="weapon-performance-impact" class="hidden p-6 bg-red-900/20 border border-red-700/50 rounded-xl">
+    <h3 class="text-lg font-semibold text-red-200 mb-4 flex items-center gap-2">
+      <span>📊</span>
+      <span>Impacto na Performance</span>
+    </h3>
+    <div id="weapon-performance-content">
+      <!-- Performance impact will be shown here -->
+    </div>
+  </div>
+
+  <!-- Compatibility Warnings -->
+  <div id="weapon-warnings" class="hidden mt-4">
+    <div class="bg-amber-900/20 border border-amber-800/50 rounded-xl p-4">
+      <div class="flex items-start gap-3">
+        <span class="text-xl">⚠️</span>
+        <div>
+          <h4 class="font-semibold text-amber-300 mb-2">Avisos de Armamento</h4>
+          <div id="weapon-warnings-list" class="text-sm text-amber-200 space-y-1">
+            <!-- Warnings will be populated here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.weapon-category-btn {
+  @apply flex items-center gap-2 px-4 py-2 rounded-lg border transition-all duration-200;
+  @apply bg-slate-700/50 text-slate-300 border-slate-600/50;
+}
+
+.weapon-category-btn:hover {
+  @apply bg-slate-600/50 text-slate-200 border-slate-500/50;
+}
+
+.weapon-category-btn.active {
+  @apply bg-red-600/20 text-red-300 border-red-500/50;
+}
+
+.weapon-category-btn .icon {
+  @apply text-lg;
+}
+
+.weapon-category-btn .label {
+  @apply text-sm font-medium;
+}
+
+.weapon-card {
+  @apply p-4 rounded-xl border transition-all duration-200 cursor-pointer;
+  @apply bg-slate-800/40 border-slate-700/50;
+}
+
+.weapon-card:hover {
+  @apply bg-slate-700/50 border-slate-600/50 transform -translate-y-1;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.weapon-card.selected {
+  @apply ring-2 ring-red-400/60 bg-red-900/20 border-red-400/50;
+}
+
+.weapon-card.incompatible {
+  @apply opacity-50 pointer-events-none;
+}
+
+.weapon-type-badge {
+  @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium;
+}
+
+.weapon-type-badge.cannon {
+  @apply bg-orange-600/20 text-orange-300 border border-orange-500/30;
+}
+
+.weapon-type-badge.bomb {
+  @apply bg-red-600/20 text-red-300 border border-red-500/30;
+}
+
+.weapon-type-badge.rocket {
+  @apply bg-yellow-600/20 text-yellow-300 border border-yellow-500/30;
+}
+
+.weapon-type-badge.missile {
+  @apply bg-purple-600/20 text-purple-300 border border-purple-500/30;
+}
+
+.weapon-type-badge.fuel {
+  @apply bg-blue-600/20 text-blue-300 border border-blue-500/30;
+}
+
+.mission-preset-btn {
+  @apply w-full p-3 rounded-lg border transition-all duration-200 text-left;
+  @apply bg-slate-700/50 border-slate-600/50 hover:bg-slate-600/50 hover:border-slate-500/50;
+}
+
+.hardpoint-slot {
+  @apply flex items-center justify-center w-12 h-12 rounded-lg border-2 border-dashed transition-all;
+  @apply border-slate-600 bg-slate-800/50;
+}
+
+.hardpoint-slot.occupied {
+  @apply border-solid border-red-400 bg-red-900/20;
+}
+
+.hardpoint-slot.available {
+  @apply border-cyan-400 bg-cyan-900/20;
+}
+
+.loadout-item {
+  @apply flex items-center justify-between p-3 rounded-lg bg-slate-700/30 border border-slate-600/50;
+}
+
+.loadout-item .remove-btn {
+  @apply w-6 h-6 rounded-full bg-red-600/20 text-red-400 border border-red-500/30;
+  @apply flex items-center justify-center text-xs cursor-pointer transition-colors;
+}
+
+.loadout-item .remove-btn:hover {
+  @apply bg-red-600/30 text-red-300;
+}
+</style>

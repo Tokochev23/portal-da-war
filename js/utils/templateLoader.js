@@ -181,19 +181,18 @@ window.loadTemplate = async function(containerId, templatePath, data = {}) {
 class ProgressiveLoader {
     constructor() {
         this.criticalTemplates = [
-            'templates/vehicle-creator/header.html',
-            'templates/vehicle-creator/project-info.html'
+            'templates/aircraft-creator/airframes-tab.html',
+            'templates/aircraft-creator/engines-tab.html'
         ];
         
         this.secondaryTemplates = [
-            'templates/vehicle-creator/component-tabs.html',
-            'templates/vehicle-creator/warnings-section.html',
-            'templates/vehicle-creator/analysis-section.html'
+            'templates/aircraft-creator/weapons-tab.html',
+            'templates/aircraft-creator/wings-tab.html',
+            'templates/aircraft-creator/avionics-tab.html'
         ];
         
         this.tertiaryTemplates = [
-            'templates/vehicle-creator/action-buttons.html',
-            'templates/vehicle-creator/footer-components.html'
+            'templates/aircraft-creator/component-tabs.html'
         ];
     }
 
@@ -236,4 +235,4 @@ class ProgressiveLoader {
 
 window.progressiveLoader = new ProgressiveLoader();
 
-export { TemplateLoader, TemplateInjector, ProgressiveLoader };
+console.log('📝 Template Loader carregado!');

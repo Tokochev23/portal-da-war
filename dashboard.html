@@ -60,7 +60,10 @@
   </main>
 
   <script src="./js/services/firebase.js" type="module"></script>
-  <script src="./js/pages/dashboard.js" type="module"></script>
+  <script type="module">
+    import { initDashboard } from './js/pages/dashboard.js';
+    document.addEventListener('DOMContentLoaded', initDashboard);
+  </script>
 </body>
 </html>
 

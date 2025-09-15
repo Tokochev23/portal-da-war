@@ -5,6 +5,7 @@
 
 import { Logger } from '../utils.js';
 import { calculatePIBTotal, calculatePIBPerCapita, applyGrowthToPIBPerCapita } from '../utils/pibCalculations.js';
+import { POWER_PLANTS } from '../data/power_plants.js';
 
 // Configurações de cálculo
 const CALCULATION_CONFIG = {
@@ -412,6 +413,182 @@ class EconomicCalculations {
     // Dependência = % dos investimentos externos vindos deste investidor
     return fromInvestor / totalExternal;
   }
+
+    // --- NOVAS FUNÇÕES: recursos, energia e bens de consumo ---
+    // Consumo de recurso pela ação industrial (valor em milhões -> unidades de recurso)
+    static computeIndustryResourceConsumption(actionValueMillions, country) {
+      // regra simples: cada 1M investido consome 0.2 unidades de recurso base
+      const baseRate = 0.2;
+      const amount = (parseFloat(actionValueMillions) || 0) * baseRate;
+      return amount;
+    }
+
+    // Calcula penalidade por déficit de energia (0..1 multiplicador de eficácia)
+    static computeEnergyPenalty(energyCapacity, energyDemand) {
+      if (energyCapacity >= energyDemand) return 1.0;
+      // deficit fraction
+      const deficit = (energyDemand - energyCapacity) / Math.max(energyDemand, 1);
+      // cada 25% de déficit reduz eficácia em 15% (exponencial leve)
+      const penalty = Math.max(0, 1 - deficit * 0.6);
+      return penalty;
+    }
+
+    // Calcular índice de Bens de Consumo (0-100)
+    static computeConsumerGoodsIndex(country, resources = {}) {
+      // recursos: { Graos, Combustivel, EnergiaDisponivel }
+      const graos = parseFloat(resources.Graos || country.Graos || 0);
+      const combustivel = parseFloat(resources.Combustivel || country.Combustivel || 0);
+      const energia = parseFloat(resources.EnergiaDisponivel || country.EnergiaDisponivel || country.EnergiaCapacidade || 0);
+      const industrialEfficiency = parseFloat(country.IndustrialEfficiency) || 50;
+
+      // Normalizar esperadas: supor que 100 é abundante para graos/combustivel/energia
+      const gScore = Math.min(1, graos / 100);
+      const fScore = Math.min(1, (combustivel + energia) / 100);
+      const iScore = Math.min(1, industrialEfficiency / 100);
+
+      // Pesos: 40% alimentos, 30% energia/combustivel, 30% eficiência industrial
+      const idx = (gScore * 0.4 + fScore * 0.3 + iScore * 0.3) * 100;
+      return Math.round(idx);
+    }
+
+    // Nova versão da métrica de Bens de Consumo (V2)
+    // Retorna { index: 0..100, breakdown: { g, f, i, p, s }, urbanFactor }
+    static computeConsumerGoodsIndexV2(country, resources = {}) {
+      try {
+        const G = parseFloat(resources.Graos || country.Graos || 0);
+        const Comb = parseFloat(resources.Combustivel || country.Combustivel || 0);
+        const Energia = parseFloat(resources.EnergiaDisponivel || country.EnergiaDisponivel || country.EnergiaCapacidade || 0);
+        const I = parseFloat(country.IndustrialEfficiency) || 50;
+        const PIB = parseFloat(country.PIB) || 0;
+        const Pop = parseFloat(country.Populacao) || 1;
+        const PIBpc = Pop > 0 ? (PIB / Pop) : 0;
+        const S = parseFloat(country.Estabilidade) || 50;
+        const U = parseFloat(country.Urbanizacao) || 50;
+
+  // Softer reference caps for historical 1954 scale
+  const Gref = 150; // permitir maiores estoques sem penalizar
+  const Fref = 250; // combustível+energia referência mais alta
+  const Pref = 10000; // reduzir referência de PIBpc para refletir 1954 USD
+
+  // Normalizações 0..1
+  const g = Math.min(1, G / Gref);
+  const f = Math.min(1, (Comb + Energia) / Fref);
+  const i = Math.min(1, I / 100);
+  const p = Math.min(1, PIBpc / Pref);
+  const s = Math.min(1, S / 100);
+
+  // Pesos ajustados: menos penalidade por falta de recursos, mais peso para eficiência e PIB
+  const Wg = 0.25, Wf = 0.20, Wi = 0.25, Wp = 0.20, Ws = 0.10;
+
+  // Urbanização multiplicador mais moderado (U=50 => 1.0, +/-5%)
+  const urbanFactor = 1 + ((U / 100) - 0.5) * 0.1;
+
+        const base = Wg * g + Wf * f + Wi * i + Wp * p + Ws * s;
+        const raw = base * urbanFactor;
+        const index = Math.round(Math.max(0, Math.min(1, raw)) * 100);
+
+        return {
+          index,
+          breakdown: { g: Number((g*100).toFixed(1)), f: Number((f*100).toFixed(1)), i: Number((i*100).toFixed(1)), p: Number((p*100).toFixed(1)), s: Number((s*100).toFixed(1)) },
+          urbanFactor: Number(urbanFactor.toFixed(3))
+        };
+      } catch (err) {
+        Logger.error('computeConsumerGoodsIndexV2 failed:', err);
+        return { index: 0, breakdown: { g:0,f:0,i:0,p:0,s:0 }, urbanFactor: 1 };
+      }
+    }
+
+    // Estimar demanda de energia média (GW) baseada em PIB per capita, população, eficiência industrial e urbanização
+    // Retorna objeto { demandaGW, perCapitaKWh, totalGWh }
+    static computeEnergyDemandGW(country) {
+      try {
+        const pib = parseFloat(country.PIB) || 0;
+        const pop = parseFloat(country.Populacao) || 1;
+        const pibPerCapita = pop > 0 ? (pib / pop) : 0;
+
+        // parâmetros heurísticos — simples e explicáveis
+        // consumo base anual por pessoa (kWh) em cenário mínimo
+        const baseKWh = 500; // consumo básico por ano
+
+        // aumenta com PIB per capita: cada $1000 adiciona 50 kWh per capita (escala moderada)
+        const pibScale = (pibPerCapita / 1000) * 50;
+
+        // urbanização incrementa consumo por pessoa até +40%
+        const urbanizacao = (parseFloat(country.Urbanizacao) || 0) / 100;
+        const urbanFactor = 1 + Math.min(0.4, urbanizacao * 0.4);
+
+        // eficiência industrial reduz intensidade energética (máx 25% redução)
+        const industrialEfficiency = (parseFloat(country.IndustrialEfficiency) || 50) / 100;
+        const efficiencyFactor = 1 - Math.min(0.25, industrialEfficiency * 0.25);
+
+        const perCapitaKWh = Math.max(0, (baseKWh + pibScale) * urbanFactor * efficiencyFactor);
+
+        // total anual (GWh)
+        const totalGWh = (perCapitaKWh * pop) / 1e6;
+
+        // média contínua em GW = totalGWh / 8760
+        const demandaGW = totalGWh / 8760;
+
+        return {
+          demandaGW: Number(demandaGW.toFixed(3)),
+          perCapitaKWh: Number(perCapitaKWh.toFixed(1)),
+          totalGWh: Number(totalGWh.toFixed(2))
+        };
+      } catch (err) {
+        Logger.error('computeEnergyDemandGW failed:', err);
+        return { demandaGW: 0, perCapitaKWh: 0, totalGWh: 0 };
+      }
+    }
+
+
+  // Calcular produção total de energia elétrica de um país
+    static calculateEnergyProduction(country, currentResources) {
+      let totalProduction = 0;
+      const consumedResources = {
+        Carvao: 0,
+        Combustivel: 0,
+        Uranio: 0 // Future resource
+      };
+
+      if (!country.power_plants || country.power_plants.length === 0) {
+        return { totalProduction, consumedResources };
+      }
+
+      for (const plantInstance of country.power_plants) {
+        const plantType = POWER_PLANTS[plantInstance.id];
+        if (!plantType) {
+          Logger.warn(`Tipo de usina desconhecido: ${plantInstance.id}`);
+          continue;
+        }
+
+        let canProduce = true;
+        // Verificar recursos necessários para usinas térmicas e nucleares
+        if (plantType.resource_input) {
+          const requiredResource = plantType.resource_input;
+          const consumptionAmount = plantType.resource_consumption;
+
+          if (currentResources[requiredResource] < consumptionAmount) {
+            canProduce = false;
+            Logger.info(`Usina ${plantType.name} não pode produzir por falta de ${requiredResource}.`);
+          } else {
+            // Simular consumo para o cálculo
+            consumedResources[requiredResource] += consumptionAmount;
+          }
+        }
+
+        // Verificar potencial para hidrelétricas
+        if (plantType.type === 'hydro' && country.PotencialHidreletrico <= 0) {
+          canProduce = false;
+          Logger.info(`Usina ${plantType.name} não pode produzir por falta de potencial hidrelétrico.`);
+        }
+
+        if (canProduce) {
+          totalProduction += plantType.energy_output;
+        }
+      }
+      return { totalProduction, consumedResources };
+    }
+
 
   // Verificar risco de rejeição popular
   static checkRejectionRisk(targetCountry, investmentValue, originCountry) {

@@ -3,11 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>✈️ Criador de Aeronaves • WAR Era 1954</title>
+  <title>✈️ Criador de Aeronaves Avançado • WAR Era 1954</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%23ffb400%22/%3E%3Ctext x=%228%22 y=%2211%22 font-size=%2210%22 text-anchor=%22middle%22 fill=%22%230b1020%22%3EW%3C/text%3E%3C/svg%3E" />
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- html2canvas for screenshot capture -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -41,89 +44,89 @@
   <link rel="stylesheet" href="css/vehicle-creator.css">
   <link rel="stylesheet" href="css/vehicle-creator-enhanced.css">
   
-  <!-- Custom Armor Slider CSS -->
+  <!-- Custom Slider CSS for Aircraft -->
   <style>
-    .armor-slider {
+    .aircraft-slider {
       background: linear-gradient(to right, #10b981 0%, #f59e0b 50%, #ef4444 100%);
       outline: none;
       border-radius: 8px;
     }
     
-    .armor-slider::-webkit-slider-thumb {
+    .aircraft-slider::-webkit-slider-thumb {
       appearance: none;
       width: 24px;
       height: 24px;
       border-radius: 50%;
-      background: linear-gradient(45deg, #fbbf24, #f59e0b);
+      background: linear-gradient(45deg, #22d3ee, #0ea5e9);
       cursor: pointer;
       border: 2px solid #1e293b;
-      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+      box-shadow: 0 4px 12px rgba(34, 211, 238, 0.4);
       transition: all 0.2s ease;
     }
     
-    .armor-slider::-webkit-slider-thumb:hover {
+    .aircraft-slider::-webkit-slider-thumb:hover {
       transform: scale(1.1);
-      box-shadow: 0 6px 16px rgba(245, 158, 11, 0.6);
+      box-shadow: 0 6px 16px rgba(34, 211, 238, 0.6);
     }
     
-    .armor-slider::-moz-range-thumb {
+    .aircraft-slider::-moz-range-thumb {
       width: 24px;
       height: 24px;
       border-radius: 50%;
-      background: linear-gradient(45deg, #fbbf24, #f59e0b);
+      background: linear-gradient(45deg, #22d3ee, #0ea5e9);
       cursor: pointer;
       border: 2px solid #1e293b;
-      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+      box-shadow: 0 4px 12px rgba(34, 211, 238, 0.4);
       transition: all 0.2s ease;
     }
     
-    .armor-slider::-moz-range-thumb:hover {
+    .aircraft-slider::-moz-range-thumb:hover {
       transform: scale(1.1);
-      box-shadow: 0 6px 16px rgba(245, 158, 11, 0.6);
+      box-shadow: 0 6px 16px rgba(34, 211, 238, 0.6);
     }
     
-    .armor-slider:focus {
-      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.3);
+    .aircraft-slider:focus {
+      box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.3);
     }
 
-    /* Weapon sliders with orange gradient */
-    .slider-thumb {
-      background: linear-gradient(to right, #ea580c 0%, #dc2626 50%, #991b1b 100%);
+    /* Aircraft performance indicators */
+    .performance-indicator {
+      background: linear-gradient(to right, #06b6d4 0%, #0ea5e9 50%, #3b82f6 100%);
       outline: none;
       border-radius: 8px;
     }
     
-    .slider-thumb::-webkit-slider-thumb {
+    .performance-indicator::-webkit-slider-thumb {
       appearance: none;
       width: 20px;
       height: 20px;
       border-radius: 50%;
-      background: linear-gradient(45deg, #f97316, #ea580c);
+      background: linear-gradient(45deg, #06b6d4, #0ea5e9);
       cursor: pointer;
       border: 2px solid #1e293b;
-      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+      box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
       transition: all 0.2s ease;
     }
     
-    .slider-thumb::-webkit-slider-thumb:hover {
+    .performance-indicator::-webkit-slider-thumb:hover {
       transform: scale(1.1);
-      box-shadow: 0 6px 16px rgba(249, 115, 22, 0.6);
+      box-shadow: 0 6px 16px rgba(6, 182, 212, 0.6);
     }
     
-    .slider-thumb::-moz-range-thumb {
+    .performance-indicator::-moz-range-thumb {
       width: 20px;
       height: 20px;
       border-radius: 50%;
-      background: linear-gradient(45deg, #f97316, #ea580c);
+      background: linear-gradient(45deg, #06b6d4, #0ea5e9);
       cursor: pointer;
       border: 2px solid #1e293b;
-      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+      box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
       transition: all 0.2s ease;
     }
     
-    .slider-thumb::-moz-range-thumb:hover {
+    .performance-indicator::-moz-range-thumb:hover {
       transform: scale(1.1);
-      box-shadow: 0 6px 16px rgba(249, 115, 22, 0.6);
+      box-shadow: 0 6px 16px rgba(6, 182, 212, 0.6);
     }
   </style>
 </head>
@@ -132,53 +135,234 @@
   <!-- Loading Screen -->
   <div id="initial-loading" class="fixed inset-0 bg-bg z-50 flex items-center justify-center">
     <div class="text-center">
-      <div class="animate-spin w-12 h-12 border-4 border-brand-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+      <div class="animate-spin w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full mx-auto mb-4"></div>
       <p class="text-slate-200 font-medium">Iniciando Criador de Aeronaves...</p>
       <p class="text-slate-400 text-sm mt-2" id="loading-status">Carregando templates...</p>
     </div>
   </div>
 
-  <!-- HEADER - Carregado dinamicamente -->
-  <div id="header-container"></div>
+  <!-- HEADER -->
+  <header class="border-b border-slate-800/50 bg-bg/80 backdrop-blur-sm sticky top-0 z-40">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div class="flex h-16 items-center justify-between">
+        <div class="flex items-center space-x-4">
+          <div class="flex items-center space-x-2">
+            <span class="text-3xl">✈️</span>
+            <div>
+              <h1 class="text-lg font-bold text-slate-100">Criador de Aeronaves</h1>
+              <p class="text-xs text-slate-400">Sistema Avançado WAR Era 1954</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-4">
+          <div class="flex items-center space-x-2 text-sm">
+            <span class="text-slate-400">País:</span>
+            <span id="current-country" class="font-medium text-cyan-300">Carregando...</span>
+          </div>
+          
+          <button onclick="showAircraftSummaryModal()" class="flex items-center space-x-2 rounded-lg bg-cyan-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-bg">
+            <span>✈️</span>
+            <span>Ficha da Aeronave</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
 
   <!-- MAIN CONTENT -->
   <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
     
-    <!-- PROJECT INFO SECTION - Carregado dinamicamente -->
-    <div id="project-info-container"></div>
+    <!-- PROJECT INFO SECTION -->
+    <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-6 mb-8">
+      <div class="flex items-start justify-between">
+        <div class="flex items-center space-x-3">
+          <span class="text-4xl">🛩️</span>
+          <div>
+            <h2 class="text-xl font-bold text-slate-100">Projeto de Aeronave</h2>
+            <p class="text-slate-400 text-sm mt-1">Configure cada componente para criar sua aeronave ideal</p>
+          </div>
+        </div>
+        
+        <div class="text-right">
+          <div class="text-lg font-bold text-cyan-300" id="aircraft-name-display">Nova Aeronave</div>
+          <div class="text-sm text-slate-400 mt-1">
+            <span id="aircraft-type-display">Tipo não definido</span> • 
+            <span id="aircraft-year-display">1954</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Quick stats row -->
+      <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-slate-700/30">
+        <div class="text-center">
+          <div class="text-xl font-bold text-slate-100" id="total-weight-display">0 kg</div>
+          <div class="text-xs text-slate-400">Peso Total</div>
+        </div>
+        <div class="text-center">
+          <div class="text-xl font-bold text-cyan-300" id="max-speed-display">0 km/h</div>
+          <div class="text-xs text-slate-400">Velocidade Máx</div>
+        </div>
+        <div class="text-center">
+          <div class="text-xl font-bold text-sky-300" id="thrust-weight-ratio-display">0:1</div>
+          <div class="text-xs text-slate-400">Empuxo/Peso</div>
+        </div>
+        <div class="text-center">
+          <div class="text-xl font-bold text-blue-300" id="total-cost-display">$0K</div>
+          <div class="text-xs text-slate-400">Custo Total</div>
+        </div>
+      </div>
+    </div>
 
-    <!-- COMPONENT SELECTION TABS - Carregado dinamicamente -->
-    <div id="component-tabs-container"></div>
+    <!-- COMPONENT TABS -->
+    <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl overflow-hidden mb-8">
+      <nav class="flex border-b border-slate-700/50">
+        <button class="tab-button flex-1 px-6 py-4 text-sm font-medium border-b-2 transition-all hover:text-cyan-300 hover:bg-slate-800/50" data-tab="cell">
+          <div class="flex items-center justify-center space-x-2">
+            <span>✈️</span>
+            <span>Célula</span>
+          </div>
+        </button>
+        <button class="tab-button flex-1 px-6 py-4 text-sm font-medium border-b-2 transition-all hover:text-cyan-300 hover:bg-slate-800/50" data-tab="wings">
+          <div class="flex items-center justify-center space-x-2">
+            <span>🪶</span>
+            <span>Asas</span>
+          </div>
+        </button>
+        <button class="tab-button flex-1 px-6 py-4 text-sm font-medium border-b-2 transition-all hover:text-cyan-300 hover:bg-slate-800/50" data-tab="propulsion">
+          <div class="flex items-center justify-center space-x-2">
+            <span>🚀</span>
+            <span>Propulsão</span>
+          </div>
+        </button>
+        <button class="tab-button flex-1 px-6 py-4 text-sm font-medium border-b-2 transition-all hover:text-cyan-300 hover:bg-slate-800/50" data-tab="supercharger">
+          <div class="flex items-center justify-center space-x-2">
+            <span>⚡</span>
+            <span>Supercharger</span>
+          </div>
+        </button>
+        <button class="tab-button flex-1 px-6 py-4 text-sm font-medium border-b-2 transition-all hover:text-cyan-300 hover:bg-slate-800/50" data-tab="weapons">
+          <div class="flex items-center justify-center space-x-2">
+            <span>🎯</span>
+            <span>Armamento</span>
+          </div>
+        </button>
+        <button class="tab-button flex-1 px-6 py-4 text-sm font-medium border-b-2 transition-all hover:text-cyan-300 hover:bg-slate-800/50" data-tab="avionics">
+          <div class="flex items-center justify-center space-x-2">
+            <span>📡</span>
+            <span>Aviônica</span>
+          </div>
+        </button>
+      </nav>
 
-    <!-- WARNINGS SECTION - Carregado dinamicamente -->
-    <div id="warnings-container"></div>
+      <div id="tab-content" class="p-6 min-h-[500px]">
+        <!-- Dynamic content will be loaded here -->
+        <div class="text-center text-slate-400 py-16">
+          <span class="text-4xl">✈️</span>
+          <p class="mt-4">Selecione uma aba para começar a configurar sua aeronave</p>
+        </div>
+      </div>
+    </div>
 
-    <!-- DETAILED ANALYSIS SECTION - Carregado dinamicamente -->
-    <div id="analysis-container"></div>
+    <!-- WARNINGS SECTION -->
+    <div id="warnings-container" class="hidden">
+      <div class="bg-amber-900/20 border border-amber-800/50 rounded-xl p-6 mb-8">
+        <div class="flex items-start space-x-3">
+          <span class="text-2xl">⚠️</span>
+          <div>
+            <h3 class="text-lg font-semibold text-amber-300 mb-2">Avisos de Design</h3>
+            <div id="warnings-list">
+              <!-- Warnings will be populated by JavaScript -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-    <!-- ACTION BUTTONS - Carregado dinamicamente -->
-    <div id="action-buttons-container"></div>
+    <!-- ANALYSIS SECTION -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      <!-- Performance Chart -->
+      <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-6">
+        <h3 class="text-lg font-semibold text-slate-100 mb-4 flex items-center space-x-2">
+          <span>📊</span>
+          <span>Performance da Aeronave</span>
+        </h3>
+        <div class="relative">
+          <canvas id="performance-radar" width="300" height="300"></canvas>
+        </div>
+      </div>
+
+      <!-- Detailed Analysis -->
+      <div class="space-y-6">
+        <!-- Flight Performance -->
+        <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-6">
+          <h3 class="text-lg font-semibold text-slate-100 mb-4 flex items-center space-x-2">
+            <span>🛫</span>
+            <span>Performance de Voo</span>
+          </h3>
+          <div id="flight-performance-analysis">
+            <!-- Flight performance details will be populated by JavaScript -->
+          </div>
+        </div>
+
+        <!-- Cost Breakdown -->
+        <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-6">
+          <h3 class="text-lg font-semibold text-slate-100 mb-4 flex items-center space-x-2">
+            <span>💰</span>
+            <span>Análise de Custos</span>
+          </h3>
+          <div id="cost-breakdown">
+            <!-- Cost details will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTION BUTTONS -->
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-800/40 border border-slate-700/50 rounded-xl p-6">
+      <div class="flex items-center space-x-4 text-sm text-slate-400">
+        <span class="flex items-center space-x-2">
+          <span class="w-2 h-2 bg-cyan-500 rounded-full"></span>
+          <span>Sistema de Design Aeronáutico</span>
+        </span>
+        <span>•</span>
+        <span>WAR Era 1954</span>
+      </div>
+      
+      <div class="flex items-center space-x-3">
+        <button onclick="resetAircraft()" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg font-medium transition-colors flex items-center space-x-2">
+          <span>🔄</span>
+          <span>Resetar</span>
+        </button>
+        
+        <button onclick="saveAircraftDesign()" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-medium transition-colors flex items-center space-x-2">
+          <span>💾</span>
+          <span>Salvar Design</span>
+        </button>
+        
+        <button onclick="showAircraftSummaryModal()" class="px-6 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-cyan-500/25">
+          <span>✈️</span>
+          <span>Ver Ficha Completa</span>
+        </button>
+      </div>
+    </div>
 
   </main>
 
-  <!-- FOOTER COMPONENTS - Carregado dinamicamente -->
-  <div id="footer-components-container"></div>
-
   <!-- Scripts -->
-  <script src="./js/utils/templateLoader.js" type="module"></script>
-  <script src="./js/components/aircraftTabLoaders.js?v=eqp1" type="module"></script>
-  <script src="./js/services/firebase.js" type="module"></script>
-  <script src="./js/utils/armorFunctions.js"></script>
-  <script src="./js/utils/energySystem.js" type="module"></script>
-  <script src="./js/utils/performanceSystem.js" type="module"></script>
-  <script src="./js/utils/costSystem.js" type="module"></script>
-  <script src="js/aircraftCreator.js?v=eqp1" type="module"></script>
+  <script src="./js/utils/templateLoader.js"></script>
+  <script src="./js/utils/realisticPerformanceCalculator.js"></script>
+  <script src="./js/utils/advancedPerformanceCalculator.js"></script>
+  <script src="./js/components/aircraftTabLoaders.js"></script>
+  <script type="module" src="./js/services/firebase.js"></script>
+  <script type="module" src="./js/utils/aircraftCostSystem.js"></script>
+  <script type="module" src="js/aircraftCreator.js"></script>
   
   <script>
-    // Sistema de inicialização para o Criador de Aeronaves
+    // Sistema de inicialização para aeronaves
     class AircraftCreatorApp {
       constructor() {
-        this.currentTab = 'airframe'; // Aba inicial é a fuselagem
+        this.currentTab = 'airframes';
         this.performanceChart = null;
         this.isInitialized = false;
         this.loadingElement = document.getElementById('initial-loading');
@@ -193,70 +377,52 @@
 
       async initialize() {
         try {
-          this.updateLoadingStatus('Iniciando carregamento progressivo...');
+          this.updateLoadingStatus('Iniciando sistema de aeronaves...');
           
-          // Fases de carregamento (mantidas)
-          await this.loadCriticalComponents();
-          setTimeout(() => this.loadSecondaryComponents(), 100);
-          setTimeout(() => this.initializeFeatures(), 300);
-          setTimeout(() => this.finishInitialization(), 500);
+          // Carregar templates primeiro
+          this.updateLoadingStatus('Carregando templates...');
+          if (window.progressiveLoader) {
+            await window.progressiveLoader.loadAll();
+          }
+          
+          // Carregar componentes de aeronaves
+          this.updateLoadingStatus('Carregando componentes de aeronaves...');
+          if (window.loadAircraftComponents) {
+            const componentsLoaded = await window.loadAircraftComponents();
+            if (!componentsLoaded) {
+              throw new Error('Falha ao carregar componentes de aeronaves');
+            }
+          } else {
+            console.warn('⚠️ loadAircraftComponents function not found - using fallback');
+            // Fallback: aguardar um pouco para os scripts carregarem
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            if (!window.AIRCRAFT_COMPONENTS || Object.keys(window.AIRCRAFT_COMPONENTS.airframes || {}).length === 0) {
+              throw new Error('Componentes de aeronaves não foram carregados');
+            }
+          }
+          
+          this.updateLoadingStatus('Inicializando interface...');
+          this.initializeInterface();
+          this.setupTabNavigation();
+          this.setupPerformanceChart();
+          
+          // Carregar a primeira aba (células/fuselagens)
+          this.updateLoadingStatus('Carregando fuselagens...');
+          this.loadTabContent('cell');
+          
+          // Initial calculations update to show displays (even with zero values)
+          setTimeout(() => {
+            if (typeof window.updateAircraftCalculations === 'function') {
+              window.updateAircraftCalculations();
+            }
+          }, 200);
+          
+          setTimeout(() => this.hideLoadingScreen(), 500);
           
         } catch (error) {
           console.error('❌ Initialization failed:', error);
           this.showInitializationError(error);
         }
-      }
-
-      async loadCriticalComponents() {
-        this.updateLoadingStatus('Carregando componentes principais...');
-        
-        const criticalInjections = [
-          { containerId: 'header-container', templatePath: 'templates/vehicle-creator/header.html' },
-          { containerId: 'project-info-container', templatePath: 'templates/vehicle-creator/project-info.html' }
-        ];
-
-        await window.templateInjector.injectMultipleTemplates(criticalInjections);
-        console.log('✅ Critical components loaded');
-      }
-
-      async loadSecondaryComponents() {
-        this.updateLoadingStatus('Carregando sistema de abas...');
-        
-        const secondaryInjections = [
-          // TODO: Criar templates específicos para aeronaves
-          { containerId: 'component-tabs-container', templatePath: 'templates/aircraft-creator/component-tabs.html' },
-          { containerId: 'warnings-container', templatePath: 'templates/vehicle-creator/warnings-section.html' },
-          { containerId: 'analysis-container', templatePath: 'templates/vehicle-creator/analysis-section.html' }
-        ];
-
-        await window.templateInjector.injectMultipleTemplates(secondaryInjections);
-        console.log('✅ Secondary components loaded');
-      }
-
-      async finishInitialization() {
-        this.updateLoadingStatus('Finalizando configuração...');
-        
-        const tertiaryInjections = [
-          { containerId: 'action-buttons-container', templatePath: 'templates/vehicle-creator/action-buttons.html' },
-          { containerId: 'footer-components-container', templatePath: 'templates/vehicle-creator/footer-components.html' }
-        ];
-
-        await window.templateInjector.injectMultipleTemplates(tertiaryInjections);
-        
-        this.hideLoadingScreen();
-        this.isInitialized = true;
-        console.log('✅ Aircraft Creator fully initialized');
-      }
-
-      async initializeFeatures() {
-        this.updateLoadingStatus('Configurando funcionalidades...');
-        
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        this.initializeInterface();
-        this.setupTabNavigation();
-        this.setupPerformanceChart();
-        this.loadComponentTabs();
       }
 
       hideLoadingScreen() {
@@ -266,21 +432,19 @@
             this.loadingElement.style.display = 'none';
           }, 300);
         }
+        this.isInitialized = true;
+        console.log('✅ Aircraft Creator fully initialized');
       }
 
       showInitializationError(error) {
-        if (this.loadingElement) {
-          this.loadingElement.innerHTML = `
-            <div class="text-center text-red-400">
-              <div class="text-4xl mb-4">⚠️</div>
-              <h2 class="text-xl font-bold mb-2">Erro de Inicialização</h2>
-              <p class="text-slate-300 mb-4">Falha ao carregar o aplicativo</p>
-              <p class="text-sm text-slate-500 mb-4">${error.message}</p>
-              <button 
-                onclick="window.location.reload()" 
-                class="px-4 py-2 bg-brand-500 text-bg rounded-lg hover:bg-brand-600 transition-colors"
-              >
-                🔄 Recarregar Página
+        console.error('❌ Erro de inicialização:', error);
+        if (this.statusElement) {
+          this.statusElement.innerHTML = `
+            <div class="text-red-400 text-center">
+              <div class="text-lg font-semibold mb-2">❌ Erro de Inicialização</div>
+              <div class="text-sm">${error.message}</div>
+              <button onclick="window.location.reload()" class="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
+                Recarregar Página
               </button>
             </div>
           `;
@@ -293,7 +457,21 @@
         if (countryElement) {
           countryElement.textContent = country;
         }
-        this.setActiveTab('airframe');
+        
+        // Initialize currentAircraft object
+        if (!window.currentAircraft) {
+          window.currentAircraft = {
+            name: 'Nova Aeronave',
+            airframe: null,
+            engine: null,
+            weapons: [],
+            avionics: [],
+            supercharger: null,
+            quantity: 1
+          };
+        }
+        
+        this.setActiveTab('airframes');
       }
 
       setupTabNavigation() {
@@ -310,12 +488,12 @@
       setActiveTab(tabId) {
         this.currentTab = tabId;
         document.querySelectorAll('.tab-button').forEach(btn => {
-          btn.classList.remove('border-brand-500', 'text-brand-300');
+          btn.classList.remove('border-cyan-500', 'text-cyan-300');
           btn.classList.add('border-transparent', 'text-slate-400');
         });
         const activeBtn = document.querySelector(`[data-tab="${tabId}"]`);
         if(activeBtn) {
-          activeBtn.classList.add('border-brand-500', 'text-brand-300');
+          activeBtn.classList.add('border-cyan-500', 'text-cyan-300');
           activeBtn.classList.remove('border-transparent', 'text-slate-400');
         }
       }
@@ -324,22 +502,42 @@
         const tabContent = document.getElementById('tab-content');
         if (!tabContent) return;
         
-        tabContent.innerHTML = '<div class="text-center py-8"><div class="animate-spin w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full mx-auto"></div></div>';
+        tabContent.innerHTML = '<div class="text-center py-8"><div class="animate-spin w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full mx-auto"></div></div>';
         
         setTimeout(() => {
-          // Abas para Aeronaves
           switch(tabId) {
-            case 'airframe': this.loadAirframeTab(); break;
-            case 'engine': this.loadEngineTab(); break;
+            case 'cell': this.loadCellTab(); break;
+            case 'wings': this.loadWingsTab(); break;
+            case 'propulsion': this.loadPropulsionTab(); break;
+            case 'supercharger': this.loadSuperchargerTab(); break;
             case 'weapons': this.loadWeaponsTab(); break;
             case 'avionics': this.loadAvionicsTab(); break;
-            // Adicionar mais abas conforme necessário
           }
         }, 200);
       }
 
-      loadComponentTabs() {
-        this.loadTabContent(this.currentTab);
+      loadWingsTab() {
+        if (window.tabLoaders) window.tabLoaders.loadWingsTab();
+      }
+
+      loadCellTab() {
+        if (window.tabLoaders) window.tabLoaders.loadCellTab();
+      }
+
+      loadPropulsionTab() {
+        if (window.tabLoaders) window.tabLoaders.loadPropulsionTab();
+      }
+
+      loadSuperchargerTab() {
+        if (window.tabLoaders) window.tabLoaders.loadSuperchargerTab();
+      }
+
+      loadWeaponsTab() {
+        if (window.tabLoaders) window.tabLoaders.loadWeaponsTab();
+      }
+
+      loadAvionicsTab() {
+        if (window.tabLoaders) window.tabLoaders.loadAvionicsTab();
       }
 
       setupPerformanceChart() {
@@ -349,6 +547,7 @@
           return;
         }
 
+        // Destroy existing chart if it exists
         if (this.performanceChart) {
           this.performanceChart.destroy();
           this.performanceChart = null;
@@ -358,13 +557,13 @@
         this.performanceChart = new Chart(ctx, {
           type: 'radar',
           data: {
-            labels: ['Velocidade', 'Agilidade', 'Potência', 'Teto de Serviço', 'Alcance', 'Custo'], // Labels para aeronaves
+            labels: ['Velocidade', 'Manobrabilidade', 'Alcance', 'Firepower', 'Durabilidade', 'Custo-Benefício'],
             datasets: [{
               label: 'Performance',
-              data: [0, 0, 0, 0, 0, 0],
-              backgroundColor: 'rgba(255, 180, 0, 0.2)',
-              borderColor: 'rgba(255, 180, 0, 0.8)',
-              pointBackgroundColor: 'rgba(255, 180, 0, 1)',
+              data: [0, 0, 0, 0, 0, 0], // Initial static data, will be updated dynamically
+              backgroundColor: 'rgba(34, 211, 238, 0.2)',
+              borderColor: 'rgba(34, 211, 238, 0.8)',
+              pointBackgroundColor: 'rgba(34, 211, 238, 1)',
             }]
           },
           options: {
@@ -384,23 +583,266 @@
         });
       }
 
-      // Métodos de carregamento de abas para aeronaves
-      loadAirframeTab() { 
-        if (window.tabLoaders) window.tabLoaders.loadAirframeTab(); 
-      }
-      loadEngineTab() { 
-        if (window.tabLoaders) window.tabLoaders.loadEngineTab(); 
-      }
-      loadWeaponsTab() { 
-        if (window.tabLoaders) window.tabLoaders.loadWeaponsTab(); 
-      }
-      loadAvionicsTab() { 
-        if (window.tabLoaders) window.tabLoaders.loadAvionicsTab(); 
+      updatePerformanceChart(performance) {
+        if (!this.performanceChart || !performance) return;
+
+        // Normalize performance values to a 0-100 scale for the radar chart
+        const maxSpeedNormalized = Math.min(100, performance.maxSpeedKph / 10); // Assuming max 1000 km/h for 100%
+        const maneuverabilityNormalized = Math.min(100, (performance.thrustToWeight * 10) + (1000 / performance.wingLoading)); // Placeholder, needs better metric
+        const rangeNormalized = Math.min(100, performance.range / 50); // Assuming max 5000 km for 100%
+        const firepowerNormalized = Math.min(100, (window.currentAircraft.weapons?.length || 0) * 15); // Placeholder
+        const durabilityNormalized = Math.min(100, performance.totalWeight / 100); // Placeholder, needs better metric
+        const costBenefitNormalized = Math.min(100, (window.AircraftCostSystem?.calculateCosts(window.currentAircraft)?.efficiency_metrics?.bang_for_buck || 0) / 1000); // Placeholder
+
+        this.performanceChart.data.datasets[0].data = [
+          maxSpeedNormalized,
+          maneuverabilityNormalized,
+          rangeNormalized,
+          firepowerNormalized,
+          durabilityNormalized,
+          costBenefitNormalized
+        ];
+        this.performanceChart.update();
       }
     }
 
     // Inicialização global
     window.aircraftCreatorApp = new AircraftCreatorApp();
+
+    // Funções globais para seleção de componentes
+    window.selectAirframe = function(airframeId) {
+      if (!window.AIRCRAFT_COMPONENTS?.airframes[airframeId]) {
+        console.error('Airframe not found:', airframeId);
+        return;
+      }
+      
+      window.currentAircraft.airframe = airframeId;
+      console.log('Selected airframe:', airframeId);
+
+      // Update visual selection
+      document.querySelectorAll('.airframe-card').forEach(card => {
+        card.classList.remove('selected', 'border-cyan-400', 'ring-1', 'ring-cyan-400/50');
+        card.classList.add('border-slate-700/50', 'bg-slate-800/40');
+      });
+      
+      const selectedCard = document.querySelector(`[onclick="selectAirframe('${airframeId}')"]`);
+      if (selectedCard) {
+        selectedCard.classList.add('selected', 'border-cyan-400', 'ring-1', 'ring-cyan-400/50');
+        selectedCard.classList.remove('border-slate-700/50', 'bg-slate-800/40');
+      }
+      
+      // Update calculations and refresh tabs that depend on airframe selection
+      updateAircraftCalculations();
+      
+      // Refresh engine tab if it's currently visible to show compatibility
+      if (window.aircraftCreatorApp.currentTab === 'engines') {
+        window.aircraftCreatorApp.loadEnginesTab();
+      }
+    };
+
+    window.selectAircraftEngine = function(engineId) {
+      if (!window.AIRCRAFT_COMPONENTS?.aircraft_engines[engineId]) {
+        console.error('Engine not found:', engineId);
+        return;
+      }
+      
+      window.currentAircraft.engine = engineId;
+      console.log('Selected engine:', engineId);
+
+      // Update visual selection
+      document.querySelectorAll('.engine-card').forEach(card => {
+        card.classList.remove('selected', 'border-cyan-400', 'ring-1', 'ring-cyan-400/50');
+        card.classList.add('border-slate-700/50', 'bg-slate-800/40');
+      });
+      
+      const selectedCard = document.querySelector(`[onclick="selectAircraftEngine('${engineId}')"]`);
+      if (selectedCard) {
+        selectedCard.classList.add('selected', 'border-cyan-400', 'ring-1', 'ring-cyan-400/50');
+        selectedCard.classList.remove('border-slate-700/50', 'bg-slate-800/40');
+      }
+      
+      updateAircraftCalculations();
+    };
+
+    window.toggleAircraftWeapon = function(weaponId) {
+      if (!window.currentAircraft.weapons) {
+        window.currentAircraft.weapons = [];
+      }
+      
+      const index = window.currentAircraft.weapons.indexOf(weaponId);
+      if (index > -1) {
+        window.currentAircraft.weapons.splice(index, 1);
+      } else {
+        window.currentAircraft.weapons.push(weaponId);
+      }
+      
+      console.log('Weapon toggled:', weaponId, 'Current weapons:', window.currentAircraft.weapons);
+      updateAircraftCalculations();
+    };
+
+    window.selectSupercharger = function(superchargerId) {
+      if (!window.AIRCRAFT_COMPONENTS?.superchargers[superchargerId]) {
+        console.error('Supercharger not found:', superchargerId);
+        return;
+      }
+      
+      window.currentAircraft.supercharger = superchargerId;
+      console.log('Selected supercharger:', superchargerId);
+
+      // Update visual selection
+      document.querySelectorAll('.component-card[onclick*="selectSupercharger"]').forEach(card => {
+        card.classList.remove('selected', 'border-cyan-400', 'ring-1', 'ring-cyan-400/50', 'bg-cyan-900/20');
+        card.classList.add('border-slate-700/50', 'bg-slate-800/40');
+      });
+      
+      const selectedCard = document.querySelector(`[onclick="selectSupercharger('${superchargerId}')"]`);
+      if (selectedCard) {
+        selectedCard.classList.add('selected', 'border-cyan-400', 'ring-1', 'ring-cyan-400/50', 'bg-cyan-900/20');
+        selectedCard.classList.remove('border-slate-700/50', 'bg-slate-800/40');
+      }
+
+      // Update selected supercharger name display
+      const nameDisplay = document.getElementById('selected-supercharger-name');
+      if (nameDisplay && window.AIRCRAFT_COMPONENTS.superchargers[superchargerId]) {
+        nameDisplay.textContent = window.AIRCRAFT_COMPONENTS.superchargers[superchargerId].name;
+      }
+
+      // Update impact displays
+      if (window.tabLoaders && typeof window.tabLoaders.updateSuperchargerImpact === 'function') {
+        window.tabLoaders.updateSuperchargerImpact();
+      }
+      
+      updateAircraftCalculations();
+    };
+
+    window.showTechRequirement = function(componentName, requiredTech, currentTech) {
+      const missingTech = requiredTech - currentTech;
+      alert(`${componentName} requer nível tecnológico ${requiredTech}.\n\nSeu nível atual: ${currentTech}\nNecessário: +${missingTech} pontos de tecnologia`);
+    };
+
+    window.calculateAircraftCosts = function(aircraft = window.currentAircraft) {
+      return window.AircraftCostSystem ? window.AircraftCostSystem.calculateCosts(aircraft) : { unitCost: 0, maintenanceCostPerHour: 0 };
+    };
+
+    window.calculateAircraftCost = function(aircraft = window.currentAircraft) {
+      const costs = window.calculateAircraftCosts(aircraft);
+      return costs.unitCost || 0;
+    };
+
+    window.updateAircraftCalculations = function() {
+      console.log('🔄 Updating aircraft calculations...');
+      
+      if (!window.currentAircraft?.airframe) {
+        console.log('⚠️ No airframe selected - showing zero values');
+        // Show zero values in displays
+        updateAircraftDisplays({ totalWeight: 0, maxSpeed: 0, thrustToWeight: 0 });
+        updateCostDisplays({ totalCost: 0, unitCost: 0 });
+        return;
+      }
+      
+      try {
+        if (window.calculateAircraftPerformance) {
+          const performance = window.calculateAircraftPerformance(window.currentAircraft);
+          console.log('Performance calculated:', performance);
+          
+          // Update displays
+          updateAircraftDisplays(performance);
+
+          // Handle warnings display
+          const warningsContainer = document.getElementById('warnings-container');
+          const warningsList = document.getElementById('warnings-list');
+          if (warningsContainer && warningsList) {
+              if (performance.warnings && performance.warnings.length > 0) {
+                  warningsList.innerHTML = performance.warnings.map(w => `<div class="text-sm">• ${w}</div>`).join('');
+                  warningsContainer.classList.remove('hidden');
+              } else {
+                  warningsList.innerHTML = '';
+                  warningsContainer.classList.add('hidden');
+              }
+          }
+
+          // Update performance radar chart
+          window.aircraftCreatorApp.updatePerformanceChart(performance);
+        }
+        
+        if (window.AircraftCostSystem) {
+          const costs = window.AircraftCostSystem.calculateCosts(window.currentAircraft);
+          console.log('Costs calculated:', costs);
+          
+          // Update cost displays
+          updateCostDisplays(costs);
+        }
+        
+        console.log('✅ Aircraft calculations updated successfully');
+      } catch (error) {
+        console.error('❌ Error updating aircraft calculations:', error);
+      }
+    };
+
+    function updateAircraftDisplays(performance) {
+      // Update header displays
+      const weightEl = document.getElementById('total-weight-display');
+      const speedEl = document.getElementById('max-speed-display');
+      const thrustEl = document.getElementById('thrust-weight-ratio-display');
+      
+      if (weightEl && performance.totalWeight) {
+        weightEl.textContent = Math.round(performance.totalWeight) + ' kg';
+      }
+      if (speedEl && (performance.maxSpeed || performance.maxSpeedKph)) {
+        const speed = performance.maxSpeed || performance.maxSpeedKph;
+        speedEl.textContent = Math.round(speed) + ' km/h';
+      }
+      if (thrustEl && performance.thrustToWeight) {
+        thrustEl.textContent = performance.thrustToWeight.toFixed(2) + ':1';
+      }
+      
+      // Update detailed performance section
+      const performanceSection = document.getElementById('flight-performance-analysis');
+      if (performanceSection && window.AircraftPerformanceSystem) {
+        performanceSection.innerHTML = window.AircraftPerformanceSystem.renderPerformanceDisplay(window.currentAircraft);
+      }
+    }
+
+    function updateCostDisplays(costs) {
+      const costEl = document.getElementById('total-cost-display');
+      if (costEl && costs.totalCost) {
+        costEl.textContent = '$' + Math.round(costs.totalCost / 1000) + 'K';
+      }
+      
+      // Update detailed cost breakdown section
+      const costSection = document.getElementById('cost-breakdown');
+      if (costSection && window.AircraftCostSystem) {
+        costSection.innerHTML = window.AircraftCostSystem.renderCostDisplay(window.currentAircraft);
+      }
+    }
+
+    // Funções auxiliares
+    window.resetAircraft = function() {
+      window.currentAircraft = {
+        name: 'Nova Aeronave',
+        airframe: null,
+        engine: null,
+        weapons: [],
+        avionics: [],
+        quantity: 1
+      };
+      
+      // Refresh current tab
+      window.aircraftCreatorApp.loadTabContent(window.aircraftCreatorApp.currentTab);
+      updateAircraftCalculations();
+    };
+
+    window.saveAircraftDesign = function() {
+      console.log('Saving aircraft design:', window.currentAircraft);
+      // TODO: Implement save functionality
+      alert('Design salvo! (funcionalidade será implementada)');
+    };
+
+    window.showAircraftSummaryModal = function() {
+      console.log('Showing aircraft summary modal');
+      // TODO: Implement modal display
+      alert('Modal da aeronave será implementado');
+    };
 
     // Iniciar aplicação quando DOM estiver pronto
     document.addEventListener('DOMContentLoaded', () => {
@@ -416,5 +858,284 @@
       }
     });
   </script>
+
+  <!-- AIRCRAFT SUMMARY MODAL -->
+  <div id="aircraft-summary-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-slate-900 rounded-2xl shadow-2xl border border-slate-700 w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between p-6 border-b border-slate-700 sticky top-0 bg-slate-900 rounded-t-2xl">
+        <div class="flex items-center gap-3">
+          <span class="text-3xl">📋</span>
+          <h2 class="text-2xl font-bold text-slate-100">Ficha Técnica da Aeronave</h2>
+        </div>
+        <button onclick="hideAircraftSummaryModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors">
+          <span class="text-slate-400 text-xl">×</span>
+        </button>
+      </div>
+
+      <!-- Modal Content -->
+      <div id="aircraft-summary-content" class="p-6">
+        <!-- Content will be populated by JavaScript -->
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex items-center justify-between p-6 border-t border-slate-700 bg-slate-800/50 rounded-b-2xl">
+        <div class="text-sm text-slate-400">
+          Ficha gerada automaticamente pelo Sistema de Criação de Aeronaves War1954
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="flex gap-3 justify-end">
+          <button onclick="exportAircraftToPDF()" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
+            <span>📄</span>
+            <span>Exportar PDF</span>
+          </button>
+          
+          <button id="submit-aircraft-approval-btn" onclick="submitAircraftForApproval()" class="px-6 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white rounded-lg font-medium transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-cyan-500/25">
+            <span>✈️</span>
+            <span>Enviar para Aprovação</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AIRCRAFT SUMMARY AND APPROVAL MODAL -->
+  <div id="aircraft-summary-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-slate-900 rounded-2xl shadow-2xl border border-slate-700 w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between p-6 border-b border-slate-700 sticky top-0 bg-slate-900 rounded-t-2xl">
+        <div class="flex items-center gap-3">
+          <span class="text-3xl">✈️</span>
+          <h2 class="text-2xl font-bold text-slate-100">Ficha Técnica da Aeronave</h2>
+        </div>
+        <button onclick="hideAircraftSummaryModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors">
+          <span class="text-slate-400 text-xl">×</span>
+        </button>
+      </div>
+
+      <!-- Modal Content -->
+      <div id="aircraft-summary-content" class="p-6">
+        <!-- Content will be populated by JavaScript -->
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-6 border-t border-slate-700 bg-slate-800/50 rounded-b-2xl space-y-4">
+        
+        <!-- Quantity Selection -->
+        <div class="bg-slate-700/30 border border-slate-600/50 rounded-lg p-4">
+          <label class="block text-sm font-medium text-slate-300 mb-2">
+            📊 Quantidade de Unidades a Produzir
+          </label>
+          <div class="flex items-center gap-4">
+            <input 
+              type="number" 
+              id="aircraft-quantity-input" 
+              class="flex-1 px-3 py-2 bg-slate-800/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent" 
+              min="1" 
+              max="500" 
+              value="12"
+              placeholder="Ex: 12"
+            >
+            <div class="text-xs text-slate-400 text-center">
+              <div>Min: 1</div>
+              <div>Max: 500</div>
+            </div>
+          </div>
+          <p class="text-xs text-slate-400 mt-1">
+            Esta quantidade será avaliada pelo narrador para aprovação
+          </p>
+        </div>
+        
+        <!-- Country Selection for Admin/Narrator -->
+        <div id="admin-country-selection-aircraft" class="hidden bg-slate-700/30 border border-slate-600/50 rounded-lg p-4">
+          <label class="block text-sm font-medium text-slate-300 mb-2">
+            🌍 País de Destino (Admin/Narrador)
+          </label>
+          <select 
+            id="aircraft-target-country" 
+            class="w-full px-3 py-2 bg-slate-800/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+          >
+            <option value="">Carregando países...</option>
+          </select>
+          <p class="text-xs text-slate-400 mt-1">
+            Como admin/narrador, selecione o país que receberá esta aeronave
+          </p>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="flex gap-3 justify-end">
+          <button onclick="exportAircraftToPDF()" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
+            <span>📄</span>
+            <span>Exportar PDF</span>
+          </button>
+          
+          <button id="submit-aircraft-approval-btn" onclick="submitAircraftForApprovalModal()" class="px-6 py-2 bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-700 hover:to-blue-800 text-white rounded-lg font-medium transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-cyan-500/25 disabled:opacity-50 disabled:cursor-not-allowed">
+            <span>✈️</span>
+            <span>Enviar para Aprovação</span>
+          </button>
+        </div>
+        
+        <!-- Status Message Area -->
+        <div id="aircraft-submission-status" class="hidden mt-3 rounded-lg p-3 text-sm"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Aircraft Modal Functions
+    function showAircraftSummaryModal() {
+      const modal = document.getElementById('aircraft-summary-modal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        populateAircraftSummary();
+        loadCountriesForAdmin();
+      }
+    }
+
+    function hideAircraftSummaryModal() {
+      const modal = document.getElementById('aircraft-summary-modal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    }
+
+    function populateAircraftSummary() {
+      const content = document.getElementById('aircraft-summary-content');
+      if (!content || !window.currentAircraft) return;
+
+      const performance = window.realisticPerformanceCalculator ? 
+        window.realisticPerformanceCalculator.calculateAircraftPerformance(window.currentAircraft) : null;
+
+      const airframe = window.AIRCRAFT_COMPONENTS?.airframes?.[window.currentAircraft.airframe];
+      const engine = window.AIRCRAFT_COMPONENTS?.aircraft_engines?.[window.currentAircraft.engine];
+
+      content.innerHTML = `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Basic Info -->
+          <div class="bg-slate-800/30 rounded-lg p-4 border border-slate-700/50">
+            <h3 class="text-lg font-semibold text-slate-200 mb-3">Informações Básicas</h3>
+            <div class="space-y-2 text-sm">
+              <div><span class="text-slate-400">Nome:</span> <span class="text-white">${window.currentAircraft.name || 'Nova Aeronave'}</span></div>
+              <div><span class="text-slate-400">Fuselagem:</span> <span class="text-white">${airframe?.name || 'Não selecionada'}</span></div>
+              <div><span class="text-slate-400">Motor:</span> <span class="text-white">${engine?.name || 'Não selecionado'}</span></div>
+              <div><span class="text-slate-400">Era:</span> <span class="text-white">${airframe?.tech_era || 'N/A'}</span></div>
+            </div>
+          </div>
+
+          <!-- Performance -->
+          <div class="bg-slate-800/30 rounded-lg p-4 border border-slate-700/50">
+            <h3 class="text-lg font-semibold text-slate-200 mb-3">Performance</h3>
+            <div class="space-y-2 text-sm">
+              <div><span class="text-slate-400">Vel. Máxima:</span> <span class="text-cyan-300">${performance?.maxSpeed || 0} km/h</span></div>
+              <div><span class="text-slate-400">Taxa de Subida:</span> <span class="text-green-300">${performance?.rateOfClimb || 0} m/min</span></div>
+              <div><span class="text-slate-400">Teto de Serviço:</span> <span class="text-blue-300">${performance?.serviceCeiling || 0} m</span></div>
+              <div><span class="text-slate-400">Alcance:</span> <span class="text-yellow-300">${performance?.range || 0} km</span></div>
+            </div>
+          </div>
+
+          <!-- Configuration -->
+          <div class="bg-slate-800/30 rounded-lg p-4 border border-slate-700/50">
+            <h3 class="text-lg font-semibold text-slate-200 mb-3">Configuração</h3>
+            <div class="space-y-2 text-sm">
+              <div><span class="text-slate-400">Armamentos:</span> <span class="text-white">${window.currentAircraft.weapons?.length || 0} itens</span></div>
+              <div><span class="text-slate-400">Aviônicos:</span> <span class="text-white">${window.currentAircraft.avionics?.length || 0} sistemas</span></div>
+              <div><span class="text-slate-400">Peso Total:</span> <span class="text-white">${performance?.totalWeight || 0} kg</span></div>
+            </div>
+          </div>
+
+          <!-- Economics -->
+          <div class="bg-slate-800/30 rounded-lg p-4 border border-slate-700/50">
+            <h3 class="text-lg font-semibold text-slate-200 mb-3">Custos</h3>
+            <div class="space-y-2 text-sm">
+              <div><span class="text-slate-400">Custo Base:</span> <span class="text-white" id="aircraft-unit-cost">Calculando...</span></div>
+              <div><span class="text-slate-400">País:</span> <span class="text-white">${window.getCurrentUserCountry()?.name || 'N/A'}</span></div>
+              <div><span class="text-slate-400">Modificador:</span> <span class="text-white">${((window.getCurrentUserCountry()?.costModifier || 1.0) * 100).toFixed(0)}%</span></div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Calculate costs
+      if (window.calculateAircraftCost) {
+        const baseCost = window.calculateAircraftCost(window.currentAircraft);
+        document.getElementById('aircraft-unit-cost').textContent = `$${baseCost.toLocaleString()}`;
+      }
+    }
+
+    async function loadCountriesForAdmin() {
+      try {
+        const permissions = await window.getUserPermissions();
+        const adminSection = document.getElementById('admin-country-selection-aircraft');
+        
+        if (permissions.isAdmin || permissions.isNarrator) {
+          adminSection.classList.remove('hidden');
+          
+          const select = document.getElementById('aircraft-target-country');
+          const countries = window.getGameCountries();
+          
+          select.innerHTML = '<option value="">Selecione um país...</option>';
+          
+          Object.values(countries || {}).forEach(country => {
+            const option = document.createElement('option');
+            option.value = country.id;
+            option.textContent = country.name;
+            select.appendChild(option);
+          });
+        }
+      } catch (error) {
+        console.error('Error loading countries for admin:', error);
+      }
+    }
+
+    async function submitAircraftForApprovalModal() {
+      const btn = document.getElementById('submit-aircraft-approval-btn');
+      const status = document.getElementById('aircraft-submission-status');
+      const quantity = parseInt(document.getElementById('aircraft-quantity-input').value) || 1;
+      
+      // Check for admin target country
+      const targetCountrySelect = document.getElementById('aircraft-target-country');
+      const targetCountry = targetCountrySelect?.value || null;
+      
+      if (!window.currentAircraft?.airframe || !window.currentAircraft?.engine) {
+        showSubmissionStatus('Selecione pelo menos uma fuselagem e um motor antes de enviar para aprovação.', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳</span><span>Enviando...</span>';
+      
+      try {
+        const result = await window.submitAircraftForApproval(window.currentAircraft, quantity, targetCountry);
+        
+        if (result.success) {
+          showSubmissionStatus(`✅ ${result.message}`, 'success');
+          setTimeout(() => hideAircraftSummaryModal(), 3000);
+        } else {
+          showSubmissionStatus(`❌ ${result.error}`, 'error');
+        }
+      } catch (error) {
+        showSubmissionStatus(`❌ Erro inesperado: ${error.message}`, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>✈️</span><span>Enviar para Aprovação</span>';
+      }
+    }
+
+    function showSubmissionStatus(message, type) {
+      const status = document.getElementById('aircraft-submission-status');
+      status.classList.remove('hidden');
+      status.className = `mt-3 rounded-lg p-3 text-sm ${type === 'success' ? 'bg-green-900/50 text-green-300 border border-green-700' : 'bg-red-900/50 text-red-300 border border-red-700'}`;
+      status.textContent = message;
+    }
+
+    function exportAircraftToPDF() {
+      // TODO: Implement PDF export
+      alert('Funcionalidade de exportação PDF será implementada em breve!');
+    }
+  </script>
+
 </body>
 </html>
