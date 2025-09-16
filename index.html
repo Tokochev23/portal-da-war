@@ -109,6 +109,28 @@
         grid-template-columns: repeat(2, 1fr);
       }
     }
+
+    /* Mobile Menu Styles */
+    .mobile-menu-item {
+      @apply flex items-center gap-3 w-full p-3 text-left text-slate-200 hover:bg-white/5 rounded-lg transition-colors;
+    }
+
+    .mobile-menu-item:active {
+      @apply bg-white/10 scale-[0.98];
+    }
+
+    /* Enhanced touch targets for mobile */
+    @media (max-width: 768px) {
+      button, .btn, .country-card {
+        min-height: 44px;
+        min-width: 44px;
+      }
+
+      .btn-primary, .btn-secondary {
+        padding: 0.875rem 1.5rem;
+        font-size: 1rem;
+      }
+    }
   </style>
 </head>
 <body class="bg-bg text-slate-200">
@@ -135,6 +157,13 @@
         <a href="narrador.html" class="hover:text-white/90 transition">Narrador</a>
         <a href="dashboard.html" class="hover:text-white/90 transition">Meu Painel</a>
       </nav>
+
+      <!-- Mobile Menu Button -->
+      <button id="mobile-menu-btn" class="md:hidden p-2 text-slate-300 hover:text-white transition-colors" aria-label="Abrir menu">
+        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
 
       <div class="flex items-center gap-3">
         <div id="connection-status" class="hidden text-xs text-emerald-400">● Online</div>
@@ -204,7 +233,7 @@
           </div>
 
           <!-- Métricas principais em grid -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
             <!-- PIB -->
             <div class="rounded-xl border border-white/5 bg-gradient-to-br from-emerald-500/10 to-slate-900/20 p-4">
               <div class="flex items-center justify-between mb-2">
@@ -283,7 +312,7 @@
                 </svg>
                 Ações Rápidas
               </h3>
-              <div class="grid grid-cols-2 gap-2">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button class="rounded-lg py-2 px-3 text-center text-xs border border-white/10 hover:bg-white/5 hover:border-emerald-500/30 hover:text-emerald-400 transition-all group">
                   <div class="font-medium text-slate-300 group-hover:text-emerald-400">Produção</div>
                   <div class="text-slate-500 group-hover:text-emerald-300 text-[10px]">Recursos</div>
@@ -445,14 +474,14 @@
       </div>
     </div>
 
-    <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="lista-paises-publicos">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="lista-paises-publicos">
       <!-- Cards serão gerados aqui pelo JS -->
     </div>
   </section>
 
   <!-- Auth Modal (novo, melhorado) -->
   <div id="auth-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm hidden">
-    <div class="w-full max-w-md rounded-2xl bg-bg-soft border border-bg-ring/70 p-6">
+    <div class="w-full max-w-md max-h-[95vh] overflow-y-auto mx-4 rounded-2xl bg-bg-soft border border-bg-ring/70 p-6">
       <div class="text-center">
         <div class="h-12 w-12 rounded-xl bg-brand-500/15 ring-1 ring-brand-500/30 grid place-items-center mx-auto">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -546,7 +575,7 @@
 
   <!-- Detailed Country Panel (Modal) -->
   <div id="country-panel-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xl hidden opacity-0 transition-opacity duration-300">
-    <div class="relative w-full max-w-4xl max-h-[90vh] rounded-2xl border border-slate-800/80 bg-gradient-to-b from-slate-900/70 to-slate-950/70 p-6 backdrop-blur-xl shadow-xl overflow-y-auto transform -translate-y-2 transition-transform duration-300">
+    <div class="relative w-full max-w-4xl max-h-[95vh] mx-4 rounded-2xl border border-slate-800/80 bg-gradient-to-b from-slate-900/70 to-slate-950/70 p-4 sm:p-6 backdrop-blur-xl shadow-xl overflow-y-auto transform -translate-y-2 transition-transform duration-300">
       <button id="close-country-panel" class="absolute top-4 right-4 text-slate-400 hover:text-slate-200 transition">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M18 6L6 18M6 6l12 12"></path>
@@ -556,6 +585,45 @@
       <div id="country-panel-content">
         <!-- Content will be injected here by JavaScript -->
       </div>
+    </div>
+  </div>
+
+  <!-- Mobile Menu Overlay -->
+  <div id="mobile-menu-overlay" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden md:hidden">
+    <div id="mobile-menu" class="fixed right-0 top-0 h-full w-80 max-w-[85vw] bg-bg border-l border-bg-ring/70 shadow-xl transform translate-x-full transition-transform duration-300">
+      <div class="flex items-center justify-between p-4 border-b border-bg-ring/70">
+        <h2 class="text-lg font-semibold text-slate-100">Menu</h2>
+        <button id="close-mobile-menu" class="p-2 text-slate-400 hover:text-slate-200 transition-colors">
+          <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <nav class="p-4">
+        <div class="space-y-3">
+          <a href="#paises" class="mobile-menu-item">
+            <span class="text-lg">🌍</span>
+            <span>Países</span>
+          </a>
+          <a href="#turnos" class="mobile-menu-item">
+            <span class="text-lg">🔄</span>
+            <span>Turnos</span>
+          </a>
+          <a href="#regras" class="mobile-menu-item">
+            <span class="text-lg">📋</span>
+            <span>Regras</span>
+          </a>
+          <a href="narrador.html" class="mobile-menu-item">
+            <span class="text-lg">🎭</span>
+            <span>Narrador</span>
+          </a>
+          <a href="dashboard.html" class="mobile-menu-item">
+            <span class="text-lg">📊</span>
+            <span>Meu Painel</span>
+          </a>
+        </div>
+      </nav>
     </div>
   </div>
 
@@ -589,5 +657,58 @@
   <script src="./js/ui/renderer.js" type="module"></script>
   <script src="./js/utils.js" type="module"></script>
   <script src="./js/main.js" type="module"></script>
+  <script src="./js/mobile/mobile-optimizations.js" type="module"></script>
+
+  <!-- Mobile Menu JavaScript -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+      const mobileMenuOverlay = document.getElementById('mobile-menu-overlay');
+      const mobileMenu = document.getElementById('mobile-menu');
+      const closeMobileMenu = document.getElementById('close-mobile-menu');
+
+      function openMobileMenu() {
+        mobileMenuOverlay.classList.remove('hidden');
+        setTimeout(() => {
+          mobileMenu.style.transform = 'translateX(0)';
+        }, 10);
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeMobileMenuFunc() {
+        mobileMenu.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+          mobileMenuOverlay.classList.add('hidden');
+          document.body.style.overflow = '';
+        }, 300);
+      }
+
+      // Event listeners
+      mobileMenuBtn?.addEventListener('click', openMobileMenu);
+      closeMobileMenu?.addEventListener('click', closeMobileMenuFunc);
+
+      // Close on overlay click
+      mobileMenuOverlay?.addEventListener('click', (e) => {
+        if (e.target === mobileMenuOverlay) {
+          closeMobileMenuFunc();
+        }
+      });
+
+      // Close on link click
+      const mobileMenuItems = document.querySelectorAll('.mobile-menu-item');
+      mobileMenuItems.forEach(item => {
+        item.addEventListener('click', () => {
+          closeMobileMenuFunc();
+        });
+      });
+
+      // Close on escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !mobileMenuOverlay.classList.contains('hidden')) {
+          closeMobileMenuFunc();
+        }
+      });
+    });
+  </script>
 </body>
 </html>

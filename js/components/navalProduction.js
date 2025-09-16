@@ -2,6 +2,7 @@
 
 import { db, auth } from '../services/firebase.js';
 import { showNotification } from '../utils.js';
+import { ShipyardSystem } from '../systems/shipyardSystem.js';
 
 // Load naval components if not already loaded
 async function loadNavalComponents() {
@@ -40,6 +41,7 @@ export class NavalProductionSystem {
         this.inProductionOrders = [];
         this.currentFilter = 'pending';
         this.currentSort = 'newest';
+        this.shipyardSystem = new ShipyardSystem();
     }
 
     async initialize() {
@@ -578,8 +580,8 @@ export class NavalProductionSystem {
 
             const unitCost = order.totalCost / requestedQuantity;
 
-            const updateTimeline = (quantity) => {
-                const schedule = this.calculateProductionSchedule(productionData, quantity);
+            const updateTimeline = async (quantity) => {
+                const schedule = await this.calculateProductionSchedule(productionData, quantity, order.paisId);
                 timelineDiv.innerHTML = this.renderSchedulePreview(schedule, order.design.name);
             };
 
@@ -618,9 +620,22 @@ export class NavalProductionSystem {
         }
     }
 
-    calculateProductionSchedule(hullOrProductionData, quantity) {
+    async calculateProductionSchedule(hullOrProductionData, quantity, countryId = null) {
         // Accept either hull object with production property or production data directly
-        const productionData = hullOrProductionData.production || hullOrProductionData;
+        let productionData = hullOrProductionData.production || hullOrProductionData;
+
+        // Apply shipyard bonuses if countryId is provided
+        if (countryId) {
+            const shipyardLevel = await this.shipyardSystem.getCurrentShipyardLevel(countryId);
+            productionData = this.shipyardSystem.applyShipyardBonusToProduction(productionData, shipyardLevel);
+            console.log(`🏭 Estaleiro nível ${shipyardLevel} aplicado:`, {
+                originalTime: hullOrProductionData.production?.build_time_months || hullOrProductionData.build_time_months,
+                newTime: productionData.build_time_months,
+                originalParallel: hullOrProductionData.production?.max_parallel || hullOrProductionData.max_parallel || 1,
+                newParallel: productionData.max_parallel
+            });
+        }
+
         const buildTimeMonths = productionData.build_time_months;
         const maxParallel = productionData.max_parallel || 1;
         const currentTurn = window.gameConfig?.currentTurn || 1;
@@ -683,8 +698,8 @@ export class NavalProductionSystem {
             
             const orderData = orderDoc.data();
             const hull = window.NAVAL_COMPONENTS?.hulls[orderData.design.hull];
-            
-            const schedule = this.calculateProductionSchedule(hull, approvedQuantity);
+
+            const schedule = await this.calculateProductionSchedule(hull, approvedQuantity, orderData.paisId);
             
             // Move to approved collection (NEW STRUCTURE)
             await db.collection('naval_orders_approved')
