@@ -271,6 +271,8 @@ export class MarketplaceSystem {
 
         // Verificar se o país pode fazer esta oferta (orçamento, recursos, etc)
         if (data.type === 'sell') {
+            // Para vendas, validar inventário real
+            await this.validateSellOfferAvailability(data, countryId);
             await this.validateSellOffer(data, countryData);
         } else {
             await this.validateBuyOffer(data, countryData);
@@ -342,61 +344,62 @@ export class MarketplaceSystem {
     }
 
     /**
-     * Buscar ofertas com filtros
+     * Buscar ofertas com filtros - Versão completamente sem índices
      */
     async getOffers(filters = {}) {
         try {
-            // Check if collection exists and has documents
             const collectionRef = db.collection(this.collections.offers);
+            let offers = [];
+            let snapshot;
 
-            // Try a simple query first
-            let query;
+            // Abordagem completamente sem índices: buscar todos os documentos e filtrar no cliente
             try {
-                // Start with the simplest possible query
-                query = collectionRef.where('status', '==', 'active');
+                console.info('🔍 Buscando ofertas usando filtragem client-side (sem índices)');
+                snapshot = await collectionRef.get();
+            } catch (getAllError) {
+                console.warn('Falha ao buscar todos os documentos, tentando listagem:', getAllError);
 
-                // Add ordering only if we have a specific orderBy
-                const orderBy = filters.orderBy || 'created_at';
-                const orderDirection = filters.orderDirection || 'desc';
+                try {
+                    // Fallback: tentar listar documentos se disponível
+                    const docRefs = await collectionRef.listDocuments();
+                    const docPromises = docRefs.slice(0, 100).map(ref => ref.get());
+                    const docs = await Promise.all(docPromises);
 
-                // Only add orderBy if it's not the default to avoid index issues
-                if (orderBy !== 'created_at') {
-                    query = query.orderBy(orderBy, orderDirection);
-                } else {
-                    query = query.orderBy('created_at', orderDirection);
+                    // Criar um objeto snapshot mock
+                    snapshot = {
+                        docs: docs.filter(doc => doc.exists),
+                        size: docs.filter(doc => doc.exists).length,
+                        empty: docs.filter(doc => doc.exists).length === 0,
+                        forEach: function(callback) {
+                            this.docs.forEach(callback);
+                        }
+                    };
+                } catch (listError) {
+                    console.warn('Listagem de documentos falhou, retornando resultados vazios:', listError);
+
+                    // Fallback final: retornar resultados vazios mas sistema funcionando
+                    snapshot = {
+                        docs: [],
+                        size: 0,
+                        empty: true,
+                        forEach: function() {}
+                    };
                 }
-
-                // Apply simple equality filters
-                if (filters.category && filters.category !== 'all') {
-                    query = query.where('category', '==', filters.category);
-                }
-
-                if (filters.type && filters.type !== 'all') {
-                    query = query.where('type', '==', filters.type);
-                }
-
-                // Limit results
-                if (filters.limit) {
-                    query = query.limit(filters.limit);
-                }
-
-            } catch (indexError) {
-                console.warn('Index error, falling back to simple query:', indexError);
-                // Fallback to the simplest query possible
-                query = collectionRef.limit(filters.limit || 50);
             }
 
-            const snapshot = await query.get();
-            let offers = [];
-
+            // Processar todos os documentos e aplicar filtros client-side
             snapshot.forEach(doc => {
                 const data = doc.data();
-                // Filter expires_at in memory if not ordered by it
-                if (orderBy !== 'expires_at') {
-                    const expiresAt = data.expires_at?.toDate ? data.expires_at.toDate() : new Date(data.expires_at);
-                    if (expiresAt <= new Date()) {
-                        return; // Skip expired offers
-                    }
+
+                // Filtro básico de status (sempre ativo)
+                if (data.status !== 'active') {
+                    return;
+                }
+
+                // Verificar se expirou
+                const expiresAt = data.expires_at?.toDate ? data.expires_at.toDate() : new Date(data.expires_at);
+                if (expiresAt && expiresAt <= new Date()) {
+                    return;
                 }
 
                 offers.push({
@@ -405,41 +408,85 @@ export class MarketplaceSystem {
                 });
             });
 
-            // Aplicar filtros adicionais que não podem ser feitos no Firestore
+            // Aplicar todos os filtros client-side
             let filteredOffers = offers;
 
+            // Filtros básicos
+            if (filters.category && filters.category !== 'all') {
+                filteredOffers = filteredOffers.filter(offer => offer.category === filters.category);
+            }
+
+            if (filters.type && filters.type !== 'all') {
+                filteredOffers = filteredOffers.filter(offer => offer.type === filters.type);
+            }
+
+            if (filters.seller_id) {
+                filteredOffers = filteredOffers.filter(offer => offer.seller_id === filters.seller_id);
+            }
+
+            if (filters.buyer_id) {
+                filteredOffers = filteredOffers.filter(offer => offer.buyer_id === filters.buyer_id);
+            }
+
+            // Filtros de busca
             if (filters.searchTerm) {
                 const term = filters.searchTerm.toLowerCase();
                 filteredOffers = filteredOffers.filter(offer =>
-                    offer.title.toLowerCase().includes(term) ||
-                    offer.description.toLowerCase().includes(term) ||
-                    offer.item_name.toLowerCase().includes(term) ||
-                    offer.country_name.toLowerCase().includes(term)
+                    (offer.title && offer.title.toLowerCase().includes(term)) ||
+                    (offer.description && offer.description.toLowerCase().includes(term)) ||
+                    (offer.item_name && offer.item_name.toLowerCase().includes(term)) ||
+                    (offer.country_name && offer.country_name.toLowerCase().includes(term))
                 );
             }
 
-            // Advanced filters
-            if (filters.priceMin !== null) {
+            // Filtros avançados de preço e quantidade
+            if (filters.priceMin !== null && filters.priceMin !== undefined) {
                 filteredOffers = filteredOffers.filter(offer => offer.price_per_unit >= filters.priceMin);
             }
 
-            if (filters.priceMax !== null) {
+            if (filters.priceMax !== null && filters.priceMax !== undefined) {
                 filteredOffers = filteredOffers.filter(offer => offer.price_per_unit <= filters.priceMax);
             }
 
-            if (filters.quantityMin !== null) {
+            if (filters.quantityMin !== null && filters.quantityMin !== undefined) {
                 filteredOffers = filteredOffers.filter(offer => offer.quantity >= filters.quantityMin);
             }
 
-            if (filters.quantityMax !== null) {
+            if (filters.quantityMax !== null && filters.quantityMax !== undefined) {
                 filteredOffers = filteredOffers.filter(offer => offer.quantity <= filters.quantityMax);
             }
 
+            // Ordenação client-side
+            const orderBy = filters.orderBy || 'created_at';
+            const orderDirection = filters.orderDirection || 'desc';
+
+            filteredOffers.sort((a, b) => {
+                let aVal = a[orderBy];
+                let bVal = b[orderBy];
+
+                // Converter datas se necessário
+                if (orderBy.includes('_at') && aVal && bVal) {
+                    aVal = aVal.toDate ? aVal.toDate() : new Date(aVal);
+                    bVal = bVal.toDate ? bVal.toDate() : new Date(bVal);
+                }
+
+                // Converter para números se necessário
+                if (typeof aVal === 'string' && !isNaN(aVal)) aVal = parseFloat(aVal);
+                if (typeof bVal === 'string' && !isNaN(bVal)) bVal = parseFloat(bVal);
+
+                if (orderDirection === 'desc') {
+                    return bVal > aVal ? 1 : bVal < aVal ? -1 : 0;
+                } else {
+                    return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+                }
+            });
+
+            // Filtros adicionais
             if (filters.countryFilter) {
                 filteredOffers = filteredOffers.filter(offer => offer.country_id === filters.countryFilter);
             }
 
-            if (filters.timeFilter !== null) {
+            if (filters.timeFilter !== null && filters.timeFilter !== undefined) {
                 const now = new Date();
                 const maxTime = new Date(now.getTime() + filters.timeFilter * 24 * 60 * 60 * 1000);
                 filteredOffers = filteredOffers.filter(offer => {
@@ -451,10 +498,12 @@ export class MarketplaceSystem {
             // Verificar embargos
             filteredOffers = await this.filterEmbargoedOffers(filteredOffers, filters.current_country_id);
 
-            // Apply final limit after all filtering
+            // Aplicar limite final após toda a filtragem
             if (filters.limit && filteredOffers.length > filters.limit) {
                 filteredOffers = filteredOffers.slice(0, filters.limit);
             }
+
+            console.info(`✅ Ofertas filtradas: ${filteredOffers.length} encontradas usando filtragem client-side`);
 
             return {
                 success: true,
@@ -820,6 +869,187 @@ export class MarketplaceSystem {
                 error: error.message
             };
         }
+    }
+
+    /**
+     * Obter inventário real do país para validação
+     */
+    async getCountryInventory(countryId) {
+        try {
+            const inventoryDoc = await db.collection('inventory').doc(countryId).get();
+            return inventoryDoc.exists ? inventoryDoc.data() : {};
+        } catch (error) {
+            console.error('Erro ao buscar inventário:', error);
+            return {};
+        }
+    }
+
+    /**
+     * Obter dados do país incluindo recursos
+     */
+    async getCountryData(countryId) {
+        try {
+            const countryDoc = await db.collection('paises').doc(countryId).get();
+            return countryDoc.exists ? { id: countryId, ...countryDoc.data() } : null;
+        } catch (error) {
+            console.error('Erro ao buscar dados do país:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Calcular recursos disponíveis para venda
+     */
+    calculateAvailableResources(countryData) {
+        console.log('🔍 Debug: Dados do país recebidos:', countryData);
+
+        // USAR OS RECURSOS REAIS DO DASHBOARD - NÃO CÁLCULOS!
+        // O país só pode vender o que realmente tem armazenado
+        console.log('📊 Usando recursos REAIS do dashboard (não calculados)');
+
+        // Verificar os valores reais dos recursos
+        console.log('🔍 Recursos reais no país:');
+        console.log('  - Carvao:', countryData.Carvao);
+        console.log('  - Combustivel:', countryData.Combustivel);
+        console.log('  - Metais:', countryData.Metais);
+        console.log('  - Graos:', countryData.Graos);
+
+        // Usar os valores REAIS dos recursos que o país tem
+        // Permitir venda de até 50% do estoque para manter reservas estratégicas
+        const realResources = {
+            Carvao: Math.max(0, Math.floor((parseFloat(countryData.Carvao) || 0) * 0.5)),
+            Combustivel: Math.max(0, Math.floor((parseFloat(countryData.Combustivel) || 0) * 0.5)),
+            Metais: Math.max(0, Math.floor((parseFloat(countryData.Metais) || 0) * 0.5)),
+            Graos: Math.max(0, Math.floor((parseFloat(countryData.Graos) || 0) * 0.5))
+            // Energia removida - não é comerciável
+        };
+
+        console.log('📦 Recursos REAIS disponíveis para venda (50% do estoque):', realResources);
+        return realResources;
+    }
+
+    /**
+     * Obter equipamentos disponíveis para venda do inventário
+     */
+    getAvailableEquipment(inventory) {
+        const availableEquipment = [];
+
+        Object.keys(inventory).forEach(category => {
+            if (typeof inventory[category] === 'object' && inventory[category] !== null) {
+                Object.keys(inventory[category]).forEach(equipmentName => {
+                    const equipment = inventory[category][equipmentName];
+
+                    if (equipment && typeof equipment === 'object' && equipment.quantity > 0) {
+                        // Só permite vender até 50% do inventário para manter defesas
+                        const availableQuantity = Math.floor(equipment.quantity * 0.5);
+
+                        if (availableQuantity > 0) {
+                            availableEquipment.push({
+                                id: `${category}_${equipmentName}`.toLowerCase().replace(/\s+/g, '_'),
+                                name: equipmentName,
+                                category: category,
+                                available_quantity: availableQuantity,
+                                total_quantity: equipment.quantity,
+                                unit_cost: equipment.cost || 0,
+                                maintenance_cost: (equipment.cost || 0) * 0.05 || 0,
+                                type: this.getEquipmentType(category)
+                            });
+                        }
+                    }
+                });
+            }
+        });
+
+        return availableEquipment;
+    }
+
+    /**
+     * Determinar tipo de equipamento baseado na categoria
+     */
+    getEquipmentType(category) {
+        const navalCategories = ['Couraçados', 'Cruzadores', 'Destróieres', 'Fragatas', 'Corvetas', 'Submarinos', 'Porta-aviões', 'Patrulhas', 'Auxiliares', 'Naval - Outros'];
+
+        if (navalCategories.includes(category)) {
+            return 'naval';
+        }
+
+        return 'vehicles'; // Default para veículos
+    }
+
+    /**
+     * Validar disponibilidade para oferta de venda
+     */
+    async validateSellOfferAvailability(offerData, countryId) {
+        const countryData = await this.getCountryData(countryId);
+        if (!countryData) {
+            throw new Error('Dados do país não encontrados');
+        }
+
+        if (offerData.category === 'resources') {
+            return this.validateResourceAvailability(offerData, countryData);
+        } else {
+            return this.validateEquipmentAvailability(offerData, countryId);
+        }
+    }
+
+    /**
+     * Validar disponibilidade de recursos
+     */
+    validateResourceAvailability(offerData, countryData) {
+        const availableResources = this.calculateAvailableResources(countryData);
+
+        const resourceMap = {
+            'steel_high_grade': 'Metais',
+            'steel_standard': 'Metais',
+            'oil_crude': 'Combustivel',
+            'oil_aviation': 'Combustivel',
+            'aluminum': 'Metais',
+            'copper': 'Metais',
+            'rare_metals': 'Metais',
+            'coal': 'Carvao',
+            'food': 'Graos'
+            // 'energy': 'Energia' - removido, energia não é comerciável
+        };
+
+        const resourceType = resourceMap[offerData.item_id];
+        if (!resourceType) {
+            throw new Error('Tipo de recurso não reconhecido');
+        }
+
+        const available = availableResources[resourceType] || 0;
+        if (offerData.quantity > available) {
+            throw new Error(`Quantidade insuficiente. Disponível para venda: ${available.toLocaleString()} unidades de ${resourceType}`);
+        }
+
+        return {
+            valid: true,
+            available: available,
+            resourceType: resourceType
+        };
+    }
+
+    /**
+     * Validar disponibilidade de equipamentos
+     */
+    async validateEquipmentAvailability(offerData, countryId) {
+        const inventory = await this.getCountryInventory(countryId);
+        const availableEquipment = this.getAvailableEquipment(inventory);
+
+        const equipment = availableEquipment.find(eq => eq.id === offerData.item_id);
+        if (!equipment) {
+            throw new Error(`Equipamento "${offerData.item_name}" não encontrado no inventário ou indisponível para venda`);
+        }
+
+        if (offerData.quantity > equipment.available_quantity) {
+            throw new Error(`Quantidade insuficiente. Disponível para venda: ${equipment.available_quantity} de ${equipment.total_quantity} unidades totais`);
+        }
+
+        return {
+            valid: true,
+            equipment: equipment,
+            availableQuantity: equipment.available_quantity,
+            totalQuantity: equipment.total_quantity
+        };
     }
 
     /**

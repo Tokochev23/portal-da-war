@@ -6,6 +6,8 @@
 import { Logger } from '../utils.js';
 import { calculatePIBTotal, calculatePIBPerCapita, applyGrowthToPIBPerCapita } from '../utils/pibCalculations.js';
 import { POWER_PLANTS } from '../data/power_plants.js';
+import { getCustomRules } from '../services/firebase.js';
+import { evaluateFormula } from './formulaEvaluator.js';
 
 // Configurações de cálculo
 const CALCULATION_CONFIG = {
@@ -43,26 +45,38 @@ const CALCULATION_CONFIG = {
 class EconomicCalculations {
   
   // Calcular crescimento base de uma ação
-  static calculateBaseGrowth(action, country) {
+  static calculateBaseGrowth(action, country, customRules = {}) {
     const { dice, type, value, buff = 0 } = action;
     
-    // 1. Base do dado (D12: sucesso se > 5) - FÓRMULA MUITO MAIS GENEROSA
+    // 1. Base do dado (D12: sucesso se > 5)
     let baseGrowth = 0;
     if (dice > CALCULATION_CONFIG.diceBase.successThreshold) {
-      // Fórmula MUITO mais generosa: crescimento exponencial
       baseGrowth = (dice - CALCULATION_CONFIG.diceBase.successThreshold) / 12;
     } else if (dice <= 3) {
-      // Dados críticos baixos podem causar pequenas perdas
       baseGrowth = -CALCULATION_CONFIG.diceBase.failurePenalty;
     } else {
-      // Dados 4-5 agora dão crescimento mínimo
-      baseGrowth = 0.02; // 2% mínimo
+      baseGrowth = 0.02;
     }
 
-    // 2. Modificador do país MUITO MAIS GENEROSO (tecnologia × urbanização)
-    const technology = (parseFloat(country.Tecnologia) || 0) / 100;
-    const urbanization = (parseFloat(country.Urbanizacao) || 0) / 100;
-    const countryModifier = 1 + (technology * urbanization * 1.5); // 3x mais generoso
+    // 2. Modificador do país (customizável)
+    let countryModifier;
+    const formula = customRules?.modificadorCrescimento;
+    if (formula) {
+        const result = evaluateFormula(formula, country);
+        if (result.success) {
+            countryModifier = result.value;
+            Logger.info(`Modificador de Crescimento calculado com fórmula customizada: ${formula}`);
+        } else {
+            Logger.error(`Falha na fórmula de Modificador de Crescimento "${formula}". Usando cálculo padrão. Erro: ${result.error}`);
+            const technology = (parseFloat(country.Tecnologia) || 0) / 100;
+            const urbanization = (parseFloat(country.Urbanizacao) || 0) / 100;
+            countryModifier = 1 + (technology * urbanization * 1.5);
+        }
+    } else {
+        const technology = (parseFloat(country.Tecnologia) || 0) / 100;
+        const urbanization = (parseFloat(country.Urbanizacao) || 0) / 100;
+        countryModifier = 1 + (technology * urbanization * 1.5);
+    }
 
     // 3. Modificador de estabilidade
     const stability = parseFloat(country.Estabilidade) || 0;
@@ -204,7 +218,7 @@ class EconomicCalculations {
   }
 
   // Calcular inflação total
-  static calculateInflation(actions, country, targetCountries = {}) {
+  static calculateInflation(actions, country, targetCountries = {}, customRules = {}) {
     let totalInflation = 0;
 
     // 1. Inflação por ações externas
@@ -217,7 +231,7 @@ class EconomicCalculations {
     }
 
     // 2. Inflação por distribuição interna
-    totalInflation += this.calculateDistributionInflation(actions, country);
+    totalInflation += this.calculateDistributionInflation(actions, country, customRules);
 
     // 3. Aplicar resistência à inflação
     const resistance = this.calculateInflationResistance(country);
@@ -251,7 +265,7 @@ class EconomicCalculations {
   }
 
   // Calcular inflação por distribuição
-  static calculateDistributionInflation(actions, country) {
+  static calculateDistributionInflation(actions, country, customRules = {}) {
     let inflation = 0;
     
     if (actions.length === 0) return 0;
@@ -271,7 +285,7 @@ class EconomicCalculations {
     });
 
     // Inflação APENAS por concentração excessiva em um tipo
-    const budget = this.calculateBudget(country);
+    const budget = this.calculateBudget(country, customRules);
     for (const [type, value] of Object.entries(typeDistribution)) {
       const concentration = value / budget;
       
@@ -312,7 +326,19 @@ class EconomicCalculations {
   }
 
   // Calcular orçamento (reutilizar fórmula existente)
-  static calculateBudget(country) {
+  static calculateBudget(country, customRules = {}) {
+    const formula = customRules?.orcamento;
+    if (formula) {
+        const result = evaluateFormula(formula, country);
+        if (result.success) {
+            Logger.info(`Orçamento calculado com fórmula customizada: ${formula}`);
+            return result.value;
+        } else {
+            Logger.error(`Falha na fórmula de orçamento customizada "${formula}". Usando cálculo padrão. Erro: ${result.error}`);
+        }
+    }
+
+    // Cálculo padrão (fallback)
     const pib = parseFloat(country.PIB) || 0;
     const burocracia = (parseFloat(country.Burocracia) || 0) / 100;
     const estabilidade = (parseFloat(country.Estabilidade) || 0) / 100;
@@ -320,7 +346,9 @@ class EconomicCalculations {
   }
 
   // Processar todas as ações e calcular resultado final
-  static processAllActions(actions, country, targetCountries = {}) {
+  static async processAllActions(actions, country, targetCountries = {}) {
+    const customRules = await getCustomRules();
+    
     const results = {
       actions: [],
       totalGrowth: 0,
@@ -334,7 +362,7 @@ class EconomicCalculations {
 
     // 1. Calcular crescimento base de cada ação
     actions.forEach(action => {
-      const actionResult = this.calculateBaseGrowth(action, country);
+      const actionResult = this.calculateBaseGrowth(action, country, customRules);
       results.actions.push({
         ...action,
         ...actionResult
@@ -371,7 +399,7 @@ class EconomicCalculations {
     }, 0);
 
     // 4. Calcular inflação
-    results.totalInflation = this.calculateInflation(actions, country, targetCountries);
+    results.totalInflation = this.calculateInflation(actions, country, targetCountries, customRules);
 
     // 5. Aplicar inflação ao crescimento
     results.finalGrowth = results.totalGrowth * (1 - results.totalInflation);

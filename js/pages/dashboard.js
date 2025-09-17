@@ -1846,9 +1846,17 @@ async function loadMarketplace() {
               <h2 class="text-xl font-bold text-white">🌍 Mercado Internacional</h2>
               <p class="text-sm text-slate-400 mt-1">Compre e venda recursos, veículos e equipamentos navais</p>
             </div>
-            <button id="create-offer-btn" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-black font-medium rounded-lg transition-colors">
-              + Criar Oferta
-            </button>
+            <div class="flex gap-2">
+              <button id="create-test-offers-btn" class="px-3 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium rounded-lg transition-colors">
+                🧪 Dados Teste
+              </button>
+              <button id="clear-test-offers-btn" class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">
+                🗑️ Limpar Teste
+              </button>
+              <button id="create-offer-btn" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-black font-medium rounded-lg transition-colors">
+                + Criar Oferta
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1984,6 +1992,10 @@ async function loadMarketplace() {
               <div id="embargo-status-indicator" class="mt-2"></div>
             </div>
             <div class="flex gap-2">
+              <button id="view-notifications-btn" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors relative">
+                📢 Notificações
+                <span id="notifications-count-badge" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"></span>
+              </button>
               <button id="view-embargoes-btn" class="px-3 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg transition-colors relative">
                 Ver Embargos
                 <span id="embargo-count-badge" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"></span>
@@ -2014,8 +2026,9 @@ async function loadMarketplace() {
     // Load initial content
     loadMarketplaceOffers('all', paisId);
 
-    // Update embargo status indicator
+    // Update embargo status indicator and notification count
     updateEmbargoStatusIndicator(paisId);
+    updateNotificationCount();
 
     // Load countries for filter dropdown
     loadCountriesForFilter();
@@ -2101,6 +2114,11 @@ function setupMarketplaceListeners() {
   }
 
   // Embargo management buttons
+  const viewNotificationsBtn = document.getElementById('view-notifications-btn');
+  if (viewNotificationsBtn) {
+    viewNotificationsBtn.addEventListener('click', openNotificationsModal);
+  }
+
   const viewEmbargoesBtn = document.getElementById('view-embargoes-btn');
   if (viewEmbargoesBtn) {
     viewEmbargoesBtn.addEventListener('click', openEmbargoesModal);
@@ -2109,6 +2127,109 @@ function setupMarketplaceListeners() {
   const createEmbargoBtn = document.getElementById('create-embargo-btn');
   if (createEmbargoBtn) {
     createEmbargoBtn.addEventListener('click', openCreateEmbargoModal);
+  }
+
+  // Create test offers button
+  const createTestOffersBtn = document.getElementById('create-test-offers-btn');
+  if (createTestOffersBtn) {
+    createTestOffersBtn.addEventListener('click', async () => {
+      createTestOffersBtn.disabled = true;
+      createTestOffersBtn.innerHTML = '⏳ Criando...';
+
+      try {
+        const result = await marketplaceSystem.createTestOffers();
+        if (result.success) {
+          createTestOffersBtn.innerHTML = '✅ Criado!';
+          createTestOffersBtn.classList.remove('bg-yellow-600', 'hover:bg-yellow-700');
+          createTestOffersBtn.classList.add('bg-green-600');
+
+          // Recarregar ofertas
+          setTimeout(() => {
+            const activeCategory = document.querySelector('.marketplace-category-btn.active')?.dataset.category || 'all';
+            const user = auth.currentUser;
+            if (user) {
+              checkPlayerCountry(user.uid).then(paisId => {
+                if (paisId) loadMarketplaceOffers(activeCategory, paisId);
+              });
+            }
+
+            // Resetar botão após 3 segundos
+            setTimeout(() => {
+              createTestOffersBtn.innerHTML = '🧪 Dados Teste';
+              createTestOffersBtn.classList.remove('bg-green-600');
+              createTestOffersBtn.classList.add('bg-yellow-600', 'hover:bg-yellow-700');
+              createTestOffersBtn.disabled = false;
+            }, 3000);
+          }, 1000);
+        } else {
+          throw new Error(result.error);
+        }
+      } catch (error) {
+        console.error('Erro ao criar ofertas de teste:', error);
+        createTestOffersBtn.innerHTML = '❌ Erro';
+        createTestOffersBtn.classList.remove('bg-yellow-600', 'hover:bg-yellow-700');
+        createTestOffersBtn.classList.add('bg-red-600');
+
+        setTimeout(() => {
+          createTestOffersBtn.innerHTML = '🧪 Dados Teste';
+          createTestOffersBtn.classList.remove('bg-red-600');
+          createTestOffersBtn.classList.add('bg-yellow-600', 'hover:bg-yellow-700');
+          createTestOffersBtn.disabled = false;
+        }, 3000);
+      }
+    });
+  }
+
+  // Clear test offers button
+  const clearTestOffersBtn = document.getElementById('clear-test-offers-btn');
+  if (clearTestOffersBtn) {
+    clearTestOffersBtn.addEventListener('click', async () => {
+      // Confirmar antes de deletar
+      if (!confirm('Tem certeza que deseja deletar todas as ofertas de teste? Esta ação não pode ser desfeita.')) {
+        return;
+      }
+
+      clearTestOffersBtn.disabled = true;
+      clearTestOffersBtn.innerHTML = '⏳ Limpando...';
+
+      try {
+        const result = await marketplaceSystem.clearTestOffers();
+        if (result.success) {
+          clearTestOffersBtn.innerHTML = `✅ ${result.count || 0} removidas!`;
+          clearTestOffersBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+          clearTestOffersBtn.classList.add('bg-green-600');
+
+          // Recarregar ofertas
+          setTimeout(() => {
+            const activeCategory = document.querySelector('.marketplace-category-btn.active')?.dataset.category || 'all';
+            const user = auth.currentUser;
+            if (user) {
+              checkPlayerCountry(user.uid).then(paisId => {
+                if (paisId) loadMarketplaceOffers(activeCategory, paisId);
+              });
+            }
+
+            // Resetar botão após 3 segundos
+            setTimeout(() => {
+              clearTestOffersBtn.innerHTML = '🗑️ Limpar Teste';
+              clearTestOffersBtn.classList.remove('bg-green-600');
+              clearTestOffersBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+              clearTestOffersBtn.disabled = false;
+            }, 3000);
+          }, 1000);
+        } else {
+          throw new Error(result.error);
+        }
+      } catch (error) {
+        console.error('Erro ao limpar ofertas de teste:', error);
+        clearTestOffersBtn.innerHTML = '❌ Erro';
+
+        setTimeout(() => {
+          clearTestOffersBtn.innerHTML = '🗑️ Limpar Teste';
+          clearTestOffersBtn.disabled = false;
+        }, 3000);
+      }
+    });
   }
 
   // Advanced filters functionality
@@ -2461,22 +2582,1399 @@ function renderOfferCard(offer) {
   `;
 }
 
-function openOfferDetails(offerId) {
-  // Increment view count
-  if (marketplaceSystem) {
-    marketplaceSystem.incrementOfferViews(offerId);
+async function openOfferDetails(offerId) {
+  try {
+    // Increment view count
+    if (marketplaceSystem) {
+      marketplaceSystem.incrementOfferViews(offerId);
+    }
+
+    const user = auth.currentUser;
+    if (!user) {
+      alert('Você precisa estar logado para visualizar detalhes');
+      return;
+    }
+
+    const paisId = await checkPlayerCountry(user.uid);
+    if (!paisId) {
+      alert('Você precisa estar associado a um país');
+      return;
+    }
+
+    // Get country data for budget validation
+    const allCountries = await getAllCountries();
+    const country = allCountries.find(c => c.id === paisId);
+    if (!country) {
+      alert('Dados do país não encontrados');
+      return;
+    }
+
+    // Find the offer in current loaded offers
+    const offerCards = document.querySelectorAll('[onclick*="openOfferDetails"]');
+    let offer = null;
+
+    // Try to get offer from marketplace system cache or make a direct query
+    try {
+      const result = await marketplaceSystem.getOffers({ limit: 1000 });
+      if (result.success && result.offers) {
+        offer = result.offers.find(o => o.id === offerId);
+      }
+    } catch (error) {
+      console.error('Error finding offer:', error);
+    }
+
+    if (!offer) {
+      alert('Oferta não encontrada');
+      return;
+    }
+
+    // Remove existing modal
+    const existingModal = document.getElementById('offer-details-modal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+
+    // Create modal
+    const modal = document.createElement('div');
+    modal.id = 'offer-details-modal';
+    modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+
+    const isOwnOffer = offer.player_id === user.uid || offer.country_id === paisId;
+    const canBuy = !isOwnOffer && offer.type === 'sell' && offer.status === 'active';
+    const canSell = !isOwnOffer && offer.type === 'buy' && offer.status === 'active';
+    const canInteract = canBuy || canSell;
+
+    // Calculate if user has budget for buy offers
+    const budget = calculateBudget(country);
+    const totalCost = offer.quantity * offer.price_per_unit;
+    const hasBudget = budget >= totalCost;
+
+    const expiresAt = offer.expires_at?.toDate ? offer.expires_at.toDate() : new Date(offer.expires_at);
+    const timeLeft = Math.max(0, Math.ceil((expiresAt - new Date()) / (24 * 60 * 60 * 1000)));
+
+    modal.innerHTML = `
+      <div class="bg-bg-soft border border-bg-ring rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-bg-ring/50">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <div class="text-2xl">
+                ${offer.type === 'sell' ? '🔥' : '💰'}
+                ${offer.category === 'resources' ? '🏭' : offer.category === 'vehicles' ? '🚗' : '🚢'}
+              </div>
+              <div>
+                <h2 class="text-xl font-bold text-white">${offer.title}</h2>
+                <div class="flex items-center space-x-4 text-sm text-slate-400">
+                  <span>${offer.country_flag} ${offer.country_name}</span>
+                  <span>${offer.type === 'sell' ? 'Vendendo' : 'Comprando'}</span>
+                  <span>${timeLeft} dias restantes</span>
+                </div>
+              </div>
+            </div>
+            <button onclick="closeOfferDetailsModal()" class="text-slate-400 hover:text-white transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="p-6">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Informações da Oferta -->
+            <div class="space-y-6">
+              <div class="bg-bg/30 rounded-lg p-4">
+                <h3 class="text-white font-medium mb-3">📋 Detalhes do Item</h3>
+                <div class="space-y-2 text-sm">
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Item:</span>
+                    <span class="text-white">${offer.item_name}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Categoria:</span>
+                    <span class="text-white">${offer.category === 'resources' ? 'Recursos' : offer.category === 'vehicles' ? 'Veículos' : 'Naval'}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Quantidade:</span>
+                    <span class="text-white font-medium">${offer.quantity.toLocaleString()} ${offer.unit}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Preço por ${offer.unit.slice(0, -1)}:</span>
+                    <span class="text-white font-medium">${formatCurrency(offer.price_per_unit)}</span>
+                  </div>
+                  <div class="flex justify-between border-t border-bg-ring pt-2 mt-3">
+                    <span class="text-slate-400">Valor Total:</span>
+                    <span class="text-brand-300 font-bold text-lg">${formatCurrency(offer.total_value)}</span>
+                  </div>
+                </div>
+              </div>
+
+              ${offer.description ? `
+              <div class="bg-bg/30 rounded-lg p-4">
+                <h3 class="text-white font-medium mb-2">📝 Descrição</h3>
+                <p class="text-slate-300 text-sm">${offer.description}</p>
+              </div>
+              ` : ''}
+
+              <div class="bg-bg/30 rounded-lg p-4">
+                <h3 class="text-white font-medium mb-3">⚙️ Condições</h3>
+                <div class="space-y-2 text-sm">
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Quantidade Mínima:</span>
+                    <span class="text-white">${offer.min_quantity || 1} ${offer.unit}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Quantidade Máxima:</span>
+                    <span class="text-white">${offer.max_quantity || offer.quantity} ${offer.unit}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Tempo de Entrega:</span>
+                    <span class="text-white">${offer.delivery_time_days || 30} dias</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Criado em:</span>
+                    <span class="text-white">${new Date(offer.created_at?.seconds * 1000 || offer.created_at).toLocaleDateString('pt-BR')}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-bg/30 rounded-lg p-4">
+                <h3 class="text-white font-medium mb-3">📊 Estatísticas</h3>
+                <div class="space-y-2 text-sm">
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Visualizações:</span>
+                    <span class="text-white">${offer.views || 0}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Países Interessados:</span>
+                    <span class="text-white">${offer.interested_countries?.length || 0}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Ações e Compra -->
+            <div class="space-y-6">
+              ${isOwnOffer ? `
+                <div class="bg-blue-500/10 border border-blue-400/30 rounded-lg p-4">
+                  <div class="flex items-start space-x-2">
+                    <div class="text-blue-400">ℹ️</div>
+                    <div>
+                      <div class="text-blue-300 font-medium">Esta é sua oferta</div>
+                      <div class="text-sm text-slate-300 mt-1">Você não pode interagir com suas próprias ofertas.</div>
+                    </div>
+                  </div>
+                </div>
+              ` : canInteract ? `
+                <div class="bg-bg/30 rounded-lg p-4">
+                  <h3 class="text-white font-medium mb-4">
+                    ${offer.type === 'sell' ? '💰 Comprar Item' : '🔥 Vender Item'}
+                  </h3>
+
+                  <div class="space-y-4">
+                    <div>
+                      <label class="block text-sm font-medium text-slate-300 mb-2">Quantidade Desejada</label>
+                      <div class="flex space-x-2">
+                        <input type="number" id="transaction-quantity" min="${offer.min_quantity || 1}" max="${offer.max_quantity || offer.quantity}" value="${offer.min_quantity || 1}" class="flex-1 px-3 py-2 bg-bg border border-bg-ring rounded-lg text-white focus:border-brand-400 focus:outline-none">
+                        <span class="px-3 py-2 text-slate-400 bg-bg/50 border border-bg-ring rounded-lg">${offer.unit}</span>
+                      </div>
+                      <div class="text-xs text-slate-400 mt-1">
+                        Mín: ${offer.min_quantity || 1} | Máx: ${offer.max_quantity || offer.quantity}
+                      </div>
+                    </div>
+
+                    <div id="transaction-summary" class="bg-brand-500/10 border border-brand-400/30 rounded-lg p-3">
+                      <div class="text-sm space-y-1">
+                        <div class="flex justify-between">
+                          <span class="text-slate-400">Quantidade:</span>
+                          <span class="text-white"><span id="summary-quantity">${offer.min_quantity || 1}</span> ${offer.unit}</span>
+                        </div>
+                        <div class="flex justify-between">
+                          <span class="text-slate-400">Preço unitário:</span>
+                          <span class="text-white">${formatCurrency(offer.price_per_unit)}</span>
+                        </div>
+                        <div class="flex justify-between font-medium border-t border-brand-400/30 pt-1 mt-2">
+                          <span class="text-brand-300">Total a pagar:</span>
+                          <span class="text-brand-300" id="summary-total">${formatCurrency((offer.min_quantity || 1) * offer.price_per_unit)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    ${offer.type === 'sell' && !hasBudget ? `
+                      <div class="bg-red-500/10 border border-red-400/30 rounded-lg p-3">
+                        <div class="flex items-start space-x-2">
+                          <div class="text-red-400">⚠️</div>
+                          <div>
+                            <div class="text-red-300 font-medium">Orçamento Insuficiente</div>
+                            <div class="text-sm text-slate-300 mt-1">
+                              Disponível: ${formatCurrency(budget)}<br>
+                              Necessário: ${formatCurrency(totalCost)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ` : ''}
+
+                    <div class="flex space-x-2">
+                      <button onclick="closeOfferDetailsModal()" class="flex-1 px-4 py-2 text-slate-300 hover:text-white transition-colors border border-bg-ring rounded-lg">
+                        Cancelar
+                      </button>
+                      <button onclick="processTransaction('${offer.id}')" id="process-transaction-btn" class="flex-1 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-black font-medium rounded-lg transition-colors ${(offer.type === 'sell' && !hasBudget) ? 'opacity-50 cursor-not-allowed' : ''}" ${(offer.type === 'sell' && !hasBudget) ? 'disabled' : ''}>
+                        ${offer.type === 'sell' ? '💰 Comprar' : '🔥 Vender'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ` : `
+                <div class="bg-amber-500/10 border border-amber-400/30 rounded-lg p-4">
+                  <div class="flex items-start space-x-2">
+                    <div class="text-amber-400">⚠️</div>
+                    <div>
+                      <div class="text-amber-300 font-medium">Oferta não disponível</div>
+                      <div class="text-sm text-slate-300 mt-1">
+                        ${offer.status !== 'active' ? 'Esta oferta não está mais ativa.' : 'Você não pode interagir com esta oferta.'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `}
+
+              ${(offer.category === 'vehicles' || offer.category === 'naval') ? `
+              <!-- Especificações do Equipamento -->
+              <div class="bg-purple-500/10 border border-purple-400/30 rounded-lg p-4">
+                <div class="flex items-center justify-between mb-3">
+                  <h3 class="text-purple-300 font-medium">⚙️ Especificações Técnicas</h3>
+                  <button onclick="openEquipmentDetails('${offer.item_id}', '${offer.category}', '${offer.country_id}')" class="px-3 py-1 bg-purple-600/20 text-purple-300 text-xs rounded-lg hover:bg-purple-600/30 transition-colors">
+                    📋 Ver Ficha Completa
+                  </button>
+                </div>
+                <div id="equipment-specs-${offer.id}" class="text-sm text-slate-300 space-y-2">
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Tipo:</span>
+                    <span class="text-white">${offer.category === 'vehicles' ? '🚗 Veículo Terrestre' : '🚢 Embarcação Naval'}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Modelo:</span>
+                    <span class="text-white">${offer.item_name}</span>
+                  </div>
+                  <div class="text-xs text-slate-500 mt-3 p-2 bg-bg/50 rounded">
+                    💡 Clique em "Ver Ficha Completa" para especificações detalhadas, componentes, custos e desempenho
+                  </div>
+                </div>
+              </div>
+              ` : ''}
+
+              <!-- Informações do Vendedor/Comprador -->
+              <div class="bg-bg/30 rounded-lg p-4">
+                <h3 class="text-white font-medium mb-3">🏛️ Informações do País</h3>
+                <div class="flex items-center space-x-3 mb-3">
+                  <div class="text-2xl">${offer.country_flag}</div>
+                  <div>
+                    <div class="text-white font-medium">${offer.country_name}</div>
+                    <div class="text-sm text-slate-400">${offer.type === 'sell' ? 'Vendedor' : 'Comprador'}</div>
+                  </div>
+                </div>
+                <div class="text-sm text-slate-400">
+                  Este país ${offer.type === 'sell' ? 'está oferecendo' : 'está procurando'} ${offer.item_name.toLowerCase()}
+                  ${offer.type === 'sell' ? 'para venda' : 'para compra'} no mercado internacional.
+                </div>
+              </div>
+
+              <!-- Histórico de Preços (placeholder) -->
+              <div class="bg-bg/30 rounded-lg p-4">
+                <h3 class="text-white font-medium mb-3">📈 Informações de Mercado</h3>
+                <div class="space-y-2 text-sm">
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Preço Médio de Mercado:</span>
+                    <span class="text-white">${formatCurrency(offer.price_per_unit * (0.9 + Math.random() * 0.2))}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Esta Oferta:</span>
+                    <span class="${offer.price_per_unit > (offer.price_per_unit * 1.1) ? 'text-red-300' : offer.price_per_unit < (offer.price_per_unit * 0.9) ? 'text-green-300' : 'text-yellow-300'}">
+                      ${offer.price_per_unit > (offer.price_per_unit * 1.1) ? '📈 Acima' : offer.price_per_unit < (offer.price_per_unit * 0.9) ? '📉 Abaixo' : '📊 Na Média'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    setupOfferDetailsModal(offer, country, paisId);
+
+  } catch (error) {
+    console.error('Erro ao abrir detalhes da oferta:', error);
+    alert('Erro ao carregar detalhes da oferta');
+  }
+}
+
+function closeOfferDetailsModal() {
+  const modal = document.getElementById('offer-details-modal');
+  if (modal) {
+    modal.remove();
+  }
+}
+
+function setupOfferDetailsModal(offer, country, paisId) {
+  const modal = document.getElementById('offer-details-modal');
+  if (!modal) return;
+
+  // Setup quantity input change handler
+  const quantityInput = modal.querySelector('#transaction-quantity');
+  if (quantityInput) {
+    quantityInput.addEventListener('input', () => {
+      updateTransactionSummary(offer, quantityInput.value);
+    });
   }
 
-  // TODO: Implement offer details modal in next task
-  console.log('Opening offer details for:', offerId);
-  alert('Detalhes da oferta e sistema de compra serão implementados na próxima tarefa');
+  // Close modal on click outside
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeOfferDetailsModal();
+    }
+  });
+
+  // Close modal on Escape key
+  document.addEventListener('keydown', function escapeHandler(e) {
+    if (e.key === 'Escape') {
+      closeOfferDetailsModal();
+      document.removeEventListener('keydown', escapeHandler);
+    }
+  });
 }
 
-function openCreateOfferModal() {
-  // TODO: Implement create offer modal in next task
-  console.log('Opening create offer modal');
-  alert('Criação de ofertas será implementada na próxima tarefa');
+function updateTransactionSummary(offer, quantity) {
+  const modal = document.getElementById('offer-details-modal');
+  if (!modal) return;
+
+  const summaryQuantity = modal.querySelector('#summary-quantity');
+  const summaryTotal = modal.querySelector('#summary-total');
+
+  if (summaryQuantity && summaryTotal) {
+    const qty = parseInt(quantity) || 1;
+    const total = qty * offer.price_per_unit;
+
+    summaryQuantity.textContent = qty.toLocaleString();
+    summaryTotal.textContent = formatCurrency(total);
+  }
 }
+
+async function processTransaction(offerId) {
+  try {
+    const modal = document.getElementById('offer-details-modal');
+    const quantityInput = modal.querySelector('#transaction-quantity');
+    const processBtn = modal.querySelector('#process-transaction-btn');
+    const originalText = processBtn.textContent;
+
+    if (!quantityInput) {
+      alert('Erro: quantidade não especificada');
+      return;
+    }
+
+    const quantity = parseInt(quantityInput.value);
+    if (!quantity || quantity <= 0) {
+      alert('Por favor, especifique uma quantidade válida');
+      quantityInput.focus();
+      return;
+    }
+
+    // Get user and country info
+    const user = auth.currentUser;
+    if (!user) {
+      alert('Você precisa estar logado');
+      return;
+    }
+
+    const paisId = await checkPlayerCountry(user.uid);
+    if (!paisId) {
+      alert('Você precisa estar associado a um país');
+      return;
+    }
+
+    // Find the offer
+    const result = await marketplaceSystem.getOffers({ limit: 1000 });
+    const offer = result.offers?.find(o => o.id === offerId);
+
+    if (!offer) {
+      alert('Oferta não encontrada');
+      return;
+    }
+
+    // Validate quantity limits
+    if (quantity < (offer.min_quantity || 1)) {
+      alert(`Quantidade mínima: ${offer.min_quantity || 1} ${offer.unit}`);
+      return;
+    }
+
+    if (quantity > (offer.max_quantity || offer.quantity)) {
+      alert(`Quantidade máxima: ${offer.max_quantity || offer.quantity} ${offer.unit}`);
+      return;
+    }
+
+    if (quantity > offer.quantity) {
+      alert(`Quantidade disponível: ${offer.quantity} ${offer.unit}`);
+      return;
+    }
+
+    // Show confirmation dialog
+    const totalCost = quantity * offer.price_per_unit;
+    const action = offer.type === 'sell' ? 'comprar' : 'vender';
+    const confirmMessage = `
+      Confirmar ${action}:
+
+      • Item: ${offer.item_name}
+      • Quantidade: ${quantity} ${offer.unit}
+      • Preço unitário: ${formatCurrency(offer.price_per_unit)}
+      • Valor total: ${formatCurrency(totalCost)}
+      • País: ${offer.country_name}
+
+      Deseja continuar?
+    `;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    // Update button state
+    processBtn.disabled = true;
+    processBtn.textContent = '⏳ Processando...';
+
+    // Create transaction
+    const transactionResult = await marketplaceSystem.createTransaction(offerId, {
+      quantity: quantity
+    });
+
+    if (transactionResult.success) {
+      processBtn.textContent = '✅ Sucesso!';
+      processBtn.classList.remove('bg-brand-500', 'hover:bg-brand-600');
+      processBtn.classList.add('bg-green-600');
+
+      // Show success message
+      setTimeout(() => {
+        alert('Transação criada com sucesso! A negociação foi iniciada.');
+        closeOfferDetailsModal();
+
+        // Refresh marketplace offers
+        const activeCategory = document.querySelector('.marketplace-category-btn.active')?.dataset.category || 'all';
+        const user = auth.currentUser;
+        if (user) {
+          checkPlayerCountry(user.uid).then(currentPaisId => {
+            if (currentPaisId) loadMarketplaceOffers(activeCategory, currentPaisId);
+          });
+        }
+      }, 1500);
+
+    } else {
+      throw new Error(transactionResult.error || 'Erro desconhecido ao processar transação');
+    }
+
+  } catch (error) {
+    console.error('Erro ao processar transação:', error);
+
+    const processBtn = document.querySelector('#process-transaction-btn');
+    if (processBtn) {
+      processBtn.textContent = '❌ Erro';
+      processBtn.classList.remove('bg-brand-500', 'hover:bg-brand-600');
+      processBtn.classList.add('bg-red-600');
+
+      setTimeout(() => {
+        processBtn.textContent = offer.type === 'sell' ? '💰 Comprar' : '🔥 Vender';
+        processBtn.classList.remove('bg-red-600');
+        processBtn.classList.add('bg-brand-500', 'hover:bg-brand-600');
+        processBtn.disabled = false;
+      }, 3000);
+    }
+
+    alert('Erro ao processar transação: ' + error.message);
+  }
+}
+
+// Equipment Details Modal Functions
+async function openEquipmentDetails(itemId, category, countryId) {
+  try {
+    console.log('Abrindo detalhes do equipamento:', { itemId, category, countryId });
+
+    // Get the equipment data from inventory
+    const inventory = await marketplaceSystem.getCountryInventory(countryId);
+
+    // Find the equipment in the inventory
+    let equipmentData = null;
+    let equipmentCategory = null;
+
+    // Search through inventory categories
+    Object.keys(inventory).forEach(cat => {
+      if (inventory[cat] && typeof inventory[cat] === 'object') {
+        Object.keys(inventory[cat]).forEach(name => {
+          const equipment = inventory[cat][name];
+          if (equipment && typeof equipment === 'object') {
+            // Create an ID similar to how it's done in the marketplace
+            const generatedId = `${cat}_${name}`.toLowerCase().replace(/\s+/g, '_');
+            if (generatedId === itemId || name.toLowerCase().includes(itemId.toLowerCase())) {
+              equipmentData = equipment;
+              equipmentCategory = cat;
+              equipmentData.name = name;
+              equipmentData.category = cat;
+            }
+          }
+        });
+      }
+    });
+
+    if (!equipmentData) {
+      alert('Equipamento não encontrado no inventário do país vendedor.');
+      return;
+    }
+
+    // Remove existing modal
+    const existingModal = document.getElementById('equipment-details-modal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+
+    // Create equipment details modal
+    const modal = document.createElement('div');
+    modal.id = 'equipment-details-modal';
+    modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4';
+
+    modal.innerHTML = `
+      <div class="bg-bg-soft border border-bg-ring rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-bg-ring/50">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <div class="text-2xl">${category === 'vehicles' ? '🚗' : '🚢'}</div>
+              <div>
+                <h2 class="text-xl font-bold text-white">${equipmentData.name}</h2>
+                <div class="text-sm text-slate-400">Ficha Técnica Completa</div>
+              </div>
+            </div>
+            <button onclick="closeEquipmentDetailsModal()" class="text-slate-400 hover:text-white transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="p-6">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Informações Gerais -->
+            <div class="space-y-4">
+              <div class="bg-bg/30 rounded-lg p-4">
+                <h3 class="text-white font-medium mb-3">📋 Informações Gerais</h3>
+                <div class="space-y-2 text-sm">
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Nome:</span>
+                    <span class="text-white">${equipmentData.name}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Categoria:</span>
+                    <span class="text-white">${equipmentCategory}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Quantidade no Inventário:</span>
+                    <span class="text-white">${equipmentData.quantity || 0} unidades</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Custo Total de Produção:</span>
+                    <span class="text-white">${formatCurrency(equipmentData.cost || 0)}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Custo de Manutenção/Mês:</span>
+                    <span class="text-white">${formatCurrency((equipmentData.cost || 0) * 0.05)}</span>
+                  </div>
+                </div>
+              </div>
+
+              ${equipmentData.components ? `
+              <!-- Componentes -->
+              <div class="bg-bg/30 rounded-lg p-4">
+                <h3 class="text-white font-medium mb-3">🔧 Componentes</h3>
+                <div class="space-y-3 text-sm">
+                  ${Object.entries(equipmentData.components).map(([compType, compData]) => `
+                    <div class="bg-bg/50 rounded p-3">
+                      <div class="flex justify-between items-start">
+                        <div>
+                          <div class="text-brand-300 font-medium">${compType.replace(/_/g, ' ').toUpperCase()}</div>
+                          <div class="text-slate-300">${compData.name || 'N/A'}</div>
+                        </div>
+                        <div class="text-right">
+                          <div class="text-slate-400 text-xs">Custo</div>
+                          <div class="text-white">${formatCurrency(compData.cost || 0)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+              ` : ''}
+            </div>
+
+            <!-- Performance e Estatísticas -->
+            <div class="space-y-4">
+              ${equipmentData.stats ? `
+              <!-- Estatísticas -->
+              <div class="bg-bg/30 rounded-lg p-4">
+                <h3 class="text-white font-medium mb-3">📊 Estatísticas</h3>
+                <div class="space-y-3">
+                  ${Object.entries(equipmentData.stats).map(([statName, value]) => `
+                    <div class="flex justify-between items-center">
+                      <span class="text-slate-400">${statName.replace(/_/g, ' ')}:</span>
+                      <div class="flex items-center space-x-2">
+                        <span class="text-white">${typeof value === 'number' ? value.toLocaleString() : value}</span>
+                        ${typeof value === 'number' && value > 0 ? `
+                          <div class="bg-bg w-16 h-2 rounded-full overflow-hidden">
+                            <div class="h-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500" style="width: ${Math.min(100, (value / 100) * 100)}%"></div>
+                          </div>
+                        ` : ''}
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+              ` : ''}
+
+              <!-- Informações Operacionais -->
+              <div class="bg-bg/30 rounded-lg p-4">
+                <h3 class="text-white font-medium mb-3">⚡ Informações Operacionais</h3>
+                <div class="space-y-2 text-sm">
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Estado Operacional:</span>
+                    <span class="text-green-400">✅ Ativo</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Disponível para Venda:</span>
+                    <span class="text-white">${Math.floor((equipmentData.quantity || 0) * 0.5)} unidades (50% max)</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Tempo de Preparação:</span>
+                    <span class="text-white">15-30 dias</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Condição:</span>
+                    <span class="text-white">Excelente</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Notas Técnicas -->
+              <div class="bg-blue-500/10 border border-blue-400/30 rounded-lg p-4">
+                <h3 class="text-blue-300 font-medium mb-2">💡 Notas Técnicas</h3>
+                <div class="text-sm text-slate-300">
+                  <p>Este equipamento foi produzido conforme especificações militares padrão e passou por todos os testes de qualidade necessários.</p>
+                  <p class="mt-2">Inclui documentação técnica completa, manuais de operação e suporte técnico básico.</p>
+                </div>
+              </div>
+
+              <!-- Botão de Fechar -->
+              <div class="flex justify-end pt-4">
+                <button onclick="closeEquipmentDetailsModal()" class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors">
+                  Fechar Ficha
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Close modal on click outside
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeEquipmentDetailsModal();
+      }
+    });
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', function escapeHandler(e) {
+      if (e.key === 'Escape') {
+        closeEquipmentDetailsModal();
+        document.removeEventListener('keydown', escapeHandler);
+      }
+    });
+
+  } catch (error) {
+    console.error('Erro ao abrir detalhes do equipamento:', error);
+    alert('Erro ao carregar detalhes do equipamento');
+  }
+}
+
+function closeEquipmentDetailsModal() {
+  const modal = document.getElementById('equipment-details-modal');
+  if (modal) {
+    modal.remove();
+  }
+}
+
+// Make functions globally available
+window.openOfferDetails = openOfferDetails;
+window.openEquipmentDetails = openEquipmentDetails;
+window.closeEquipmentDetailsModal = closeEquipmentDetailsModal;
+window.closeOfferDetailsModal = closeOfferDetailsModal;
+window.processTransaction = processTransaction;
+
+async function openCreateOfferModal() {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      alert('Você precisa estar logado para criar ofertas');
+      return;
+    }
+
+    const paisId = await checkPlayerCountry(user.uid);
+    if (!paisId) {
+      alert('Você precisa estar associado a um país');
+      return;
+    }
+
+    // Get country data for budget validation
+    const allCountries = await getAllCountries();
+    const country = allCountries.find(c => c.id === paisId);
+    if (!country) {
+      alert('Dados do país não encontrados');
+      return;
+    }
+
+    // Remove existing modal
+    const existingModal = document.getElementById('create-offer-modal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+
+    // Create modal
+    const modal = document.createElement('div');
+    modal.id = 'create-offer-modal';
+    modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+
+    modal.innerHTML = `
+      <div class="bg-bg-soft border border-bg-ring rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-bg-ring/50">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-bold text-white">📝 Criar Nova Oferta</h2>
+            <button onclick="closeCreateOfferModal()" class="text-slate-400 hover:text-white transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <form id="create-offer-form" class="p-6 space-y-6">
+          <!-- Tipo da Oferta -->
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-2">Tipo de Oferta</label>
+            <div class="grid grid-cols-2 gap-4">
+              <label class="flex items-center space-x-3 p-4 border border-bg-ring rounded-lg cursor-pointer hover:border-brand-400 transition-colors">
+                <input type="radio" name="offer-type" value="sell" class="text-brand-500 focus:ring-brand-400" required>
+                <div>
+                  <div class="text-white font-medium">🔥 Vender</div>
+                  <div class="text-slate-400 text-sm">Ofertar seus recursos/equipamentos</div>
+                </div>
+              </label>
+              <label class="flex items-center space-x-3 p-4 border border-bg-ring rounded-lg cursor-pointer hover:border-brand-400 transition-colors">
+                <input type="radio" name="offer-type" value="buy" class="text-brand-500 focus:ring-brand-400" required>
+                <div>
+                  <div class="text-white font-medium">💰 Comprar</div>
+                  <div class="text-slate-400 text-sm">Buscar recursos/equipamentos</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Categoria -->
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-2">Categoria</label>
+            <select id="offer-category" name="category" class="w-full px-3 py-2 bg-bg border border-bg-ring rounded-lg text-white focus:border-brand-400 focus:outline-none" required>
+              <option value="">Selecione uma categoria</option>
+              <option value="resources">🏭 Recursos (Aço, Petróleo, Eletrônicos)</option>
+              <option value="vehicles">🚗 Veículos (Tanques, Artilharia)</option>
+              <option value="naval">🚢 Naval (Navios, Submarinos)</option>
+            </select>
+          </div>
+
+          <!-- Item Específico -->
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-2">Item</label>
+            <select id="offer-item" name="item_id" class="w-full px-3 py-2 bg-bg border border-bg-ring rounded-lg text-white focus:border-brand-400 focus:outline-none" required disabled>
+              <option value="">Selecione primeiro uma categoria</option>
+            </select>
+          </div>
+
+          <!-- Título e Descrição -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2">Título da Oferta</label>
+              <input type="text" id="offer-title" name="title" placeholder="Ex: Aço de Alta Qualidade" maxlength="100" class="w-full px-3 py-2 bg-bg border border-bg-ring rounded-lg text-white focus:border-brand-400 focus:outline-none" required>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2">Duração (dias)</label>
+              <select name="duration_days" class="w-full px-3 py-2 bg-bg border border-bg-ring rounded-lg text-white focus:border-brand-400 focus:outline-none" required>
+                <option value="7">7 dias</option>
+                <option value="14" selected>14 dias</option>
+                <option value="21">21 dias</option>
+                <option value="30">30 dias</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-2">Descrição</label>
+            <textarea id="offer-description" name="description" rows="3" placeholder="Descreva o item, qualidade, condições especiais..." maxlength="500" class="w-full px-3 py-2 bg-bg border border-bg-ring rounded-lg text-white focus:border-brand-400 focus:outline-none resize-none"></textarea>
+          </div>
+
+          <!-- Quantidade e Preço -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2">Quantidade</label>
+              <input type="number" id="offer-quantity" name="quantity" min="1" placeholder="0" class="w-full px-3 py-2 bg-bg border border-bg-ring rounded-lg text-white focus:border-brand-400 focus:outline-none" required>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2">Unidade</label>
+              <select id="offer-unit" name="unit" class="w-full px-3 py-2 bg-bg border border-bg-ring rounded-lg text-white focus:border-brand-400 focus:outline-none" required>
+                <option value="toneladas">Toneladas</option>
+                <option value="unidades">Unidades</option>
+                <option value="barris">Barris</option>
+                <option value="navios">Navios</option>
+                <option value="submarinos">Submarinos</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2">Preço por Unidade (USD)</label>
+              <input type="number" id="offer-price" name="price_per_unit" min="0.01" step="0.01" placeholder="0.00" class="w-full px-3 py-2 bg-bg border border-bg-ring rounded-lg text-white focus:border-brand-400 focus:outline-none" required>
+            </div>
+          </div>
+
+          <!-- Configurações Avançadas -->
+          <div class="bg-bg/30 rounded-lg p-4 space-y-4">
+            <h3 class="text-white font-medium">⚙️ Configurações Avançadas</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Quantidade Mínima por Pedido</label>
+                <input type="number" name="min_quantity" min="1" placeholder="1" class="w-full px-3 py-2 bg-bg border border-bg-ring rounded-lg text-white focus:border-brand-400 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Tempo de Entrega (dias)</label>
+                <input type="number" name="delivery_time_days" min="1" value="30" class="w-full px-3 py-2 bg-bg border border-bg-ring rounded-lg text-white focus:border-brand-400 focus:outline-none">
+              </div>
+            </div>
+          </div>
+
+          <!-- Resumo -->
+          <!-- Informações do Item Selecionado -->
+          <div id="item-info" class="bg-blue-500/10 border border-blue-400/30 rounded-lg p-4 hidden">
+            <h3 class="text-blue-300 font-medium mb-2">📋 Informações do Item</h3>
+            <div id="item-info-content" class="text-sm text-slate-300 space-y-1">
+              <!-- Content will be populated by JavaScript -->
+            </div>
+          </div>
+
+          <!-- Resumo da Oferta -->
+          <div id="offer-summary" class="bg-brand-500/10 border border-brand-400/30 rounded-lg p-4 hidden">
+            <h3 class="text-brand-300 font-medium mb-2">📊 Resumo da Oferta</h3>
+            <div id="offer-summary-content" class="text-sm text-slate-300 space-y-1">
+              <!-- Content will be populated by JavaScript -->
+            </div>
+          </div>
+
+          <!-- Budget Warning for Buy Offers -->
+          <div id="budget-warning" class="bg-amber-500/10 border border-amber-400/30 rounded-lg p-4 hidden">
+            <div class="flex items-start space-x-2">
+              <div class="text-amber-400">⚠️</div>
+              <div>
+                <div class="text-amber-300 font-medium">Atenção: Orçamento</div>
+                <div class="text-sm text-slate-300 mt-1">
+                  Orçamento disponível: <span class="font-medium">${formatCurrency(calculateBudget(country))}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Buttons -->
+          <div class="flex items-center justify-end space-x-4 pt-4">
+            <button type="button" onclick="closeCreateOfferModal()" class="px-4 py-2 text-slate-300 hover:text-white transition-colors">
+              Cancelar
+            </button>
+            <button type="submit" id="submit-offer-btn" class="px-6 py-2 bg-brand-500 hover:bg-brand-600 text-black font-medium rounded-lg transition-colors">
+              Criar Oferta
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    setupCreateOfferModal(country, paisId);
+
+    // Focus on first input
+    setTimeout(() => {
+      const firstRadio = modal.querySelector('input[type="radio"]');
+      if (firstRadio) firstRadio.focus();
+    }, 100);
+
+  } catch (error) {
+    console.error('Erro ao abrir modal de criação:', error);
+    alert('Erro ao abrir formulário de criação de ofertas');
+  }
+}
+
+function closeCreateOfferModal() {
+  const modal = document.getElementById('create-offer-modal');
+  if (modal) {
+    modal.remove();
+  }
+}
+
+function setupCreateOfferModal(country, paisId) {
+  const modal = document.getElementById('create-offer-modal');
+  if (!modal) return;
+
+  // Load available items based on actual inventory
+  let availableItems = {
+    resources: [],
+    vehicles: [],
+    naval: []
+  };
+
+  // Load available items asynchronously
+  async function loadAvailableItems() {
+    try {
+      // Check offer type first
+      const offerTypeInputs = modal.querySelectorAll('input[name="offer-type"]');
+      let offerType = null;
+      offerTypeInputs.forEach(input => {
+        if (input.checked) offerType = input.value;
+      });
+
+      console.log('🔍 Tipo de oferta selecionado:', offerType);
+
+      if (offerType === 'sell') {
+        // For sell offers, load from actual inventory
+        console.log('📦 Carregando itens do inventário real para VENDA');
+        await loadInventoryItems();
+      } else if (offerType === 'buy') {
+        // For buy offers, show all available item types
+        console.log('🛒 Carregando todos os tipos de itens para COMPRA');
+        loadAllItemTypes();
+      } else {
+        // Default to sell mode if no offer type selected
+        console.log('⚠️ Nenhum tipo selecionado, usando VENDA como padrão');
+        await loadInventoryItems();
+      }
+
+      // Update the current category selection
+      const category = categorySelect.value;
+      if (category) {
+        populateItemsForCategory(category);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar itens disponíveis:', error);
+    }
+  }
+
+  async function loadInventoryItems() {
+    if (!marketplaceSystem) return;
+
+    try {
+      console.log('🔍 Carregando itens do inventário para país:', paisId);
+
+      // Get country data and inventory
+      const countryData = await marketplaceSystem.getCountryData(paisId);
+      console.log('📊 Dados do país carregados:', countryData);
+
+      const inventory = await marketplaceSystem.getCountryInventory(paisId);
+      console.log('📦 Inventário carregado:', inventory);
+
+      // Load available resources
+      if (countryData) {
+        const availableResources = marketplaceSystem.calculateAvailableResources(countryData);
+        console.log('⚡ Recursos disponíveis:', availableResources);
+
+        availableItems.resources = [];
+
+        Object.entries(availableResources).forEach(([resourceType, available]) => {
+          console.log(`🔹 Processando ${resourceType}: ${available} disponíveis`);
+
+          // Energia não é comerciável - pular
+          if (resourceType === 'Energia') {
+            console.log(`⚡ ${resourceType} não é comerciável - pulando`);
+            return;
+          }
+
+          if (available > 0) {
+            const resourceItems = getResourceItems(resourceType, available);
+            console.log(`✅ Adicionando ${resourceItems.length} itens de ${resourceType}:`, resourceItems);
+            availableItems.resources.push(...resourceItems);
+          } else {
+            console.log(`❌ ${resourceType} não tem quantidade disponível (${available})`);
+          }
+        });
+
+        console.log('📋 Total de recursos disponíveis:', availableItems.resources);
+      } else {
+        console.error('❌ Dados do país não encontrados');
+      }
+
+      // Load available equipment
+      const availableEquipment = marketplaceSystem.getAvailableEquipment(inventory);
+      availableItems.vehicles = availableEquipment.filter(eq => eq.type === 'vehicles');
+      availableItems.naval = availableEquipment.filter(eq => eq.type === 'naval');
+
+    } catch (error) {
+      console.error('Erro ao carregar itens do inventário:', error);
+    }
+  }
+
+  function getResourceItems(resourceType, available) {
+    // Energia não é comerciável - apenas recursos físicos podem ser vendidos
+    const resourceMap = {
+      'Metais': [
+        { id: 'steel_high_grade', name: `Aço de Alta Qualidade (${available.toLocaleString()} disponíveis)`, unit: 'toneladas', available },
+        { id: 'steel_standard', name: `Aço Padrão (${available.toLocaleString()} disponíveis)`, unit: 'toneladas', available },
+        { id: 'aluminum', name: `Alumínio (${available.toLocaleString()} disponíveis)`, unit: 'toneladas', available },
+        { id: 'copper', name: `Cobre (${available.toLocaleString()} disponíveis)`, unit: 'toneladas', available },
+        { id: 'rare_metals', name: `Metais Raros (${available.toLocaleString()} disponíveis)`, unit: 'toneladas', available }
+      ],
+      'Combustivel': [
+        { id: 'oil_crude', name: `Petróleo Bruto (${available.toLocaleString()} disponíveis)`, unit: 'barris', available },
+        { id: 'oil_aviation', name: `Petróleo de Aviação (${available.toLocaleString()} disponíveis)`, unit: 'barris', available }
+      ],
+      'Carvao': [
+        { id: 'coal', name: `Carvão (${available.toLocaleString()} disponíveis)`, unit: 'toneladas', available }
+      ],
+      'Graos': [
+        { id: 'food', name: `Alimentos (${available.toLocaleString()} disponíveis)`, unit: 'toneladas', available }
+      ]
+      // Energia removida - não é comerciável (não pode ser transportada fisicamente em 1954)
+    };
+
+    return resourceMap[resourceType] || [];
+  }
+
+  function loadAllItemTypes() {
+    // For buy offers, show all possible item types (excluding energy - not tradeable)
+    availableItems = {
+      resources: [
+        { id: 'steel_high_grade', name: 'Aço de Alta Qualidade', unit: 'toneladas' },
+        { id: 'steel_standard', name: 'Aço Padrão', unit: 'toneladas' },
+        { id: 'oil_crude', name: 'Petróleo Bruto', unit: 'barris' },
+        { id: 'oil_aviation', name: 'Petróleo de Aviação', unit: 'barris' },
+        { id: 'aluminum', name: 'Alumínio', unit: 'toneladas' },
+        { id: 'copper', name: 'Cobre', unit: 'toneladas' },
+        { id: 'rare_metals', name: 'Metais Raros', unit: 'toneladas' },
+        { id: 'coal', name: 'Carvão', unit: 'toneladas' },
+        { id: 'food', name: 'Alimentos', unit: 'toneladas' }
+        // Energia removida - não é comerciável
+      ],
+      vehicles: [
+        { id: 'mbt_modern', name: 'Tanque MBT Moderno', unit: 'unidades' },
+        { id: 'mbt_standard', name: 'Tanque MBT Padrão', unit: 'unidades' },
+        { id: 'light_tank', name: 'Tanque Leve', unit: 'unidades' },
+        { id: 'heavy_tank', name: 'Tanque Pesado', unit: 'unidades' },
+        { id: 'artillery_howitzer', name: 'Artilharia Howitzer', unit: 'unidades' },
+        { id: 'artillery_rocket', name: 'Artilharia de Foguetes', unit: 'unidades' },
+        { id: 'apc_standard', name: 'Transporte Blindado', unit: 'unidades' },
+        { id: 'ifv_modern', name: 'Veículo de Combate', unit: 'unidades' }
+      ],
+      naval: [
+        { id: 'destroyer_standard', name: 'Destroyer Padrão', unit: 'navios' },
+        { id: 'destroyer_fletcher', name: 'Destroyer Classe Fletcher', unit: 'navios' },
+        { id: 'cruiser_heavy', name: 'Cruzador Pesado', unit: 'navios' },
+        { id: 'cruiser_light', name: 'Cruzador Leve', unit: 'navios' },
+        { id: 'submarine_diesel', name: 'Submarino Diesel-Elétrico', unit: 'submarinos' },
+        { id: 'submarine_nuclear', name: 'Submarino Nuclear', unit: 'submarinos' },
+        { id: 'corvette_patrol', name: 'Corveta de Patrulha', unit: 'navios' },
+        { id: 'frigate_escort', name: 'Fragata de Escolta', unit: 'navios' }
+      ]
+    };
+  }
+
+  function populateItemsForCategory(category) {
+    console.log(`🎯 Populando itens para categoria: ${category}`);
+    console.log('📋 availableItems atual:', availableItems);
+
+    itemSelect.innerHTML = '<option value="">Selecione um item</option>';
+
+    if (category && availableItems[category]) {
+      itemSelect.disabled = false;
+
+      const items = availableItems[category];
+      console.log(`📦 Itens encontrados para ${category}:`, items);
+
+      if (items.length === 0) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Nenhum item disponível para venda';
+        option.disabled = true;
+        itemSelect.appendChild(option);
+        itemSelect.disabled = true;
+      } else {
+        items.forEach(item => {
+          console.log(`➕ Adicionando item: ${item.name} (${item.id})`);
+          const option = document.createElement('option');
+          option.value = item.id;
+          option.textContent = item.name;
+          option.dataset.unit = item.unit;
+          option.dataset.available = item.available_quantity || item.available || '';
+          option.dataset.cost = item.unit_cost || '';
+          option.dataset.maintenance = item.maintenance_cost || '';
+          itemSelect.appendChild(option);
+        });
+      }
+    } else {
+      console.log(`❌ Categoria ${category} não encontrada ou sem itens`);
+      itemSelect.disabled = true;
+    }
+
+    updateOfferSummary();
+  }
+
+  loadAvailableItems();
+
+  // Setup category change handler
+  const categorySelect = modal.querySelector('#offer-category');
+  const itemSelect = modal.querySelector('#offer-item');
+  const unitSelect = modal.querySelector('#offer-unit');
+
+  categorySelect.addEventListener('change', () => {
+    const category = categorySelect.value;
+    populateItemsForCategory(category);
+  });
+
+  // Setup offer type change handler
+  const offerTypeInputs = modal.querySelectorAll('input[name="offer-type"]');
+  offerTypeInputs.forEach(input => {
+    input.addEventListener('change', () => {
+      // Reload items when offer type changes
+      loadAvailableItems();
+    });
+  });
+
+  // Setup item change handler to update unit
+  itemSelect.addEventListener('change', () => {
+    const selectedOption = itemSelect.querySelector('option:checked');
+    if (selectedOption && selectedOption.dataset.unit) {
+      unitSelect.value = selectedOption.dataset.unit;
+    }
+    updateOfferSummary();
+  });
+
+  // Setup form input change handlers
+  const formInputs = modal.querySelectorAll('input, select, textarea');
+  formInputs.forEach(input => {
+    input.addEventListener('input', updateOfferSummary);
+    input.addEventListener('change', updateOfferSummary);
+  });
+
+  // Setup form submission
+  const form = modal.querySelector('#create-offer-form');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const submitBtn = modal.querySelector('#submit-offer-btn');
+    const originalText = submitBtn.textContent;
+
+    try {
+      submitBtn.disabled = true;
+      submitBtn.textContent = '⏳ Criando...';
+
+      const formData = new FormData(form);
+      const offerData = {
+        type: formData.get('offer-type'),
+        category: formData.get('category'),
+        item_id: formData.get('item_id'),
+        item_name: itemSelect.querySelector('option:checked')?.textContent || '',
+        title: formData.get('title'),
+        description: formData.get('description'),
+        quantity: parseInt(formData.get('quantity')),
+        unit: formData.get('unit'),
+        price_per_unit: parseFloat(formData.get('price_per_unit')),
+        min_quantity: parseInt(formData.get('min_quantity')) || 1,
+        delivery_time_days: parseInt(formData.get('delivery_time_days')) || 30,
+        duration_days: parseInt(formData.get('duration_days'))
+      };
+
+      // Validate required fields
+      if (!offerData.type || !offerData.category || !offerData.item_id || !offerData.title || !offerData.quantity || !offerData.price_per_unit) {
+        throw new Error('Preencha todos os campos obrigatórios');
+      }
+
+      // Create offer using MarketplaceSystem
+      const result = await marketplaceSystem.createOffer(offerData);
+
+      if (result.success) {
+        submitBtn.textContent = '✅ Criado!';
+        submitBtn.classList.remove('bg-brand-500', 'hover:bg-brand-600');
+        submitBtn.classList.add('bg-green-600');
+
+        // Show success message
+        setTimeout(() => {
+          alert('Oferta criada com sucesso!');
+          closeCreateOfferModal();
+
+          // Refresh marketplace offers
+          const activeCategory = document.querySelector('.marketplace-category-btn.active')?.dataset.category || 'all';
+          const user = auth.currentUser;
+          if (user) {
+            checkPlayerCountry(user.uid).then(currentPaisId => {
+              if (currentPaisId) loadMarketplaceOffers(activeCategory, currentPaisId);
+            });
+          }
+        }, 1000);
+
+      } else {
+        throw new Error(result.error || 'Erro desconhecido ao criar oferta');
+      }
+
+    } catch (error) {
+      console.error('Erro ao criar oferta:', error);
+      submitBtn.textContent = '❌ Erro';
+      submitBtn.classList.remove('bg-brand-500', 'hover:bg-brand-600');
+      submitBtn.classList.add('bg-red-600');
+
+      alert('Erro ao criar oferta: ' + error.message);
+
+      setTimeout(() => {
+        submitBtn.textContent = originalText;
+        submitBtn.classList.remove('bg-red-600');
+        submitBtn.classList.add('bg-brand-500', 'hover:bg-brand-600');
+        submitBtn.disabled = false;
+      }, 3000);
+    }
+  });
+
+  function updateOfferSummary() {
+    const summaryDiv = modal.querySelector('#offer-summary');
+    const summaryContent = modal.querySelector('#offer-summary-content');
+    const budgetWarning = modal.querySelector('#budget-warning');
+    const itemInfoDiv = modal.querySelector('#item-info');
+    const itemInfoContent = modal.querySelector('#item-info-content');
+
+    const formData = new FormData(form);
+    const offerType = formData.get('offer-type');
+    const quantity = parseInt(formData.get('quantity')) || 0;
+    const pricePerUnit = parseFloat(formData.get('price_per_unit')) || 0;
+    const totalValue = quantity * pricePerUnit;
+
+    // Show item information when item is selected
+    const selectedOption = itemSelect.querySelector('option:checked');
+    if (selectedOption && selectedOption.value) {
+      const itemName = selectedOption.textContent;
+      const available = selectedOption.dataset.available;
+      const cost = selectedOption.dataset.cost;
+      const maintenance = selectedOption.dataset.maintenance;
+
+      let itemInfo = `<div><strong>Item selecionado:</strong> ${itemName}</div>`;
+
+      if (offerType === 'sell' && available) {
+        itemInfo += `<div class="text-green-400"><strong>Disponível para venda:</strong> ${parseInt(available).toLocaleString()} unidades</div>`;
+      }
+
+      if (cost && parseFloat(cost) > 0) {
+        itemInfo += `<div><strong>Custo de produção:</strong> ${formatCurrency(parseFloat(cost))} por unidade</div>`;
+      }
+
+      if (maintenance && parseFloat(maintenance) > 0) {
+        itemInfo += `<div><strong>Custo de manutenção:</strong> ${formatCurrency(parseFloat(maintenance))} por unidade/mês</div>`;
+      }
+
+      // Show validation warnings for sell offers
+      if (offerType === 'sell' && available && quantity > 0) {
+        const availableQty = parseInt(available);
+        if (quantity > availableQty) {
+          itemInfo += `<div class="text-red-400 mt-2"><strong>⚠️ Quantidade excede o disponível!</strong><br>Máximo vendível: ${availableQty.toLocaleString()}</div>`;
+        }
+      }
+
+      itemInfoContent.innerHTML = itemInfo;
+      itemInfoDiv.classList.remove('hidden');
+    } else {
+      itemInfoDiv.classList.add('hidden');
+    }
+
+    // Show offer summary
+    if (quantity > 0 && pricePerUnit > 0) {
+      summaryDiv.classList.remove('hidden');
+
+      const itemName = selectedOption?.textContent || 'Item';
+      const unit = formData.get('unit') || 'unidades';
+
+      let summaryInfo = `
+        <div><strong>Tipo:</strong> ${offerType === 'sell' ? '🔥 Venda' : '💰 Compra'}</div>
+        <div><strong>Item:</strong> ${itemName}</div>
+        <div><strong>Quantidade:</strong> ${quantity.toLocaleString()} ${unit}</div>
+        <div><strong>Preço por ${unit.slice(0, -1)}:</strong> ${formatCurrency(pricePerUnit)}</div>
+        <div class="font-medium text-brand-300"><strong>Valor Total:</strong> ${formatCurrency(totalValue)}</div>
+      `;
+
+      // Add profit/cost analysis for sell offers
+      if (offerType === 'sell' && cost && parseFloat(cost) > 0) {
+        const unitCost = parseFloat(cost);
+        const profit = pricePerUnit - unitCost;
+        const totalProfit = profit * quantity;
+        const profitColor = profit > 0 ? 'text-green-400' : 'text-red-400';
+
+        summaryInfo += `<div class="${profitColor}"><strong>Lucro por unidade:</strong> ${formatCurrency(profit)}</div>`;
+        summaryInfo += `<div class="${profitColor}"><strong>Lucro total:</strong> ${formatCurrency(totalProfit)}</div>`;
+      }
+
+      summaryContent.innerHTML = summaryInfo;
+
+      // Show budget warning for buy offers
+      if (offerType === 'buy') {
+        const budget = calculateBudget(country);
+        if (totalValue > budget) {
+          budgetWarning.classList.remove('hidden');
+          budgetWarning.querySelector('.text-sm').innerHTML = `
+            Orçamento disponível: <span class="font-medium">${formatCurrency(budget)}</span><br>
+            <span class="text-red-300">⚠️ Valor da oferta (${formatCurrency(totalValue)}) excede o orçamento disponível!</span>
+          `;
+        } else {
+          budgetWarning.classList.add('hidden');
+        }
+      } else {
+        budgetWarning.classList.add('hidden');
+      }
+    } else {
+      summaryDiv.classList.add('hidden');
+      budgetWarning.classList.add('hidden');
+    }
+  }
+
+  // Close modal on click outside
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeCreateOfferModal();
+    }
+  });
+
+  // Close modal on Escape key
+  document.addEventListener('keydown', function escapeHandler(e) {
+    if (e.key === 'Escape') {
+      closeCreateOfferModal();
+      document.removeEventListener('keydown', escapeHandler);
+    }
+  });
+
+  // Add modal to DOM
+  document.body.appendChild(modal);
+
+  // Set "Vender" as default and load items
+  const sellRadio = modal.querySelector('input[name="offer-type"][value="sell"]');
+  if (sellRadio) {
+    sellRadio.checked = true;
+    console.log('✅ Radio "Vender" selecionado por padrão');
+  }
+
+  // Load items for sell mode
+  console.log('🚀 Carregando itens iniciais para modo VENDA');
+  loadAvailableItems();
+}
+
+// Make functions globally available
+window.closeCreateOfferModal = closeCreateOfferModal;
 
 // Utility function for debouncing
 function debounce(func, wait) {
@@ -2492,6 +3990,377 @@ function debounce(func, wait) {
 }
 
 // Embargo Management Functions
+// Notifications Management Functions
+async function openNotificationsModal() {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const paisId = await checkPlayerCountry(user.uid);
+    if (!paisId) return;
+
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+    modal.id = 'notifications-modal';
+
+    modal.innerHTML = `
+      <div class="bg-bg-soft border border-bg-ring rounded-xl max-w-4xl w-full max-h-[80vh] overflow-y-auto">
+        <div class="p-6 border-b border-bg-ring/50">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-bold text-white">📢 Notificações Diplomáticas</h2>
+            <div class="flex items-center space-x-2">
+              <button onclick="markAllNotificationsAsRead()" class="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors">
+                Marcar Todas como Lidas
+              </button>
+              <button onclick="closeNotificationsModal()" class="text-slate-400 hover:text-white transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-6">
+          <div class="space-y-4">
+            <!-- Filter tabs -->
+            <div class="flex flex-wrap gap-2 mb-4">
+              <button class="notification-filter-btn active px-3 py-2 rounded-lg text-sm font-medium transition-colors bg-brand-500/20 text-brand-400 border border-brand-400/30" data-filter="all">
+                Todas
+              </button>
+              <button class="notification-filter-btn px-3 py-2 rounded-lg text-sm font-medium transition-colors bg-bg/50 text-slate-300 border border-bg-ring hover:bg-bg-ring/50" data-filter="unread">
+                Não Lidas
+              </button>
+              <button class="notification-filter-btn px-3 py-2 rounded-lg text-sm font-medium transition-colors bg-bg/50 text-slate-300 border border-bg-ring hover:bg-bg-ring/50" data-filter="embargo">
+                Embargos
+              </button>
+              <button class="notification-filter-btn px-3 py-2 rounded-lg text-sm font-medium transition-colors bg-bg/50 text-slate-300 border border-bg-ring hover:bg-bg-ring/50" data-filter="transaction">
+                Transações
+              </button>
+            </div>
+
+            <!-- Notifications list -->
+            <div id="notifications-list" class="space-y-3">
+              <div class="flex items-center justify-center py-8">
+                <div class="animate-spin w-6 h-6 border-2 border-brand-400 border-t-transparent rounded-full"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    setupNotificationsModal(paisId);
+    await loadNotificationsData(paisId);
+
+  } catch (error) {
+    console.error('Erro ao abrir modal de notificações:', error);
+  }
+}
+
+function closeNotificationsModal() {
+  const modal = document.getElementById('notifications-modal');
+  if (modal) {
+    modal.remove();
+  }
+}
+
+function setupNotificationsModal(paisId) {
+  const modal = document.getElementById('notifications-modal');
+  if (!modal) return;
+
+  // Setup filter buttons
+  const filterBtns = modal.querySelectorAll('.notification-filter-btn');
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Update active state
+      filterBtns.forEach(b => {
+        b.classList.remove('active', 'bg-brand-500/20', 'text-brand-400', 'border-brand-400/30');
+        b.classList.add('bg-bg/50', 'text-slate-300', 'border-bg-ring');
+      });
+
+      btn.classList.add('active', 'bg-brand-500/20', 'text-brand-400', 'border-brand-400/30');
+      btn.classList.remove('bg-bg/50', 'text-slate-300', 'border-bg-ring');
+
+      // Filter notifications
+      const filter = btn.dataset.filter;
+      filterNotifications(filter);
+    });
+  });
+
+  // Close modal on click outside
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeNotificationsModal();
+    }
+  });
+
+  // Close modal on Escape key
+  document.addEventListener('keydown', function escapeHandler(e) {
+    if (e.key === 'Escape') {
+      closeNotificationsModal();
+      document.removeEventListener('keydown', escapeHandler);
+    }
+  });
+}
+
+let allNotifications = [];
+
+async function loadNotificationsData(countryId) {
+  try {
+    // Load all notifications for this country
+    const notificationsSnapshot = await db.collection('notifications')
+      .where('target_country_id', '==', countryId)
+      .orderBy('created_at', 'desc')
+      .limit(50)
+      .get();
+
+    allNotifications = [];
+    notificationsSnapshot.forEach(doc => {
+      allNotifications.push({ id: doc.id, ...doc.data() });
+    });
+
+    renderNotifications(allNotifications);
+
+  } catch (error) {
+    console.error('Erro ao carregar notificações:', error);
+    const container = document.getElementById('notifications-list');
+    if (container) {
+      container.innerHTML = `
+        <div class="text-center py-8 text-red-400">
+          <div class="text-4xl mb-2">❌</div>
+          <p>Erro ao carregar notificações</p>
+        </div>
+      `;
+    }
+  }
+}
+
+function renderNotifications(notifications) {
+  const container = document.getElementById('notifications-list');
+  if (!container) return;
+
+  if (notifications.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-8 text-slate-400">
+        <div class="text-4xl mb-2">📪</div>
+        <p>Nenhuma notificação encontrada</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = notifications.map(notification => renderNotificationCard(notification)).join('');
+}
+
+function renderNotificationCard(notification) {
+  const isUnread = !notification.read;
+  const createdAt = notification.created_at?.toDate ? notification.created_at.toDate() : new Date(notification.created_at);
+  const timeAgo = getTimeAgo(createdAt);
+
+  const typeIcons = {
+    embargo_applied: '🚫',
+    embargo_lifted: '✅',
+    transaction_created: '💰',
+    transaction_completed: '✅',
+    trade_offer: '📦',
+    diplomatic: '🏛️'
+  };
+
+  const typeColors = {
+    embargo_applied: 'border-red-400/30 bg-red-400/10',
+    embargo_lifted: 'border-green-400/30 bg-green-400/10',
+    transaction_created: 'border-blue-400/30 bg-blue-400/10',
+    transaction_completed: 'border-green-400/30 bg-green-400/10',
+    trade_offer: 'border-yellow-400/30 bg-yellow-400/10',
+    diplomatic: 'border-purple-400/30 bg-purple-400/10'
+  };
+
+  const icon = typeIcons[notification.type] || '📬';
+  const colorClass = typeColors[notification.type] || 'border-slate-400/30 bg-slate-400/10';
+
+  return `
+    <div class="notification-item bg-bg border ${colorClass} rounded-lg p-4 ${isUnread ? 'border-l-4 border-l-brand-400' : ''}"
+         data-type="${notification.type}" data-read="${notification.read ? 'true' : 'false'}">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start space-x-3 flex-1">
+          <div class="text-2xl">${icon}</div>
+          <div class="flex-1">
+            <div class="flex items-center space-x-2 mb-1">
+              <h4 class="font-medium text-white">${notification.title}</h4>
+              ${isUnread ? '<span class="w-2 h-2 bg-brand-400 rounded-full"></span>' : ''}
+            </div>
+            <p class="text-sm text-slate-300 mb-2">${notification.message}</p>
+            <div class="flex items-center space-x-4 text-xs text-slate-400">
+              <span>${timeAgo}</span>
+              ${notification.priority === 'high' ? '<span class="text-red-400 font-medium">• Alta Prioridade</span>' : ''}
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center space-x-2">
+          ${isUnread ? `
+            <button onclick="markNotificationAsRead('${notification.id}')" class="px-2 py-1 bg-green-600/20 text-green-400 text-xs rounded hover:bg-green-600/30 transition-colors">
+              Marcar como Lida
+            </button>
+          ` : ''}
+          <button onclick="deleteNotification('${notification.id}')" class="px-2 py-1 bg-red-600/20 text-red-400 text-xs rounded hover:bg-red-600/30 transition-colors">
+            Excluir
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function filterNotifications(filter) {
+  let filteredNotifications = allNotifications;
+
+  if (filter === 'unread') {
+    filteredNotifications = allNotifications.filter(n => !n.read);
+  } else if (filter === 'embargo') {
+    filteredNotifications = allNotifications.filter(n => n.type && n.type.includes('embargo'));
+  } else if (filter === 'transaction') {
+    filteredNotifications = allNotifications.filter(n => n.type && n.type.includes('transaction'));
+  }
+
+  renderNotifications(filteredNotifications);
+}
+
+async function markNotificationAsRead(notificationId) {
+  try {
+    await db.collection('notifications').doc(notificationId).update({
+      read: true,
+      read_at: new Date()
+    });
+
+    // Update local data
+    const notification = allNotifications.find(n => n.id === notificationId);
+    if (notification) {
+      notification.read = true;
+    }
+
+    // Re-render current filter
+    const activeFilter = document.querySelector('.notification-filter-btn.active')?.dataset.filter || 'all';
+    filterNotifications(activeFilter);
+
+    // Update notification count
+    await updateNotificationCount();
+
+  } catch (error) {
+    console.error('Erro ao marcar notificação como lida:', error);
+  }
+}
+
+async function markAllNotificationsAsRead() {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const paisId = await checkPlayerCountry(user.uid);
+    if (!paisId) return;
+
+    // Update all unread notifications
+    const batch = db.batch();
+    allNotifications.forEach(notification => {
+      if (!notification.read) {
+        const notificationRef = db.collection('notifications').doc(notification.id);
+        batch.update(notificationRef, {
+          read: true,
+          read_at: new Date()
+        });
+        notification.read = true;
+      }
+    });
+
+    await batch.commit();
+
+    // Re-render notifications
+    const activeFilter = document.querySelector('.notification-filter-btn.active')?.dataset.filter || 'all';
+    filterNotifications(activeFilter);
+
+    // Update notification count
+    await updateNotificationCount();
+
+  } catch (error) {
+    console.error('Erro ao marcar todas as notificações como lidas:', error);
+  }
+}
+
+async function deleteNotification(notificationId) {
+  try {
+    if (!confirm('Tem certeza que deseja excluir esta notificação?')) {
+      return;
+    }
+
+    await db.collection('notifications').doc(notificationId).delete();
+
+    // Update local data
+    allNotifications = allNotifications.filter(n => n.id !== notificationId);
+
+    // Re-render notifications
+    const activeFilter = document.querySelector('.notification-filter-btn.active')?.dataset.filter || 'all';
+    filterNotifications(activeFilter);
+
+    // Update notification count
+    await updateNotificationCount();
+
+  } catch (error) {
+    console.error('Erro ao excluir notificação:', error);
+  }
+}
+
+async function updateNotificationCount() {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const paisId = await checkPlayerCountry(user.uid);
+    if (!paisId) return;
+
+    const unreadSnapshot = await db.collection('notifications')
+      .where('target_country_id', '==', paisId)
+      .where('read', '==', false)
+      .get();
+
+    const count = unreadSnapshot.size;
+    const badge = document.getElementById('notifications-count-badge');
+
+    if (badge) {
+      if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : count.toString();
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+
+  } catch (error) {
+    console.error('Erro ao atualizar contador de notificações:', error);
+  }
+}
+
+function getTimeAgo(date) {
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMins < 1) return 'Agora há pouco';
+  if (diffMins < 60) return `${diffMins} min atrás`;
+  if (diffHours < 24) return `${diffHours}h atrás`;
+  if (diffDays < 7) return `${diffDays} dias atrás`;
+  return date.toLocaleDateString('pt-BR');
+}
+
+// Make functions globally available
+window.closeNotificationsModal = closeNotificationsModal;
+window.markNotificationAsRead = markNotificationAsRead;
+window.markAllNotificationsAsRead = markAllNotificationsAsRead;
+window.deleteNotification = deleteNotification;
+
 async function openEmbargoesModal() {
   try {
     const user = auth.currentUser;

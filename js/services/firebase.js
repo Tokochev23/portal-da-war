@@ -518,6 +518,54 @@ export async function getGameConfig(useCache = true) {
     }
 }
 
+export async function getCustomRules() {
+    try {
+        const doc = await db.collection('configuracoes').doc('regrasDinamicas').get();
+        
+        if (doc.exists) {
+            Logger.debug('Regras dinâmicas carregadas do Firestore');
+            return doc.data();
+        } else {
+            Logger.debug('Nenhum documento de regras dinâmicas encontrado, usando objeto vazio.');
+            return {}; // Retorna objeto vazio se não houver regras customizadas
+        }
+    } catch (error) {
+        FirebaseErrorHandler.handleError(error, 'carregamento de regras dinâmicas');
+        return {}; // Retorna objeto vazio em caso de erro
+    }
+}
+
+export async function saveCustomRules(rulesObject, userId = null) {
+    try {
+        if (typeof rulesObject !== 'object' || rulesObject === null) {
+            throw new Error('Objeto de regras inválido.');
+        }
+
+        if (userId) {
+            const permissions = await checkUserPermissions(userId, false);
+            if (!permissions.isNarrator && !permissions.isAdmin) {
+                throw new Error('Acesso negado: apenas narradores podem salvar regras.');
+            }
+        }
+
+        const updateData = {
+            ...rulesObject,
+            ultimaAtualizacao: firebase.firestore.Timestamp.now(),
+            ultimoEditor: userId || 'desconhecido'
+        };
+
+        await db.collection('configuracoes').doc('regrasDinamicas').set(updateData);
+
+        globalCache.clear(); 
+
+        Logger.info('Regras dinâmicas salvas com sucesso', { userId });
+        showNotification('success', 'Conjunto de regras customizadas foi salvo!');
+        return { success: true };
+    } catch (error) {
+        return FirebaseErrorHandler.handleError(error, 'salvamento de regras dinâmicas');
+    }
+}
+
 export async function updateTurn(newTurn, userId = null) {
     try {
         const turn = parseInt(newTurn);

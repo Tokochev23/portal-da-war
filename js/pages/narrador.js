@@ -19,6 +19,7 @@ const localCatalog = {
       { key: "PIB", label: "PIB Total", tipo: "calculado", dependeDe: ["PIBPerCapita", "Populacao"] },
       { key: "Populacao", label: "População", tipo: "inteiro", min: 0 },
       { key: "Estabilidade", label: "Estabilidade", tipo: "percent", min: 0, max: 100 },
+      { key: "Burocracia", label: "Burocracia", tipo: "percent", min: 0, max: 100 },
       { key: "Urbanizacao", label: "Urbanização", tipo: "percent", min: 0, max: 100 },
       { key: "Tecnologia", label: "Tecnologia", tipo: "percent", min: 0, max: 100 },
       { key: "ModeloPolitico", label: "Modelo Político", tipo: "texto" },
@@ -706,6 +707,12 @@ async function initNarratorSystems() {
     window.navalProductionSystem = navalProductionSystem;
     window.inventorySystem = inventorySystem;
   window.economicSimulator = economicSimulator;
+
+    // Expor dados para outros módulos
+    window.narratorData = {
+        getCatalog: () => catalog,
+        getCountries: () => state.paises,
+    };
     
     console.log('✅ Todos os sistemas do narrador inicializados');
   } catch (error) {
