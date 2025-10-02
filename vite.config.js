@@ -1,6 +1,7 @@
 
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 // Nomes dos arquivos HTML que servirão como pontos de entrada
 const entryPoints = [
@@ -20,6 +21,16 @@ const input = entryPoints.reduce((acc, current) => {
 
 export default defineConfig({
   base: '/portal-da-war/', // Necessário para o deploy no GitHub Pages
+  plugins: [
+    viteStaticCopy({
+      targets: [
+        {
+          src: 'assets/flags/**/*',
+          dest: 'assets/flags'
+        }
+      ]
+    })
+  ],
   build: {
     rollupOptions: {
       input,
