@@ -20,7 +20,7 @@ const input = entryPoints.reduce((acc, current) => {
 }, {});
 
 export default defineConfig({
-  base: '/War1954-main/', // Necessário para o deploy no GitHub Pages
+  base: '/portal-da-war/', // Necessário para o deploy no GitHub Pages
   build: {
     rollupOptions: {
       input,
