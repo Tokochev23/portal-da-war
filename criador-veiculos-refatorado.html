@@ -40,9 +40,7 @@
   <!-- Chart.js for performance graphs -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
-  <!-- CSS Refatorado -->
-  <link rel="stylesheet" href="css/vehicle-creator.css">
-  <link rel="stylesheet" href="css/vehicle-creator-enhanced.css">
+  <!-- CSS Refatorado -->
   
   <!-- Custom Armor Slider CSS -->
   <style>
@@ -53,7 +51,8 @@
     }
     
     .armor-slider::-webkit-slider-thumb {
-      appearance: none;
+      -webkit-appearance: none;
+              appearance: none;
       width: 24px;
       height: 24px;
       border-radius: 50%;
@@ -61,6 +60,7 @@
       cursor: pointer;
       border: 2px solid #1e293b;
       box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+      -webkit-transition: all 0.2s ease;
       transition: all 0.2s ease;
     }
     
@@ -77,6 +77,7 @@
       cursor: pointer;
       border: 2px solid #1e293b;
       box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+      -moz-transition: all 0.2s ease;
       transition: all 0.2s ease;
     }
     
@@ -97,7 +98,8 @@
     }
     
     .slider-thumb::-webkit-slider-thumb {
-      appearance: none;
+      -webkit-appearance: none;
+              appearance: none;
       width: 20px;
       height: 20px;
       border-radius: 50%;
@@ -105,6 +107,7 @@
       cursor: pointer;
       border: 2px solid #1e293b;
       box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+      -webkit-transition: all 0.2s ease;
       transition: all 0.2s ease;
     }
     
@@ -121,6 +124,7 @@
       cursor: pointer;
       border: 2px solid #1e293b;
       box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+      -moz-transition: all 0.2s ease;
       transition: all 0.2s ease;
     }
     
@@ -129,6 +133,8 @@
       box-shadow: 0 6px 16px rgba(249, 115, 22, 0.6);
     }
   </style>
+  <link rel="stylesheet" href="/css/vehicle-creator-enhanced.css" />
+  <script type="module" src="/js/vehicleCreator.js"></script>
 </head>
 
 <body class="gradient-bg min-h-screen">
@@ -167,16 +173,7 @@
   <!-- FOOTER COMPONENTS - Carregado dinamicamente -->
   <div id="footer-components-container"></div>
 
-  <!-- Scripts -->
-  <script src="./js/utils/templateLoader.js" type="module"></script>
-  <script src="./js/components/tabLoaders.js?v=eqp1" type="module"></script>
-  <script src="./js/services/firebase.js" type="module"></script>
-  <script src="./js/utils/armorFunctions.js"></script>
-  <script src="./js/utils/energySystem.js" type="module"></script>
-  <script src="./js/utils/performanceSystem.js" type="module"></script>
-  <script src="./js/utils/costSystem.js" type="module"></script>
-  <script src="js/vehicleCreator.js?v=eqp1" type="module"></script>
-  
+
   <script>
     // Sistema de inicialização refatorado
     class VehicleCreatorApp {

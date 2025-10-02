@@ -95,7 +95,13 @@
       "Bash(netstat:*)",
       "Bash(taskkill:*)",
       "Bash(git config:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(cat:*)",
+      "Bash(npm run build:*)",
+      "Bash(xargs sed:*)"
     ],
     "deny": [],
     "ask": []

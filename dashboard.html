@@ -12,8 +12,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <!-- Main CSS with Tailwind -->
-  <link rel="stylesheet" href="/css/main.css">
 
+  <link rel="stylesheet" href="/css/main.css" />
+  <script type="module" src="/js/pages/dashboard.js"></script>
 </head>
 <body class="bg-bg text-slate-200">
   <header class="border-b border-bg-ring/70 sticky top-0 z-40 bg-bg/90 backdrop-blur">
@@ -111,23 +112,6 @@
     </div>
   </div>
 
-  <script type="module">
-    import { initDashboard } from './js/pages/dashboard.js';
-    import ResourceProductionCalculator from './js/systems/resourceProductionCalculator.js';
-    import ResourceConsumptionCalculator from './js/systems/resourceConsumptionCalculator.js';
-    import { getFlagHTML } from './js/ui/renderer.js';
-    import { initMobileMenu } from './js/utils/mobileMenu.js';
-
-    // Expose calculators globally for marketplace system
-    window.ResourceProductionCalculator = ResourceProductionCalculator;
-    window.ResourceConsumptionCalculator = ResourceConsumptionCalculator;
-    window.getFlagHTML = getFlagHTML;
-
-    document.addEventListener('DOMContentLoaded', () => {
-      initDashboard();
-      initMobileMenu();
-    });
-  </script>
 </body>
 </html>
 
