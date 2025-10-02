@@ -20,7 +20,7 @@ const DOM = {
   playerHistorico: document.getElementById('player-historico'),
   playerNotifications: document.getElementById('player-notifications'),
   playerPanel: document.getElementById('player-panel'),
-  narratorTools: document.getElementById('narrator-tools'),
+  // narratorTools: document.getElementById('narrator-tools'), // Removido - usar página narrador.html
   userRoleBadge: document.getElementById('user-role-badge'),
   countryPanelModal: document.getElementById('country-panel-modal'),
   countryPanelContent: document.getElementById('country-panel-content'),
@@ -690,12 +690,10 @@ export function renderDetailedCountryPanel(country) {
 
 // UI do narrador
 export function updateNarratorUI(isNarrator, isAdmin) {
-  const { narratorTools, userRoleBadge } = DOM;
-  
-  if (narratorTools) {
-    narratorTools.style.display = (isNarrator || isAdmin) ? 'block' : 'none';
-  }
-  
+  const { userRoleBadge } = DOM;
+
+  // Ferramentas do narrador removidas da página principal - usar narrador.html
+
   const narratorLink = document.querySelector('a[href="narrador.html"]');
   if (narratorLink) {
     narratorLink.style.display = (isNarrator || isAdmin) ? 'block' : 'none';
