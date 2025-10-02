@@ -7,6 +7,7 @@ import ResourceConsumptionCalculator from '../systems/resourceConsumptionCalcula
 import ResourceProductionCalculator from '../systems/resourceProductionCalculator.js';
 import { ShipyardSystem } from '../systems/shipyardSystem.js';
 import MarketplaceSystem from '../systems/marketplaceSystem.js';
+import { getFlagHTML } from '../ui/renderer.js';
 
 function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
 
@@ -198,11 +199,6 @@ function renderDashboard(country) {
   const aircraftProductionCapacity = militaryBudget * distribution.aircraft;
   const shipProductionCapacity = militaryBudget * distribution.naval;
   const militaryConsequences = calculateMilitaryBudgetConsequences(country);
-
-  // Importar função de bandeira do renderer
-  const getFlagHTML = window.getFlagHTML || function(name, sizeClass = 'h-full w-full') {
-    return `<span class="text-slate-400 text-xs">—</span>`;
-  };
 
   return `
     <div class="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100">
