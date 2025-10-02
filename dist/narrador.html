@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WAR • Painel do Narrador</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%23ffb400%22/%3E%3Ctext x=%228%22 y=%2211%22 font-size=%2210%22 text-anchor=%22middle%22 fill=%22%230b1020%22%3EN%3C/text%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script type="module" crossorigin src="/War1954-main/assets/narrador-COuNell2.js"></script>
+  <link rel="modulepreload" crossorigin href="/War1954-main/assets/firebase-DhoRyF0N.js">
+  <link rel="modulepreload" crossorigin href="/War1954-main/assets/shipyardSystem-DcDxaQqG.js">
+  <link rel="modulepreload" crossorigin href="/War1954-main/assets/navalProduction-ByxrUNty.js">
+  <link rel="modulepreload" crossorigin href="/War1954-main/assets/economicCalculations-EmLH2T6y.js">
+  <link rel="stylesheet" crossorigin href="/War1954-main/assets/main-C7-JuKmz.css">
+</head>
+<body class="bg-bg text-slate-200">
+  <header class="border-b border-bg-ring/70 sticky top-0 z-40 bg-bg/90 backdrop-blur">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="h-9 w-9 rounded-xl bg-brand-500/15 ring-1 ring-brand-500/30 grid place-items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zM12 3v18M4 7.5l8 4.5m8-4.5l-8 4.5" />
+          </svg>
+        </div>
+        <div>
+          <div class="text-sm text-slate-300/80">WAR • Painel do Narrador</div>
+          <div class="font-extrabold tracking-tight">Administração</div>
+        </div>
+      </div>
+      
+      <!-- Game Status -->
+      <div class="hidden lg:flex items-center gap-6 text-sm">
+        <div class="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-bg-soft/50 border border-bg-ring/30">
+          <div class="flex items-center gap-1">
+            <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+            <span class="text-slate-400">Turno:</span>
+            <span class="text-emerald-300 font-semibold" id="header-turno">#–</span>
+          </div>
+          <div class="w-px h-4 bg-bg-ring/50"></div>
+          <div class="flex items-center gap-1">
+            <span class="text-slate-400">Jogadores:</span>
+            <span class="text-blue-300 font-semibold" id="header-players">–</span>
+          </div>
+          <div class="w-px h-4 bg-bg-ring/50"></div>
+          <div class="flex items-center gap-1">
+            <span class="text-slate-400">Pendências:</span>
+            <span class="text-orange-300 font-semibold" id="header-pending">–</span>
+          </div>
+        </div>
+      </div>
+      
+      <nav class="hidden md:flex items-center gap-4 text-sm">
+        <a href="index.html" class="hover:text-white/90 transition">Início</a>
+        <a href="#" id="logout-link" class="hover:text-white/90 transition">Sair</a>
+      </nav>
+
+      <!-- Mobile Menu Button -->
+      <button id="mobile-menu-btn" class="md:hidden p-2 text-slate-300 hover:text-white transition-colors" aria-label="Abrir menu">
+        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+    <div id="gate" class="hidden rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-red-300">
+      Acesso negado. Esta página é exclusiva para narradores.
+    </div>
+
+    <div id="admin-root" class="hidden">
+      <!-- Tab Navigation -->
+      <div class="border-b border-bg-ring/50 mb-6">
+        <nav class="flex space-x-4 sm:space-x-8 overflow-x-auto scrollbar-hide" role="tablist">
+          <button 
+            id="tab-gameplay" 
+            class="tab-button flex items-center gap-2 px-1 py-4 border-b-2 border-brand-500 text-sm font-medium text-brand-300" 
+            data-tab="gameplay"
+            role="tab"
+            aria-controls="panel-gameplay"
+            aria-selected="true"
+          >
+            <span class="text-base">🎮</span>
+            <span class="hidden sm:inline">Gameplay</span>
+            <span class="sm:hidden">Game</span>
+            <span id="gameplay-badge" class="hidden ml-2 px-2 py-0.5 text-xs rounded-full bg-orange-500 text-white font-semibold"></span>
+          </button>
+          
+          <button 
+            id="tab-players" 
+            class="tab-button flex items-center gap-2 px-1 py-4 border-b-2 border-transparent text-sm font-medium text-slate-400 hover:text-slate-200 hover:border-slate-300 transition-colors" 
+            data-tab="players"
+            role="tab"
+            aria-controls="panel-players"
+          >
+            <span class="text-base">👥</span>
+            <span class="hidden sm:inline">Jogadores</span>
+            <span class="sm:hidden">Players</span>
+            <span id="players-badge" class="hidden ml-2 px-2 py-0.5 text-xs rounded-full bg-blue-500 text-white font-semibold"></span>
+          </button>
+          
+          <button 
+            id="tab-tools" 
+            class="tab-button flex items-center gap-2 px-1 py-4 border-b-2 border-transparent text-sm font-medium text-slate-400 hover:text-slate-200 hover:border-slate-300 transition-colors" 
+            data-tab="tools"
+            role="tab"
+            aria-controls="panel-tools"
+          >
+            <span class="text-base">🛠️</span>
+            <span>Ferramentas</span>
+          </button>
+          
+          <button 
+            id="tab-energia" 
+            class="tab-button flex items-center gap-2 px-1 py-4 border-b-2 border-transparent text-sm font-medium text-slate-400 hover:text-slate-200 hover:border-slate-300 transition-colors" 
+            data-tab="energia"
+            role="tab"
+            aria-controls="panel-energia"
+          >
+            <span class="text-base">⚡</span>
+            <span>Energia</span>
+          </button>
+          
+          <button 
+            id="tab-admin" 
+            class="tab-button flex items-center gap-2 px-1 py-4 border-b-2 border-transparent text-sm font-medium text-slate-400 hover:text-slate-200 hover:border-slate-300 transition-colors" 
+            data-tab="admin"
+            role="tab"
+            aria-controls="panel-admin"
+          >
+            <span class="text-base">⚙️</span>
+            <span>Administração</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- GAMEPLAY TAB -->
+      <div id="panel-gameplay" class="tab-panel" role="tabpanel" aria-labelledby="tab-gameplay">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <!-- Quick Actions Panel (sempre visível) -->
+          <div class="lg:col-span-1 space-y-4">
+            <!-- Game Controls -->
+            <div class="rounded-xl border border-emerald-500/30 bg-gradient-to-b from-emerald-500/5 to-emerald-600/10 p-4">
+              <h3 class="text-sm font-semibold text-emerald-200 mb-3">🎯 Controle do Jogo</h3>
+              <div class="space-y-3">
+                <div class="text-center">
+                  <div class="text-xs text-slate-400">Turno Atual</div>
+                  <div id="turno-atual-admin" class="text-2xl font-bold text-emerald-300">#–</div>
+                </div>
+                <div class="grid grid-cols-1 gap-2">
+                  <button id="btn-proximo-turno" class="w-full rounded-lg bg-emerald-500 text-slate-900 font-semibold px-3 py-2 hover:bg-emerald-400 transition-colors">
+                    🔄 Próximo Turno
+                  </button>
+                  <button id="btn-pausar-jogo" class="w-full rounded-lg border border-emerald-500/50 text-emerald-200 px-3 py-1.5 text-sm hover:bg-emerald-500/10 transition-colors">
+                    ⏸️ Pausar Jogo
+                  </button>
+                </div>
+                <div>
+                  <label class="text-xs text-slate-400">Alterar turno</label>
+                  <div class="mt-1 flex gap-2">
+                    <input id="turno-input" type="number" min="0" class="flex-1 rounded-lg bg-bg border border-bg-ring/70 p-2 text-sm" placeholder="#" />
+                    <button id="btn-salvar-turno" class="rounded-lg bg-brand-500 text-slate-900 font-semibold px-3 py-1.5 hover:bg-brand-400 text-sm">Definir</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="rounded-xl border border-bg-ring/70 p-4 bg-bg-soft">
+              <h3 class="text-sm font-semibold text-slate-200 mb-3">📊 Status Rápido</h3>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="text-slate-400">Jogadores online:</span>
+                  <span class="text-blue-300 font-semibold" id="quick-players-online">–</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-400">Veículos pendentes:</span>
+                  <span class="text-orange-300 font-semibold" id="quick-vehicles-pending">–</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-400">Mudanças hoje:</span>
+                  <span class="text-emerald-300 font-semibold" id="quick-changes-today">–</span>
+                </div>
+              </div>
+              <button id="btn-recarregar" class="w-full mt-3 rounded-lg border border-bg-ring/70 px-3 py-1.5 text-sm hover:border-slate-500/60 hover:bg-white/5">🔄 Atualizar</button>
+            </div>
+          </div>
+
+          <!-- Main Content Area -->
+          <div class="lg:col-span-3 space-y-6">
+            <!-- Vehicle Approval (destaque) -->
+            <div id="vehicle-approval-anchor"></div>
+
+            <!-- Naval Production System -->
+            <div id="naval-production-anchor"></div>
+
+            <!-- Inventory System -->
+            <div id="inventory-system-anchor"></div>
+
+            <!-- Country Editor -->
+            <div class="rounded-xl border border-bg-ring/70 bg-bg-soft">
+              <div class="p-4 border-b border-bg-ring/50">
+                <h3 class="text-lg font-semibold text-slate-200">📝 Editor de País</h3>
+                <p class="text-sm text-slate-400 mt-1">Selecione um país e seção para editar</p>
+              </div>
+              
+              <!-- Country/Section Selection -->
+              <div class="p-4 border-b border-bg-ring/50 bg-bg/30">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label class="text-xs text-slate-400 mb-2 block">País</label>
+                    <select id="select-pais" class="w-full rounded-lg bg-bg border border-bg-ring/70 p-2 text-sm focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/50"></select>
+                  </div>
+                  <div>
+                    <label class="text-xs text-slate-400 mb-2 block">Seção</label>
+                    <select id="select-secao" class="w-full rounded-lg bg-bg border border-bg-ring/70 p-2 text-sm focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/50"></select>
+                  </div>
+                  <div class="flex items-end">
+                    <button id="btn-salvar-secao" class="w-full rounded-lg bg-emerald-500 text-slate-900 font-semibold px-4 py-2 hover:bg-emerald-400 transition-colors">Salvar</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Form Fields -->
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-4">
+                  <div class="flex items-center gap-2 text-xs">
+                    <div class="w-2 h-2 bg-emerald-400 rounded-full"></div>
+                    <span class="text-slate-400">Mudança aplicada</span>
+                    <div class="w-2 h-2 bg-blue-400 rounded-full ml-2"></div>
+                    <span class="text-slate-400">Mudança externa</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <label class="flex items-center gap-2 text-sm">
+                      <input id="realtime-toggle" type="checkbox" checked class="rounded border-bg-ring/70 bg-bg text-brand-500 focus:ring-brand-500/50">
+                      <span class="text-slate-300">Tempo Real</span>
+                    </label>
+                  </div>
+                </div>
+                <div id="form-secao" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+              </div>
+            </div>
+
+            <!-- History (collapsible) -->
+            <details class="rounded-xl border border-bg-ring/70 bg-bg-soft overflow-hidden">
+              <summary class="p-4 cursor-pointer hover:bg-bg/50 border-b border-bg-ring/50 flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-slate-200">📜 Histórico de Mudanças</h3>
+                <div class="flex items-center gap-2">
+                  <button id="history-refresh" class="rounded-lg border border-bg-ring/70 px-2 py-1 text-xs hover:border-slate-500/60 hover:bg-white/5 transition-colors">🔄</button>
+                  <button id="export-history" class="rounded-lg border border-bg-ring/70 px-2 py-1 text-xs hover:border-slate-500/60 hover:bg-white/5 transition-colors">📁</button>
+                  <span class="text-xs text-slate-500">▼</span>
+                </div>
+              </summary>
+              <div class="p-4">
+                <div class="text-xs text-slate-400 mb-3">
+                  Últimas 20 mudanças para o país selecionado. Use ↶ para reverter.
+                </div>
+                <div id="history-list" class="space-y-2 max-h-64 overflow-y-auto">
+                  <div class="text-sm text-slate-500 text-center py-4">
+                    Selecione um país para ver o histórico
+                  </div>
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+
+      <!-- PLAYERS TAB -->
+      <div id="panel-players" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-players">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Active Players -->
+          <div class="rounded-xl border border-blue-500/30 bg-gradient-to-b from-blue-500/5 to-blue-600/10 p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold text-blue-200">👥 Jogadores Ativos</h3>
+              <div class="text-sm text-slate-400" id="player-count">0 jogadores</div>
+            </div>
+            <div class="space-y-3 max-h-96 overflow-y-auto">
+              <div id="players-list">
+                <div class="text-sm text-slate-500 text-center py-8">
+                  Carregando jogadores...
+                </div>
+              </div>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2">
+              <button id="refresh-players" class="rounded-lg border border-blue-500/50 text-blue-200 px-3 py-1.5 text-sm hover:bg-blue-500/10 transition-colors">
+                🔄 Atualizar
+              </button>
+              <button id="send-announcement" class="rounded-lg border border-blue-500/50 text-blue-200 px-3 py-1.5 text-sm hover:bg-blue-500/10 transition-colors">
+                📢 Anúncio
+              </button>
+            </div>
+          </div>
+
+          <!-- Available Countries -->
+          <div class="rounded-xl border border-emerald-500/30 bg-gradient-to-b from-emerald-500/5 to-emerald-600/10 p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold text-emerald-200">🌍 Países Disponíveis</h3>
+              <div class="text-sm text-slate-400" id="available-count">0 países</div>
+            </div>
+            <div class="space-y-3 max-h-96 overflow-y-auto">
+              <div id="available-countries">
+                <div class="text-sm text-slate-500 text-center py-8">
+                  Carregando países...
+                </div>
+              </div>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2">
+              <button id="assign-random" class="rounded-lg border border-emerald-500/50 text-emerald-200 px-3 py-1.5 text-sm hover:bg-emerald-500/10 transition-colors">
+                🎲 Atribuição Aleatória
+              </button>
+              <button id="clear-all-assignments" class="rounded-lg border border-red-500/50 text-red-200 px-3 py-1.5 text-sm hover:bg-red-500/10 transition-colors">
+                🚮 Limpar Todas
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TOOLS TAB -->
+      <div id="panel-tools" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-tools">
+        <div class="max-w-2xl mx-auto">
+          <div class="text-center mb-8">
+            <h2 class="text-2xl font-bold text-slate-200 mb-2">🛠️ Ferramentas do Narrador</h2>
+            <p class="text-slate-400">Ferramentas especializadas para gerenciar o jogo</p>
+          </div>
+          
+          <!-- Economic Simulator - Centralizado -->
+          <div class="rounded-xl border border-purple-500/30 bg-gradient-to-b from-purple-500/5 to-purple-600/10 p-8 text-center">
+            <div class="mb-4">
+              <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-purple-500/20 border border-purple-500/30 mb-4">
+                <span class="text-3xl">💰</span>
+              </div>
+            </div>
+            <h3 class="text-xl font-semibold text-purple-200 mb-3">Simulador Econômico</h3>
+            <p class="text-slate-400 mb-6 max-w-md mx-auto">
+              Sistema completo de simulação econômica com investimentos estratégicos, 
+              cadeias produtivas e mecânicas anti-exploit balanceadas.
+            </p>
+            <button id="economic-simulator" class="px-8 py-3 rounded-lg bg-purple-500 text-slate-900 font-semibold hover:bg-purple-400 transition-colors text-lg">
+              🎯 Abrir Simulador Econômico
+            </button>
+          </div>
+
+          <!-- Editor de Regras do Jogo -->
+          <div class="mt-8 rounded-xl border border-cyan-500/30 bg-gradient-to-b from-cyan-500/5 to-cyan-600/10 p-8 text-center">
+            <div class="mb-4">
+              <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-cyan-500/20 border border-cyan-500/30 mb-4">
+                <span class="text-3xl">⚖️</span>
+              </div>
+            </div>
+            <h3 class="text-xl font-semibold text-cyan-200 mb-3">Editor de Regras do Jogo</h3>
+            <p class="text-slate-400 mb-6 max-w-md mx-auto">
+              Customize as fórmulas e mecânicas centrais do jogo, como cálculos de orçamento, crescimento e inflação.
+            </p>
+            <button id="btn-open-rules-editor" class="px-8 py-3 rounded-lg bg-cyan-500 text-slate-900 font-semibold hover:bg-cyan-400 transition-colors text-lg">
+              ⚙️ Abrir Editor de Regras
+            </button>
+          </div>
+
+          <!-- Painel do Editor de Regras (Oculto por padrão) -->
+          <div id="rules-editor-panel" class="hidden mt-8 rounded-xl border border-bg-ring/70 bg-bg-soft p-6">
+            <h3 class="text-lg font-semibold text-slate-200 mb-4">Painel de Edição de Regras</h3>
+            <div id="rules-list" class="space-y-4">
+              <!-- Exemplo de Regra: Orçamento -->
+              <div class="p-4 rounded-lg bg-bg/50 border border-bg-ring/50">
+                <div class="flex justify-between items-center">
+                  <div>
+                    <h4 class="font-semibold text-slate-300">Orçamento Anual</h4>
+                    <p class="text-xs text-slate-400">Fórmula que define o orçamento de um país a cada turno.</p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button class="btn-edit-rule rounded-lg bg-blue-600 px-3 py-1 text-sm font-semibold hover:bg-blue-500" data-rule="orcamento">Editar</button>
+                    <button class="btn-reset-rule rounded-lg border border-red-500/50 text-red-300 px-3 py-1 text-sm hover:bg-red-500/10" data-rule="orcamento">Restaurar Padrão</button>
+                  </div>
+                </div>
+                <div class="mt-3">
+                  <p class="text-xs text-slate-500 mb-1">Fórmula Atual:</p>
+                  <code id="rule-formula-orcamento" 
+                        class="block w-full rounded-md bg-bg-soft p-2 text-sm text-emerald-300 border border-bg-ring"
+                        data-default-formula="pib * 0.25 * burocracia * estabilidade * 1.5">pib * 0.25 * burocracia * estabilidade * 1.5</code>
+                </div>
+              </div>
+              <!-- Outras regras serão adicionadas aqui -->
+              <!-- Regra: Modificador de Crescimento -->
+              <div class="p-4 rounded-lg bg-bg/50 border border-bg-ring/50">
+                <div class="flex justify-between items-center">
+                  <div>
+                    <h4 class="font-semibold text-slate-300">Modificador de Crescimento</h4>
+                    <p class="text-xs text-slate-400">Fator baseado em tecnologia e urbanização que multiplica o crescimento base.</p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button class="btn-edit-rule rounded-lg bg-blue-600 px-3 py-1 text-sm font-semibold hover:bg-blue-500" data-rule="modificadorCrescimento">Editar</button>
+                    <button class="btn-reset-rule rounded-lg border border-red-500/50 text-red-300 px-3 py-1 text-sm hover:bg-red-500/10" data-rule="modificadorCrescimento">Restaurar Padrão</button>
+                  </div>
+                </div>
+                <div class="mt-3">
+                  <p class="text-xs text-slate-500 mb-1">Fórmula Atual:</p>
+                  <code id="rule-formula-modificadorCrescimento" 
+                        class="block w-full rounded-md bg-bg-soft p-2 text-sm text-emerald-300 border border-bg-ring"
+                        data-default-formula="1 + (Tecnologia / 100 * Urbanizacao / 100 * 1.5)">1 + (Tecnologia / 100 * Urbanizacao / 100 * 1.5)</code>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Coming Soon -->
+          <div class="mt-8 text-center">
+            <div class="inline-flex items-center px-4 py-2 rounded-full bg-slate-700/50 border border-slate-600/50">
+              <span class="text-slate-400 text-sm">🚧 Mais ferramentas em desenvolvimento...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ENERGY TAB -->
+      <div id="panel-energia" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-energia">
+        <div class="text-center mb-8">
+          <h2 class="text-2xl font-bold text-slate-200 mb-2">⚡ Gestão de Energia</h2>
+          <p class="text-slate-400">Construa e gerencie a matriz energética da sua nação.</p>
+        </div>
+        <div class="text-center py-16 rounded-xl bg-bg-soft border border-bg-ring/70">
+            <span class="text-slate-400 text-sm">🚧 Em desenvolvimento...</span>
+        </div>
+      </div>
+
+      <!-- ADMIN TAB -->
+      <div id="panel-admin" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-admin">
+        <div class="space-y-6">
+          <!-- Catalog Management -->
+          <div class="rounded-xl border border-bg-ring/70 bg-bg-soft p-6">
+            <h3 class="text-lg font-semibold text-slate-200 mb-4">📚 Catálogo de Campos</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h4 class="text-sm font-semibold mb-2">Seções Atuais</h4>
+                <div id="menu-secoes" class="space-y-1 bg-bg/50 rounded-lg p-3 min-h-[150px]">
+                  <div class="text-sm text-slate-500">Carregando seções...</div>
+                </div>
+              </div>
+              <div>
+                <h4 class="text-sm font-semibold mb-2">Ações</h4>
+                <div class="space-y-2">
+                  <button id="btn-salvar-catalogo" class="w-full rounded-lg bg-brand-500 text-slate-900 font-semibold px-3 py-2 hover:bg-brand-400 transition-colors">
+                    💾 Salvar Catálogo
+                  </button>
+                  <button id="btn-carregar-catalogo" class="w-full rounded-lg border border-bg-ring/70 text-slate-300 px-3 py-2 hover:bg-white/5 transition-colors">
+                    📥 Carregar do Servidor
+                  </button>
+                  <button id="btn-adicionar-campo" class="w-full rounded-lg border border-bg-ring/70 text-slate-300 px-3 py-2 hover:bg-white/5 transition-colors">
+                    ➕ Adicionar Campo
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="mt-4">
+              <div id="lista-campos-secao" class="text-sm text-slate-400">Selecione uma seção para ver os campos.</div>
+            </div>
+          </div>
+
+          <!-- CSV Import -->
+          <div class="rounded-xl border border-bg-ring/70 bg-bg-soft p-6">
+            <h3 class="text-lg font-semibold text-slate-200 mb-4">📁 Importar CSV</h3>
+            <div class="text-sm text-slate-400 mb-3">
+              Cole o CSV com a coluna "Pais" e colunas que correspondam às chaves/labels da seção atual.
+            </div>
+            <textarea id="csv-input" rows="6" class="w-full rounded-lg bg-bg border border-bg-ring/70 p-3 text-sm" placeholder="Pais,Campo1,Campo2&#10;Brasil,10,20"></textarea>
+            <div class="mt-4 flex gap-2">
+              <button id="csv-preview" class="rounded-lg border border-bg-ring/70 text-slate-300 px-4 py-2 text-sm hover:bg-white/5 transition-colors">
+                👁️ Pré-visualizar
+              </button>
+              <button id="csv-aplicar" class="rounded-lg bg-emerald-500 text-slate-900 font-semibold px-4 py-2 hover:bg-emerald-400 transition-colors">
+                📥 Aplicar Importação
+              </button>
+            </div>
+            <div id="csv-preview-area" class="mt-4 text-sm"></div>
+          </div>
+
+          <!-- Migration Action -->
+          <div class="rounded-xl border border-red-500/30 bg-red-500/10 p-6 mt-6">
+            <h3 class="text-lg font-semibold text-red-200 mb-3">🚨 Ações de Migração</h3>
+            <p class="text-sm text-red-300/80 mb-4">
+              Use este botão para atualizar a base de dados com os novos campos do sistema econômico avançado.
+              <strong>Execute esta ação apenas uma vez!</strong>
+            </p>
+            <button id="btn-run-migration" class="rounded-lg bg-red-500 text-white font-semibold px-4 py-2 hover:bg-red-400 transition-colors">
+              🚀 Executar Migração da Economia Avançada
+            </button>
+
+            <button id="btn-process-energy" class="mt-3 rounded-lg bg-purple-600 text-white font-semibold px-4 py-2 hover:bg-purple-500 transition-colors">
+              ⚡ Processar Turno de Energia
+            </button>
+
+            <button id="btn-assign-resources" class="mt-3 rounded-lg bg-emerald-600 text-white font-semibold px-4 py-2 hover:bg-emerald-500 transition-colors">
+              🌍 Atribuir Potenciais de Recursos
+            </button>
+
+            <button id="btn-resource-report" class="mt-2 rounded-lg bg-blue-600 text-white font-medium px-4 py-2 hover:bg-blue-500 transition-colors">
+              📊 Relatório de Recursos
+            </button>
+
+            <button id="btn-apply-consumption" class="mt-3 rounded-lg bg-amber-600 text-white font-semibold px-4 py-2 hover:bg-amber-500 transition-colors">
+              🍽️ Calcular Consumo de Recursos
+            </button>
+
+            <button id="btn-apply-consumption-all" class="mt-2 rounded-lg bg-green-600 text-white font-bold px-4 py-2 hover:bg-green-500 transition-colors shadow-lg">
+              🚀 APLICAR CONSUMO A TODOS OS PAÍSES
+            </button>
+
+            <button id="btn-apply-production-all" class="mt-2 rounded-lg bg-purple-600 text-white font-bold px-4 py-2 hover:bg-purple-500 transition-colors shadow-lg">
+              🏭 APLICAR PRODUÇÃO A TODOS OS PAÍSES
+            </button>
+
+            <button id="btn-simulate-consumption" class="mt-2 rounded-lg bg-orange-600 text-white font-medium px-4 py-2 hover:bg-orange-500 transition-colors">
+              🔮 Simular 3 Turnos
+            </button>
+
+            <button id="btn-simulate-production" class="mt-2 rounded-lg bg-indigo-600 text-white font-medium px-4 py-2 hover:bg-indigo-500 transition-colors">
+              📊 Simular Produção 6 Turnos
+            </button>
+
+            <button id="btn-apply-consumer-goods" class="mt-3 rounded-lg bg-pink-600 text-white font-bold px-4 py-2 hover:bg-pink-500 transition-colors shadow-lg">
+              🛍️ APLICAR BENS DE CONSUMO E ESTABILIDADE
+            </button>
+
+            <button id="btn-simulate-consumer-goods" class="mt-2 rounded-lg bg-purple-600 text-white font-medium px-4 py-2 hover:bg-purple-500 transition-colors">
+              📈 Simular Estabilidade 5 Turnos
+            </button>
+
+            <button id="btn-test-turn-processing" class="mt-3 rounded-lg bg-cyan-600 text-white font-medium px-4 py-2 hover:bg-cyan-500 transition-colors">
+              🧪 Testar Processamento de Turno
+            </button>
+
+            <button id="btn-reprocess-turn" class="mt-2 rounded-lg bg-yellow-600 text-white font-medium px-4 py-2 hover:bg-yellow-500 transition-colors">
+              🔄 Reprocessar Turno Atual
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+</body>
+</html>
