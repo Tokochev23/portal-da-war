@@ -1,9 +1,637 @@
-<div id="special-equipment-tab-content">
-    <h3 class="text-xl font-bold text-slate-100 mb-4">Equipamentos Especiais</h3>
-    <p class="text-slate-400 mb-6">Selecione equipamentos adicionais para sua aeronave. Eles podem afetar peso, custo e performance.</p>
+<!-- Special Equipment Tab Template for Aircraft Creator -->
+<div class="special-equipment-tab-content">
+    <div class="special-equipment-section">
+        <h3>Equipamentos Especiais</h3>
 
-    <div id="special-equipment-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <!-- Special equipment cards will be loaded here by JavaScript -->
-        <div class="text-center text-slate-500 py-8">Carregando equipamentos...</div>
+        <!-- Equipment Categories -->
+        <div class="equipment-categories">
+            <div class="category-tabs">
+                <button class="equipment-category-tab active" data-category="propulsion">Propulsão</button>
+                <button class="equipment-category-tab" data-category="survival">Sobrevivência</button>
+                <button class="equipment-category-tab" data-category="mission">Missão</button>
+                <button class="equipment-category-tab" data-category="experimental">Experimental</button>
+            </div>
+        </div>
+
+        <!-- Propulsion Systems -->
+        <div class="equipment-category-content active" id="propulsion-equipment">
+            <h4>Sistemas de Propulsão Avançados</h4>
+            <div class="equipment-grid">
+                <div class="equipment-card">
+                    <div class="equipment-header">
+                        <h5>Sistema Pós-Queimador</h5>
+                        <div class="equipment-toggle">
+                            <input type="checkbox" id="afterburner-system" name="afterburner">
+                            <label for="afterburner-system">Equipar</label>
+                        </div>
+                    </div>
+                    <div class="equipment-description">
+                        <p>Sistema de pós-combustão para aumento de empuxo</p>
+                        <div class="equipment-specs">
+                            <span>Aumento de Empuxo: +50-100%</span>
+                            <span>Consumo Extra: +150-300%</span>
+                            <span>Peso: +200 kg</span>
+                            <span>Custo: +500k$</span>
+                        </div>
+                    </div>
+                    <div class="equipment-config" id="afterburner-config">
+                        <div class="config-row">
+                            <label for="afterburner-type">Tipo:</label>
+                            <select id="afterburner-type">
+                                <option value="basic">Básico</option>
+                                <option value="variable">Variável</option>
+                                <option value="staged">Múltiplos Estágios</option>
+                            </select>
+                        </div>
+                        <div class="config-row">
+                            <label for="afterburner-stages">Estágios:</label>
+                            <input type="number" id="afterburner-stages" min="1" max="5" value="3">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="equipment-card">
+                    <div class="equipment-header">
+                        <h5>Vetorização de Empuxo</h5>
+                        <div class="equipment-toggle">
+                            <input type="checkbox" id="thrust-vectoring" name="thrust_vectoring">
+                            <label for="thrust-vectoring">Equipar</label>
+                        </div>
+                    </div>
+                    <div class="equipment-description">
+                        <p>Sistema de vetorização para super-manobrabilidade</p>
+                        <div class="equipment-specs">
+                            <span>Deflexão: ±15-30°</span>
+                            <span>Manobrabilidade: +200%</span>
+                            <span>Peso: +300 kg</span>
+                            <span>Custo: +800k$</span>
+                        </div>
+                    </div>
+                    <div class="equipment-config" id="vectoring-config">
+                        <div class="config-row">
+                            <label for="vectoring-dimensions">Dimensões:</label>
+                            <select id="vectoring-dimensions">
+                                <option value="2d">2D (Pitch)</option>
+                                <option value="3d">3D (Pitch/Yaw)</option>
+                            </select>
+                        </div>
+                        <div class="config-row">
+                            <label for="vectoring-max-angle">Ângulo Máx:</label>
+                            <input type="number" id="vectoring-max-angle" min="10" max="30" value="20">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="equipment-card">
+                    <div class="equipment-header">
+                        <h5>Reversor de Empuxo</h5>
+                        <div class="equipment-toggle">
+                            <input type="checkbox" id="thrust-reverser" name="thrust_reverser">
+                            <label for="thrust-reverser">Equipar</label>
+                        </div>
+                    </div>
+                    <div class="equipment-description">
+                        <p>Sistema para redução da distância de pouso</p>
+                        <div class="equipment-specs">
+                            <span>Reversão: 40-70% do empuxo</span>
+                            <span>Redução de Pouso: -30%</span>
+                            <span>Peso: +150 kg</span>
+                            <span>Custo: +300k$</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Survival Systems -->
+        <div class="equipment-category-content" id="survival-equipment">
+            <h4>Sistemas de Sobrevivência</h4>
+            <div class="equipment-grid">
+                <div class="equipment-card">
+                    <div class="equipment-header">
+                        <h5>Assento Ejetável</h5>
+                        <div class="equipment-toggle">
+                            <input type="checkbox" id="ejection-seat" name="ejection_seat">
+                            <label for="ejection-seat">Equipar</label>
+                        </div>
+                    </div>
+                    <div class="equipment-description">
+                        <p>Sistema de escape de emergência para o piloto</p>
+                        <div class="equipment-specs">
+                            <span>Altitude Mín: 0m (Zero-Zero)</span>
+                            <span>Velocidade Máx: 800 km/h</span>
+                            <span>Peso: +80 kg</span>
+                            <span>Custo: +150k$</span>
+                        </div>
+                    </div>
+                    <div class="equipment-config" id="ejection-config">
+                        <div class="config-row">
+                            <label for="ejection-type">Tipo:</label>
+                            <select id="ejection-type">
+                                <option value="basic">Básico</option>
+                                <option value="zero-zero">Zero-Zero</option>
+                                <option value="advanced">Avançado</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="equipment-card">
+                    <div class="equipment-header">
+                        <h5>Blindagem</h5>
+                        <div class="equipment-toggle">
+                            <input type="checkbox" id="armor-plating" name="armor_plating">
+                            <label for="armor-plating">Equipar</label>
+                        </div>
+                    </div>
+                    <div class="equipment-description">
+                        <p>Proteção balística para áreas críticas</p>
+                        <div class="equipment-specs">
+                            <span>Proteção: 12.7mm</span>
+                            <span>Cobertura: Cabine + Motor</span>
+                            <span>Peso: +400 kg</span>
+                            <span>Custo: +200k$</span>
+                        </div>
+                    </div>
+                    <div class="equipment-config" id="armor-config">
+                        <div class="config-row">
+                            <label for="armor-thickness">Espessura:</label>
+                            <select id="armor-thickness">
+                                <option value="light">Leve (8mm)</option>
+                                <option value="medium">Médio (12mm)</option>
+                                <option value="heavy">Pesado (20mm)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="equipment-card">
+                    <div class="equipment-header">
+                        <h5>Tanques Auto-Selantes</h5>
+                        <div class="equipment-toggle">
+                            <input type="checkbox" id="self-sealing-tanks" name="self_sealing_tanks">
+                            <label for="self-sealing-tanks">Equipar</label>
+                        </div>
+                    </div>
+                    <div class="equipment-description">
+                        <p>Tanques que se selam automaticamente quando perfurados</p>
+                        <div class="equipment-specs">
+                            <span>Proteção: Projéteis pequenos</span>
+                            <span>Selagem: Automática</span>
+                            <span>Peso: +100 kg</span>
+                            <span>Custo: +100k$</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mission Equipment -->
+        <div class="equipment-category-content" id="mission-equipment">
+            <h4>Equipamentos de Missão</h4>
+            <div class="equipment-grid">
+                <div class="equipment-card">
+                    <div class="equipment-header">
+                        <h5>Sistema de Reabastecimento Aéreo</h5>
+                        <div class="equipment-toggle">
+                            <input type="checkbox" id="air-refueling" name="air_refueling">
+                            <label for="air-refueling">Equipar</label>
+                        </div>
+                    </div>
+                    <div class="equipment-description">
+                        <p>Capacidade de reabastecimento em voo</p>
+                        <div class="equipment-specs">
+                            <span>Tipo: Receptáculo ou Sonda</span>
+                            <span>Taxa: 1000-3000 L/min</span>
+                            <span>Peso: +50 kg</span>
+                            <span>Custo: +200k$</span>
+                        </div>
+                    </div>
+                    <div class="equipment-config" id="refueling-config">
+                        <div class="config-row">
+                            <label for="refueling-type">Tipo:</label>
+                            <select id="refueling-type">
+                                <option value="probe">Sonda</option>
+                                <option value="receptacle">Receptáculo</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="equipment-card">
+                    <div class="equipment-header">
+                        <h5>Pod de Reconhecimento</h5>
+                        <div class="equipment-toggle">
+                            <input type="checkbox" id="recon-pod" name="reconnaissance_pod">
+                            <label for="recon-pod">Equipar</label>
+                        </div>
+                    </div>
+                    <div class="equipment-description">
+                        <p>Equipamentos de fotografia e sensores</p>
+                        <div class="equipment-specs">
+                            <span>Câmeras: Visível + IR</span>
+                            <span>Resolução: 0.3m</span>
+                            <span>Peso: +200 kg</span>
+                            <span>Custo: +400k$</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="equipment-card">
+                    <div class="equipment-header">
+                        <h5>Pod de Guerra Eletrônica</h5>
+                        <div class="equipment-toggle">
+                            <input type="checkbox" id="ew-pod" name="electronic_warfare_pod">
+                            <label for="ew-pod">Equipar</label>
+                        </div>
+                    </div>
+                    <div class="equipment-description">
+                        <p>Sistemas ECM/ECCM e guerra eletrônica</p>
+                        <div class="equipment-specs">
+                            <span>Frequência: 2-18 GHz</span>
+                            <span>Potência: 1-10 kW</span>
+                            <span>Peso: +300 kg</span>
+                            <span>Custo: +600k$</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Experimental Equipment -->
+        <div class="equipment-category-content" id="experimental-equipment">
+            <h4>Equipamentos Experimentais</h4>
+            <div class="equipment-grid">
+                <div class="equipment-card experimental">
+                    <div class="equipment-header">
+                        <h5>Laser de Combate</h5>
+                        <div class="equipment-toggle">
+                            <input type="checkbox" id="combat-laser" name="combat_laser">
+                            <label for="combat-laser">Equipar</label>
+                        </div>
+                    </div>
+                    <div class="equipment-description">
+                        <p>Sistema de arma de energia direcionada</p>
+                        <div class="equipment-specs">
+                            <span>Potência: 100 kW - 1 MW</span>
+                            <span>Alcance: 10-50 km</span>
+                            <span>Peso: +1000 kg</span>
+                            <span>Custo: +5000k$</span>
+                        </div>
+                    </div>
+                    <div class="equipment-config" id="laser-config">
+                        <div class="config-row">
+                            <label for="laser-power">Potência:</label>
+                            <select id="laser-power">
+                                <option value="100kw">100 kW</option>
+                                <option value="500kw">500 kW</option>
+                                <option value="1mw">1 MW</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="equipment-card experimental">
+                    <div class="equipment-header">
+                        <h5>Propulsão Nuclear</h5>
+                        <div class="equipment-toggle">
+                            <input type="checkbox" id="nuclear-propulsion" name="nuclear_propulsion">
+                            <label for="nuclear-propulsion">Equipar</label>
+                        </div>
+                    </div>
+                    <div class="equipment-description">
+                        <p>Reator nuclear para propulsão</p>
+                        <div class="equipment-specs">
+                            <span>Potência: 10-100 MW</span>
+                            <span>Duração: Ilimitada</span>
+                            <span>Peso: +5000 kg</span>
+                            <span>Custo: +50000k$</span>
+                        </div>
+                    </div>
+                    <div class="equipment-warning">
+                        ⚠️ Requer autorização especial e considerações de segurança
+                    </div>
+                </div>
+
+                <div class="equipment-card experimental">
+                    <div class="equipment-header">
+                        <h5>Campo de Força Defensivo</h5>
+                        <div class="equipment-toggle">
+                            <input type="checkbox" id="force-field" name="force_field">
+                            <label for="force-field">Equipar</label>
+                        </div>
+                    </div>
+                    <div class="equipment-description">
+                        <p>Sistema de proteção por campo eletromagnético</p>
+                        <div class="equipment-specs">
+                            <span>Proteção: Mísseis/Projéteis</span>
+                            <span>Cobertura: 360°</span>
+                            <span>Peso: +800 kg</span>
+                            <span>Custo: +10000k$</span>
+                        </div>
+                    </div>
+                    <div class="equipment-warning">
+                        🚧 Tecnologia experimental - Não comprovada
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Equipment Summary -->
+        <div class="equipment-summary">
+            <h4>Resumo dos Equipamentos</h4>
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="summary-label">Equipamentos Ativos</div>
+                    <div class="summary-value" id="active-equipment">0</div>
+                    <div class="summary-unit">itens</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">Peso Total</div>
+                    <div class="summary-value" id="total-equipment-weight">0</div>
+                    <div class="summary-unit">kg</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">Custo Total</div>
+                    <div class="summary-value" id="total-equipment-cost">0</div>
+                    <div class="summary-unit">k$</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">Nível Tecnológico</div>
+                    <div class="summary-value" id="tech-level-required">50</div>
+                    <div class="summary-unit">/100</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Equipment Impact Analysis -->
+        <div class="impact-analysis">
+            <h4>Análise de Impacto</h4>
+            <div class="impact-grid">
+                <div class="impact-card positive">
+                    <h5>Benefícios</h5>
+                    <ul id="equipment-benefits">
+                        <li>Nenhum equipamento selecionado</li>
+                    </ul>
+                </div>
+                <div class="impact-card negative">
+                    <h5>Desvantagens</h5>
+                    <ul id="equipment-drawbacks">
+                        <li>Nenhum equipamento selecionado</li>
+                    </ul>
+                </div>
+                <div class="impact-card neutral">
+                    <h5>Considerações</h5>
+                    <ul id="equipment-considerations">
+                        <li>Selecione equipamentos para ver o impacto</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
+<style>
+.special-equipment-tab-content {
+    color: #fff;
+}
+
+.special-equipment-section h3 {
+    color: #fff;
+    margin-bottom: 25px;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 10px;
+}
+
+.special-equipment-section h4 {
+    color: #007bff;
+    margin: 25px 0 15px 0;
+}
+
+.category-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.equipment-category-tab {
+    padding: 10px 20px;
+    background: #333;
+    color: #ccc;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.equipment-category-tab:hover {
+    background: #444;
+}
+
+.equipment-category-tab.active {
+    background: #007bff;
+    color: #fff;
+}
+
+.equipment-category-content {
+    display: none;
+}
+
+.equipment-category-content.active {
+    display: block;
+}
+
+.equipment-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.equipment-card {
+    background: #2d2d2d;
+    border-radius: 8px;
+    padding: 20px;
+    border-left: 4px solid #28a745;
+    transition: all 0.3s;
+}
+
+.equipment-card.experimental {
+    border-left-color: #ffc107;
+    background: linear-gradient(145deg, #2d2d2d, #3d3d2d);
+}
+
+.equipment-card:hover {
+    background: #3d3d3d;
+    transform: translateY(-2px);
+}
+
+.equipment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.equipment-header h5 {
+    color: #28a745;
+    margin: 0;
+}
+
+.equipment-card.experimental .equipment-header h5 {
+    color: #ffc107;
+}
+
+.equipment-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.equipment-toggle input[type="checkbox"] {
+    transform: scale(1.3);
+}
+
+.equipment-description p {
+    color: #ccc;
+    margin-bottom: 10px;
+}
+
+.equipment-specs {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    color: #888;
+    background: rgba(255,255,255,0.05);
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.equipment-config {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #444;
+    display: none;
+}
+
+.equipment-config.visible {
+    display: block;
+}
+
+.config-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.config-row label {
+    color: #ccc;
+    flex: 1;
+}
+
+.config-row input, .config-row select {
+    width: 120px;
+    padding: 5px 8px;
+    background: #333;
+    color: #fff;
+    border: 1px solid #555;
+    border-radius: 4px;
+}
+
+.equipment-warning {
+    margin-top: 10px;
+    padding: 8px;
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid #ffc107;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #ffc107;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.summary-card {
+    background: #2d2d2d;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    border-left: 4px solid #28a745;
+}
+
+.summary-label {
+    font-size: 12px;
+    color: #ccc;
+    margin-bottom: 8px;
+}
+
+.summary-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #28a745;
+    margin-bottom: 5px;
+}
+
+.summary-unit {
+    font-size: 12px;
+    color: #888;
+}
+
+.impact-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.impact-card {
+    background: #2d2d2d;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.impact-card.positive {
+    border-left: 4px solid #28a745;
+}
+
+.impact-card.negative {
+    border-left: 4px solid #dc3545;
+}
+
+.impact-card.neutral {
+    border-left: 4px solid #6c757d;
+}
+
+.impact-card h5 {
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.impact-card.positive h5 {
+    color: #28a745;
+}
+
+.impact-card.negative h5 {
+    color: #dc3545;
+}
+
+.impact-card.neutral h5 {
+    color: #6c757d;
+}
+
+.impact-card ul {
+    margin: 0;
+    padding-left: 20px;
+    color: #ccc;
+}
+
+.impact-card li {
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+</style>

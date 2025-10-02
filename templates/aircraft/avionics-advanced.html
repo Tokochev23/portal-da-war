@@ -1,0 +1,450 @@
+<!-- Advanced Avionics Configuration Interface - War1954 Aircraft Creator -->
+<div class="space-y-8">
+    <!-- Header Section -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-100 tracking-tight">Sistema de Aviônica Avançado</h2>
+            <p class="text-slate-400 mt-1">Configure sistemas eletrônicos integrados com dependências realistas</p>
+        </div>
+        <div class="text-right">
+            <div class="text-sm text-slate-400">Sistemas Instalados:</div>
+            <div class="text-lg font-semibold text-cyan-300" id="installed-systems-count">0</div>
+        </div>
+    </div>
+
+    <!-- System Overview Dashboard -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold text-cyan-300" id="total-power-consumption">0.0</div>
+                    <div class="text-xs text-slate-400">Consumo Total (kW)</div>
+                </div>
+                <span class="text-2xl">⚡</span>
+            </div>
+            <div class="mt-2">
+                <div class="w-full bg-slate-700/50 rounded-full h-2">
+                    <div class="bg-cyan-500 h-2 rounded-full transition-all" id="power-usage-bar" style="width: 0%"></div>
+                </div>
+                <div class="text-xs text-slate-500 mt-1" id="power-margin">Margem: 100%</div>
+            </div>
+        </div>
+
+        <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold text-orange-300" id="total-weight">0</div>
+                    <div class="text-xs text-slate-400">Peso Total (kg)</div>
+                </div>
+                <span class="text-2xl">⚖️</span>
+            </div>
+            <div class="mt-2">
+                <div class="w-full bg-slate-700/50 rounded-full h-2">
+                    <div class="bg-orange-500 h-2 rounded-full transition-all" id="weight-bar" style="width: 0%"></div>
+                </div>
+                <div class="text-xs text-slate-500 mt-1" id="weight-limit">Limite: 500kg</div>
+            </div>
+        </div>
+
+        <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold text-green-300" id="integration-efficiency">100</div>
+                    <div class="text-xs text-slate-400">Eficiência (%)</div>
+                </div>
+                <span class="text-2xl">🔗</span>
+            </div>
+            <div class="mt-2">
+                <div class="w-full bg-slate-700/50 rounded-full h-2">
+                    <div class="bg-green-500 h-2 rounded-full transition-all" id="efficiency-bar" style="width: 100%"></div>
+                </div>
+                <div class="text-xs text-slate-500 mt-1" id="synergy-count">0 sinergias ativas</div>
+            </div>
+        </div>
+
+        <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold text-blue-300" id="reliability-rating">0</div>
+                    <div class="text-xs text-slate-400">MTBF (horas)</div>
+                </div>
+                <span class="text-2xl">🛡️</span>
+            </div>
+            <div class="mt-2">
+                <div class="w-full bg-slate-700/50 rounded-full h-2">
+                    <div class="bg-blue-500 h-2 rounded-full transition-all" id="reliability-bar" style="width: 0%"></div>
+                </div>
+                <div class="text-xs text-slate-500 mt-1" id="tech-rating">Tech Rating: 0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Categories Tabs -->
+    <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl overflow-hidden">
+        <nav class="flex border-b border-slate-700/50">
+            <button class="avionics-category-tab active flex-1 px-6 py-4 text-sm font-medium border-b-2 transition-all hover:text-cyan-300 hover:bg-slate-800/50" data-category="radar">
+                <div class="flex items-center justify-center space-x-2">
+                    <span>📡</span>
+                    <span>Radar</span>
+                </div>
+            </button>
+            <button class="avionics-category-tab flex-1 px-6 py-4 text-sm font-medium border-b-2 transition-all hover:text-cyan-300 hover:bg-slate-800/50" data-category="navigation">
+                <div class="flex items-center justify-center space-x-2">
+                    <span>🧭</span>
+                    <span>Navegação</span>
+                </div>
+            </button>
+            <button class="avionics-category-tab flex-1 px-6 py-4 text-sm font-medium border-b-2 transition-all hover:text-cyan-300 hover:bg-slate-800/50" data-category="communication">
+                <div class="flex items-center justify-center space-x-2">
+                    <span>📻</span>
+                    <span>Comunicação</span>
+                </div>
+            </button>
+            <button class="avionics-category-tab flex-1 px-6 py-4 text-sm font-medium border-b-2 transition-all hover:text-cyan-300 hover:bg-slate-800/50" data-category="firecontrol">
+                <div class="flex items-center justify-center space-x-2">
+                    <span>🎯</span>
+                    <span>Controle de Tiro</span>
+                </div>
+            </button>
+            <button class="avionics-category-tab flex-1 px-6 py-4 text-sm font-medium border-b-2 transition-all hover:text-cyan-300 hover:bg-slate-800/50" data-category="countermeasures">
+                <div class="flex items-center justify-center space-x-2">
+                    <span>🛡️</span>
+                    <span>Contramedidas</span>
+                </div>
+            </button>
+            <button class="avionics-category-tab flex-1 px-6 py-4 text-sm font-medium border-b-2 transition-all hover:text-cyan-300 hover:bg-slate-800/50" data-category="autopilot">
+                <div class="flex items-center justify-center space-x-2">
+                    <span>🤖</span>
+                    <span>Piloto Automático</span>
+                </div>
+            </button>
+        </nav>
+
+        <!-- System Selection Content -->
+        <div id="avionics-category-content" class="p-6 min-h-[400px]">
+            <!-- Dynamic content will be loaded here -->
+        </div>
+    </div>
+
+    <!-- Integration Analysis Panel -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- System Dependencies Graph -->
+        <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-6">
+            <h3 class="text-lg font-semibold text-slate-100 mb-4 flex items-center space-x-2">
+                <span>🔗</span>
+                <span>Dependências e Sinergias</span>
+            </h3>
+            <div id="system-dependencies-graph" class="min-h-[300px] flex items-center justify-center">
+                <div class="text-slate-400 text-center">
+                    <span class="text-4xl block mb-2">🔌</span>
+                    <p>Instale sistemas para ver dependências</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Power Management -->
+        <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-6">
+            <h3 class="text-lg font-semibold text-slate-100 mb-4 flex items-center space-x-2">
+                <span>⚡</span>
+                <span>Gerenciamento de Energia</span>
+            </h3>
+
+            <div class="space-y-4">
+                <!-- Primary Bus -->
+                <div class="border border-slate-600/50 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-medium text-slate-200">Barramento Primário (28V DC)</span>
+                        <span class="text-sm text-slate-400" id="primary-bus-power">0.0 / 10.0 kW</span>
+                    </div>
+                    <div class="w-full bg-slate-700/50 rounded-full h-3">
+                        <div class="bg-red-500 h-3 rounded-full transition-all" id="primary-bus-bar" style="width: 0%"></div>
+                    </div>
+                    <div class="mt-2 text-xs text-slate-500" id="primary-bus-systems">Sistemas críticos</div>
+                </div>
+
+                <!-- Secondary Bus -->
+                <div class="border border-slate-600/50 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-medium text-slate-200">Barramento Secundário (115V AC)</span>
+                        <span class="text-sm text-slate-400" id="secondary-bus-power">0.0 / 5.0 kW</span>
+                    </div>
+                    <div class="w-full bg-slate-700/50 rounded-full h-3">
+                        <div class="bg-yellow-500 h-3 rounded-full transition-all" id="secondary-bus-bar" style="width: 0%"></div>
+                    </div>
+                    <div class="mt-2 text-xs text-slate-500" id="secondary-bus-systems">Sistemas normais</div>
+                </div>
+
+                <!-- Battery Backup -->
+                <div class="border border-slate-600/50 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-medium text-slate-200">Backup de Bateria (24V DC)</span>
+                        <span class="text-sm text-slate-400" id="battery-backup-time">0 min</span>
+                    </div>
+                    <div class="w-full bg-slate-700/50 rounded-full h-3">
+                        <div class="bg-green-500 h-3 rounded-full transition-all" id="battery-backup-bar" style="width: 100%"></div>
+                    </div>
+                    <div class="mt-2 text-xs text-slate-500">Sistemas de emergência</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Configuration Panel -->
+    <div id="system-configuration-panel" class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-6 hidden">
+        <h3 class="text-lg font-semibold text-slate-100 mb-4 flex items-center space-x-2">
+            <span>⚙️</span>
+            <span>Configuração de Sistemas</span>
+        </h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Radar Configuration -->
+            <div class="space-y-3">
+                <label class="block text-sm font-medium text-slate-300">Modo do Radar</label>
+                <select id="radar-mode-select" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white">
+                    <option value="air_to_air">Ar-Ar</option>
+                    <option value="air_to_ground">Ar-Solo</option>
+                    <option value="navigation">Navegação</option>
+                    <option value="weather">Meteorológico</option>
+                </select>
+            </div>
+
+            <!-- Navigation Configuration -->
+            <div class="space-y-3">
+                <label class="block text-sm font-medium text-slate-300">Modo de Navegação</label>
+                <select id="navigation-mode-select" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white">
+                    <option value="manual">Manual</option>
+                    <option value="autopilot">Piloto Automático</option>
+                    <option value="coupled">Acoplado</option>
+                    <option value="inertial">Inercial</option>
+                </select>
+            </div>
+
+            <!-- Communication Configuration -->
+            <div class="space-y-3">
+                <label class="block text-sm font-medium text-slate-300">Frequência de Comunicação</label>
+                <select id="communication-freq-select" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white">
+                    <option value="hf">HF (3-30 MHz)</option>
+                    <option value="vhf">VHF (30-300 MHz)</option>
+                    <option value="uhf">UHF (300-3000 MHz)</option>
+                    <option value="secure">UHF Seguro</option>
+                </select>
+            </div>
+
+            <!-- ECM Configuration -->
+            <div class="space-y-3">
+                <label class="block text-sm font-medium text-slate-300">Modo de Contramedidas</label>
+                <select id="ecm-mode-select" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white">
+                    <option value="off">Desligado</option>
+                    <option value="passive">Passivo</option>
+                    <option value="active">Ativo</option>
+                    <option value="chaff">Chaff</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Warnings and Issues -->
+    <div id="avionics-warnings-container" class="hidden">
+        <div class="bg-amber-900/20 border border-amber-800/50 rounded-xl p-6">
+            <div class="flex items-start space-x-3">
+                <span class="text-2xl">⚠️</span>
+                <div>
+                    <h3 class="text-lg font-semibold text-amber-300 mb-2">Avisos de Integração</h3>
+                    <div id="avionics-warnings-list">
+                        <!-- Warnings will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Integration Recommendations -->
+    <div class="bg-blue-900/20 border border-blue-700/50 rounded-xl p-6">
+        <div class="flex items-start space-x-3">
+            <span class="text-2xl">💡</span>
+            <div class="flex-1">
+                <h3 class="text-lg font-semibold text-blue-300 mb-4">Recomendações de Integração</h3>
+                <div id="integration-recommendations" class="space-y-3">
+                    <div class="flex items-center gap-2 text-blue-200">
+                        <span>ℹ️</span>
+                        <span>Configure sistemas para ver recomendações personalizadas</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Performance Impact -->
+    <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-6">
+        <h3 class="text-lg font-semibold text-slate-100 mb-4 flex items-center space-x-2">
+            <span>📊</span>
+            <span>Impacto na Performance</span>
+        </h3>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="text-center p-3 bg-slate-700/30 rounded-lg">
+                <div class="text-green-300 font-semibold" id="pilot-workload-display">100%</div>
+                <div class="text-xs text-slate-400">Carga de Trabalho</div>
+            </div>
+            <div class="text-center p-3 bg-slate-700/30 rounded-lg">
+                <div class="text-cyan-300 font-semibold" id="situational-awareness-display">100%</div>
+                <div class="text-xs text-slate-400">Consciência Situacional</div>
+            </div>
+            <div class="text-center p-3 bg-slate-700/30 rounded-lg">
+                <div class="text-orange-300 font-semibold" id="weapon-accuracy-display">100%</div>
+                <div class="text-xs text-slate-400">Precisão de Armas</div>
+            </div>
+            <div class="text-center p-3 bg-slate-700/30 rounded-lg">
+                <div class="text-purple-300 font-semibold" id="survival-probability-display">100%</div>
+                <div class="text-xs text-slate-400">Probabilidade de Sobrevivência</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Avionics Category Tabs */
+    .avionics-category-tab {
+        border-bottom-color: transparent;
+        color: rgb(148 163 184);
+        background: transparent;
+    }
+
+    .avionics-category-tab.active {
+        border-bottom-color: rgb(6 182 212);
+        color: rgb(165 243 252);
+        background: rgb(8 145 178 / 0.1);
+    }
+
+    .avionics-category-tab:hover {
+        color: rgb(103 232 249);
+        background: rgb(51 65 85 / 0.3);
+    }
+
+    /* System Cards */
+    .avionics-system-card {
+        border: 1px solid rgb(51 65 85 / 0.5);
+        background: rgb(30 41 59 / 0.5);
+        border-radius: 12px;
+        padding: 16px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        position: relative;
+    }
+
+    .avionics-system-card:hover {
+        border-color: rgb(71 85 105 / 0.7);
+        background: rgb(51 65 85 / 0.4);
+        transform: translateY(-2px);
+    }
+
+    .avionics-system-card.installed {
+        border-color: rgb(6 182 212 / 0.6);
+        background: rgb(8 145 178 / 0.2);
+        box-shadow: 0 0 0 1px rgb(6 182 212 / 0.3);
+    }
+
+    .avionics-system-card.unavailable {
+        border-color: rgb(239 68 68 / 0.5);
+        background: rgb(239 68 68 / 0.1);
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .avionics-system-card.dependency-missing {
+        border-color: rgb(245 158 11 / 0.5);
+        background: rgb(245 158 11 / 0.1);
+    }
+
+    /* Technology Level Indicators */
+    .tech-level-indicator {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        padding: 2px 6px;
+        border-radius: 6px;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .tech-level-indicator.early {
+        background: rgb(100 116 139 / 0.2);
+        color: rgb(148 163 184);
+        border: 1px solid rgb(100 116 139 / 0.3);
+    }
+
+    .tech-level-indicator.standard {
+        background: rgb(59 130 246 / 0.2);
+        color: rgb(147 197 253);
+        border: 1px solid rgb(59 130 246 / 0.3);
+    }
+
+    .tech-level-indicator.advanced {
+        background: rgb(244 63 94 / 0.2);
+        color: rgb(251 113 133);
+        border: 1px solid rgb(244 63 94 / 0.3);
+    }
+
+    .tech-level-indicator.experimental {
+        background: rgb(245 158 11 / 0.2);
+        color: rgb(252 211 77);
+        border: 1px solid rgb(245 158 11 / 0.3);
+    }
+
+    /* Dependency Lines */
+    .dependency-line {
+        position: absolute;
+        background: rgb(6 182 212 / 0.4);
+        z-index: 10;
+    }
+
+    .synergy-line {
+        position: absolute;
+        background: rgb(16 185 129 / 0.4);
+        z-index: 10;
+    }
+
+    .conflict-line {
+        position: absolute;
+        background: rgb(239 68 68 / 0.4);
+        z-index: 10;
+    }
+
+    /* Progress Bars */
+    .progress-bar {
+        transition: width 0.3s ease;
+    }
+
+    /* System Status Icons */
+    .system-status-icon {
+        position: absolute;
+        bottom: 8px;
+        right: 8px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+    }
+
+    .system-status-icon.operational {
+        background: rgb(16 185 129 / 0.2);
+        color: rgb(52 211 153);
+        border: 1px solid rgb(16 185 129 / 0.4);
+    }
+
+    .system-status-icon.degraded {
+        background: rgb(245 158 11 / 0.2);
+        color: rgb(251 191 36);
+        border: 1px solid rgb(245 158 11 / 0.4);
+    }
+
+    .system-status-icon.failed {
+        background: rgb(239 68 68 / 0.2);
+        color: rgb(248 113 113);
+        border: 1px solid rgb(239 68 68 / 0.4);
+    }
+</style>

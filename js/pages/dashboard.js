@@ -192,26 +192,16 @@ function renderDashboard(country) {
   const pibPerCapita = (parseFloat(country.PIB) || 0) / (parseFloat(country.Populacao) || 1);
   const budget = calculateBudget(country); // ORÇAMENTO GERAL DO PAÍS
   const militaryBudget = calculateMilitaryBudget(country); // ORÇAMENTO MILITAR
-  const vehicleProductionCapacity = calculateVehicleProductionCapacity(country);
-  const aircraftProductionCapacity = calculateAircraftProductionCapacity(country);
-  const shipProductionCapacity = calculateShipProductionCapacity(country);
-  const militaryConsequences = calculateMilitaryBudgetConsequences(country);
   const distribution = getMilitaryDistribution(country);
+  // Usar valores de investimento direto (sem deduzir manutenção)
+  const vehicleProductionCapacity = militaryBudget * distribution.vehicles;
+  const aircraftProductionCapacity = militaryBudget * distribution.aircraft;
+  const shipProductionCapacity = militaryBudget * distribution.naval;
+  const militaryConsequences = calculateMilitaryBudgetConsequences(country);
 
-  // Bandeira com fallback melhorado
-  const getBandeiraURL = () => {
-    const countryKey = (country.Pais || '').toLowerCase().trim();
-    const historicalFlags = {
-      'urss': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_the_Soviet_Union_(1936_%E2%80%93_1955).svg.png?alt=media',
-      'estados unidos': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_the_United_States_(1912-1959).svg.png?alt=media',
-      'reino unido': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_the_United_Kingdom_(1801%E2%80%931922).svg.png?alt=media',
-      'frança': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_France.svg.png?alt=media',
-      'alemanha': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_West_Germany.svg.png?alt=media',
-      'china': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_the_People%27s_Republic_of_China.svg.png?alt=media',
-      'japão': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_Japan.svg.png?alt=media',
-      'brasil': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_Brazil.svg.png?alt=media'
-    };
-    return historicalFlags[countryKey] || country.FlagURL || `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='40' viewBox='0 0 60 40'%3E%3Crect width='60' height='40' fill='%23374151'/%3E%3Ctext x='30' y='24' text-anchor='middle' fill='%23e5e7eb' font-size='8'%3E${(country.Pais || 'Flag').slice(0, 4)}%3C/text%3E%3C/svg%3E`;
+  // Importar função de bandeira do renderer
+  const getFlagHTML = window.getFlagHTML || function(name, sizeClass = 'h-full w-full') {
+    return `<span class="text-slate-400 text-xs">—</span>`;
   };
 
   return `
@@ -221,8 +211,8 @@ function renderDashboard(country) {
         <div class="max-w-7xl mx-auto px-6 py-4">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-4">
-              <div class="w-12 h-8 rounded border border-slate-600 overflow-hidden">
-                <img src="${getBandeiraURL()}" alt="${country.Pais}" class="w-full h-full object-cover">
+              <div class="w-12 h-8 rounded border border-slate-600 overflow-hidden grid place-items-center bg-slate-800">
+                ${getFlagHTML(country.Pais, 'w-full h-full')}
               </div>
               <div>
                 <h1 class="text-2xl font-bold text-slate-100">${country.Pais}</h1>
@@ -504,23 +494,14 @@ function renderDashboard(country) {
                     <span class="text-sm font-semibold text-purple-400">${formatCurrencyBrazil(shipProductionCapacity)}/turno</span>
                   </div>
                 </div>
-                <div class="mt-4 p-3 bg-slate-800/20 rounded-lg">
-                  <div class="text-xs text-slate-400">
-                    💡 <strong>Capacidade de Produção Militar:</strong><br>
-                    • Orçamento Total: ${formatCurrencyBrazil(militaryBudget)} (${parseFloat(country.MilitaryBudgetPercent) || 30}% do orçamento geral)<br>
-                    • Orçamento Disponível: ${formatCurrencyBrazil(militaryBudget * 0.85)} (15% deduzido para manutenção)<br>
-                    • Distribuição: Veículos ${Math.round(distribution.vehicles * 100)}%, Aeronaves ${Math.round(distribution.aircraft * 100)}%, Navios ${Math.round(distribution.naval * 100)}%<br>
-                    • Multiplicadores: Tec. Civil ${Math.round(country.Tecnologia || 0)}, Ef. Industrial ${Math.round(country.IndustrialEfficiency || 0)}%, Urbanização ${Math.round(country.Urbanizacao || 0)}%
-                  </div>
-                </div>
               </div>
             </div>
 
             <!-- Country Info Sidebar -->
             <div class="space-y-6">
               <div class="bg-slate-900/50 border border-slate-800/50 rounded-xl p-6">
-                <div class="aspect-[3/2] rounded-lg overflow-hidden mb-4">
-                  <img src="${getBandeiraURL()}" alt="${country.Pais}" class="w-full h-full object-cover">
+                <div class="aspect-[3/2] rounded-lg overflow-hidden mb-4 grid place-items-center bg-slate-800">
+                  ${getFlagHTML(country.Pais, 'w-full h-full')}
                 </div>
                 <div class="space-y-3">
                   <div class="flex justify-between">
@@ -1230,11 +1211,7 @@ async function loadNavalSystem() {
     const container = document.getElementById('naval-content-container');
     if (!container) return;
 
-    container.innerHTML = `
-      <div class="flex items-center justify-center py-8">
-        <div class="text-slate-400">🔄 Carregando sistema naval...</div>
-      </div>
-    `;
+    container.innerHTML = `<div class="flex items-center justify-center py-8"><div class="text-slate-400">🔄 Carregando sistema naval...</div></div>`;
 
     const user = auth.currentUser;
     if (!user) return;
@@ -1243,48 +1220,52 @@ async function loadNavalSystem() {
     if (!paisId) return;
 
     const shipyardSystem = new ShipyardSystem();
-    const currentLevel = await shipyardSystem.getCurrentShipyardLevel(paisId);
     const country = window.currentCountry;
 
     if (!country) {
-      container.innerHTML = `
-        <div class="bg-red-900/50 border border-red-800/50 rounded-xl p-6 text-center">
-          <div class="text-6xl mb-4">❌</div>
-          <h3 class="text-xl font-semibold text-red-200 mb-2">Erro</h3>
-          <p class="text-red-400">Dados do país não encontrados</p>
-        </div>
-      `;
-      return;
+      throw new Error("Dados do país não encontrados. Recarregue a página.");
     }
 
-    container.innerHTML = renderNavalSystem(shipyardSystem, currentLevel, country, paisId);
+    // Fetch necessary data in parallel
+    const [currentLevel, globalAverageGDP] = await Promise.all([
+        shipyardSystem.getCurrentShipyardLevel(paisId),
+        db.collection('paises').get().then(snapshot => {
+            if (snapshot.empty) return 0;
+            let totalGDP = 0;
+            let countryCount = 0;
+            snapshot.forEach(doc => {
+                const pib = parseFloat(doc.data().PIB);
+                if (!isNaN(pib)) {
+                    totalGDP += pib;
+                    countryCount++;
+                }
+            });
+            return countryCount > 0 ? totalGDP / countryCount : 0;
+        })
+    ]);
+
+    container.innerHTML = renderNavalSystem(shipyardSystem, currentLevel, country, paisId, globalAverageGDP);
 
   } catch (error) {
     console.error('Erro ao carregar sistema naval:', error);
     const container = document.getElementById('naval-content-container');
     if (container) {
-      container.innerHTML = `
-        <div class="bg-red-900/50 border border-red-800/50 rounded-xl p-6 text-center">
-          <div class="text-6xl mb-4">❌</div>
-          <h3 class="text-xl font-semibold text-red-200 mb-2">Erro</h3>
-          <p class="text-red-400">Erro ao carregar sistema naval: ${error.message}</p>
-        </div>
-      `;
+      container.innerHTML = `<div class="bg-red-900/50 border border-red-800/50 rounded-xl p-6 text-center"><div class="text-6xl mb-4">❌</div><h3 class="text-xl font-semibold text-red-200 mb-2">Erro</h3><p class="text-red-400">Erro ao carregar sistema naval: ${error.message}</p></div>`;
     }
   }
 }
 
-function renderNavalSystem(shipyardSystem, currentLevel, country, paisId) {
+function renderNavalSystem(shipyardSystem, currentLevel, country, paisId, globalAverageGDP) {
   const budget = calculateBudget(country);
-  const levelInfo = shipyardSystem.getLevelInfo(currentLevel);
+  const levelInfo = shipyardSystem.getLevelInfo(currentLevel, country, globalAverageGDP);
   const maintenanceCost = shipyardSystem.calculateMaintenanceCost(currentLevel, budget);
-  const canUpgradeResult = shipyardSystem.canUpgrade(currentLevel, budget);
+  const canUpgradeResult = shipyardSystem.canUpgrade(currentLevel, country, globalAverageGDP, budget);
 
   // Próximos 3 níveis para comparação
   const nextLevels = [];
   for (let i = 1; i <= 3; i++) {
     if (currentLevel + i <= shipyardSystem.maxLevel) {
-      nextLevels.push(shipyardSystem.getLevelInfo(currentLevel + i));
+      nextLevels.push(shipyardSystem.getLevelInfo(currentLevel + i, country, globalAverageGDP));
     }
   }
 
@@ -3574,85 +3555,56 @@ function setupCreateOfferModal(country, paisId) {
     }
   }
 
-  async function loadInventoryItems() {
-    if (!marketplaceSystem) return;
-
-    try {
-      console.log('🔍 Carregando itens do inventário para país:', paisId);
-
-      // Get country data and inventory
-      const countryData = await marketplaceSystem.getCountryData(paisId);
-      console.log('📊 Dados do país carregados:', countryData);
-
-      const inventory = await marketplaceSystem.getCountryInventory(paisId);
-      console.log('📦 Inventário carregado:', inventory);
-
-      // Load available resources
-      if (countryData) {
-        const availableResources = marketplaceSystem.calculateAvailableResources(countryData);
-        console.log('⚡ Recursos disponíveis:', availableResources);
-
-        availableItems.resources = [];
-
-        Object.entries(availableResources).forEach(([resourceType, available]) => {
-          console.log(`🔹 Processando ${resourceType}: ${available} disponíveis`);
-
-          // Energia não é comerciável - pular
-          if (resourceType === 'Energia') {
-            console.log(`⚡ ${resourceType} não é comerciável - pulando`);
-            return;
+        async function loadInventoryItems() {
+          if (!marketplaceSystem) return;
+  
+          try {
+            console.log('🔍 Carregando itens do inventário para país:', paisId);
+  
+            const countryData = window.currentCountry; // Use the already loaded country data
+            if (!countryData) {
+                console.error('❌ Dados do país não encontrados no window.currentCountry');
+                return;
+            }
+  
+            // --- NEW LOGIC: Calculate surplus from real production/consumption ---
+            const resourceConsumption = ResourceConsumptionCalculator.calculateCountryConsumption(countryData);
+            const resourceProduction = ResourceProductionCalculator.calculateCountryProduction(countryData);
+  
+            const resourceBalances = {
+                Carvao: Math.round((resourceProduction.Carvao || 0) - (resourceConsumption.Carvao || 0)),
+                Combustivel: Math.round((resourceProduction.Combustivel || 0) - (resourceConsumption.Combustivel || 0)),
+                Metais: Math.round((resourceProduction.Metais || 0) - (resourceConsumption.Metais || 0)),
+                Graos: Math.round((resourceProduction.Graos || 0) - (resourceConsumption.Graos || 0)),
+            };
+            
+            availableItems.resources = [];
+            Object.entries(resourceBalances).forEach(([resourceName, balance]) => {
+                if (balance > 0) {
+                    availableItems.resources.push({
+                        id: resourceName.toLowerCase(),
+                        name: `${resourceName} (Excedente: ${balance.toLocaleString()})`,
+                        unit: (resourceName === 'Combustivel') ? 'barris' : 'toneladas',
+                        available: balance
+                    });
+                }
+            });
+            console.log('✅ Recursos excedentes carregados para venda:', availableItems.resources);
+            // --- END OF NEW LOGIC ---
+  
+  
+            // Load available equipment (this part remains the same)
+            const inventory = await marketplaceSystem.getCountryInventory(paisId);
+            const availableEquipment = marketplaceSystem.getAvailableEquipment(inventory);
+            availableItems.vehicles = availableEquipment.filter(eq => eq.type === 'vehicles');
+            availableItems.naval = availableEquipment.filter(eq => eq.type === 'naval');
+  
+          } catch (error) {
+            console.error('Erro ao carregar itens do inventário:', error);
           }
-
-          if (available > 0) {
-            const resourceItems = getResourceItems(resourceType, available);
-            console.log(`✅ Adicionando ${resourceItems.length} itens de ${resourceType}:`, resourceItems);
-            availableItems.resources.push(...resourceItems);
-          } else {
-            console.log(`❌ ${resourceType} não tem quantidade disponível (${available})`);
-          }
-        });
-
-        console.log('📋 Total de recursos disponíveis:', availableItems.resources);
-      } else {
-        console.error('❌ Dados do país não encontrados');
-      }
-
-      // Load available equipment
-      const availableEquipment = marketplaceSystem.getAvailableEquipment(inventory);
-      availableItems.vehicles = availableEquipment.filter(eq => eq.type === 'vehicles');
-      availableItems.naval = availableEquipment.filter(eq => eq.type === 'naval');
-
-    } catch (error) {
-      console.error('Erro ao carregar itens do inventário:', error);
-    }
-  }
-
-  function getResourceItems(resourceType, available) {
-    // Energia não é comerciável - apenas recursos físicos podem ser vendidos
-    const resourceMap = {
-      'Metais': [
-        { id: 'steel_high_grade', name: `Aço de Alta Qualidade (${available.toLocaleString()} disponíveis)`, unit: 'toneladas', available },
-        { id: 'steel_standard', name: `Aço Padrão (${available.toLocaleString()} disponíveis)`, unit: 'toneladas', available },
-        { id: 'aluminum', name: `Alumínio (${available.toLocaleString()} disponíveis)`, unit: 'toneladas', available },
-        { id: 'copper', name: `Cobre (${available.toLocaleString()} disponíveis)`, unit: 'toneladas', available },
-        { id: 'rare_metals', name: `Metais Raros (${available.toLocaleString()} disponíveis)`, unit: 'toneladas', available }
-      ],
-      'Combustivel': [
-        { id: 'oil_crude', name: `Petróleo Bruto (${available.toLocaleString()} disponíveis)`, unit: 'barris', available },
-        { id: 'oil_aviation', name: `Petróleo de Aviação (${available.toLocaleString()} disponíveis)`, unit: 'barris', available }
-      ],
-      'Carvao': [
-        { id: 'coal', name: `Carvão (${available.toLocaleString()} disponíveis)`, unit: 'toneladas', available }
-      ],
-      'Graos': [
-        { id: 'food', name: `Alimentos (${available.toLocaleString()} disponíveis)`, unit: 'toneladas', available }
-      ]
-      // Energia removida - não é comerciável (não pode ser transportada fisicamente em 1954)
-    };
-
-    return resourceMap[resourceType] || [];
-  }
-
+        }
+        // The getResourceItems function is now obsolete and has been removed.
+        // Resource availability is calculated directly from production/consumption balance.
   function loadAllItemTypes() {
     // For buy offers, show all possible item types (excluding energy - not tradeable)
     availableItems = {

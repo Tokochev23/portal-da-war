@@ -15,7 +15,12 @@ export const aircraft_engines = {
         cost_multiplier: 1.0,
         maintenance_hours: 50, // between overhauls
         advantages: ["Simples", "Confiável", "Econômico"],
-        disadvantages: ["Empuxo limitado", "Eficiência baixa"]
+        disadvantages: ["Empuxo limitado", "Eficiência baixa"],
+        maintainabilityModifier: 1.2,
+        radarSignatureModifier: 0.2,
+        lifecycleCostMultiplier: 1.1,
+        techLevelRequirement: 60,
+        position: [0, 0, 0]
     },
 
     turbojet_improved: {
@@ -33,7 +38,12 @@ export const aircraft_engines = {
         cost_multiplier: 1.3,
         maintenance_hours: 65,
         advantages: ["Empuxo maior", "Eficiência melhor"],
-        disadvantages: ["Mais caro", "Complexidade maior"]
+        disadvantages: ["Mais caro", "Complexidade maior"],
+        maintainabilityModifier: 1.3,
+        radarSignatureModifier: 0.2,
+        lifecycleCostMultiplier: 1.3,
+        techLevelRequirement: 65,
+        position: [0, 0, 0]
     },
 
     turbojet_lightweight: {
@@ -51,7 +61,12 @@ export const aircraft_engines = {
         cost_multiplier: 1.1,
         maintenance_hours: 45,
         advantages: ["Peso baixo", "Taxa empuxo/peso alta"],
-        disadvantages: ["Empuxo total limitado", "Autonomia reduzida"]
+        disadvantages: ["Empuxo total limitado", "Autonomia reduzida"],
+        maintainabilityModifier: 1.1,
+        radarSignatureModifier: 0.15,
+        lifecycleCostMultiplier: 1.2,
+        techLevelRequirement: 48,
+        position: [0, 0, 0]
     },
 
     // === TURBOJATOS COM PÓS-COMBUSTÃO ===
@@ -73,7 +88,12 @@ export const aircraft_engines = {
         cost_multiplier: 2.2,
         maintenance_hours: 35,
         advantages: ["Empuxo supersônico", "Velocidade máxima"],
-        disadvantages: ["Consumo massivo", "Confiabilidade baixa", "Muito caro"]
+        disadvantages: ["Consumo massivo", "Confiabilidade baixa", "Muito caro"],
+        maintainabilityModifier: 2.0,
+        radarSignatureModifier: 0.4,
+        lifecycleCostMultiplier: 2.5,
+        techLevelRequirement: 85,
+        position: [0, 0, 0]
     },
 
     afterburning_turbojet_improved: {
@@ -94,7 +114,13 @@ export const aircraft_engines = {
         cost_multiplier: 2.8,
         maintenance_hours: 42,
         advantages: ["Empuxo alto", "Confiabilidade melhor"],
-        disadvantages: ["Ainda muito caro", "Consumo alto", "Peso elevado"]
+        disadvantages: ["Ainda muito caro", "Consumo alto", "Peso elevado"],
+        hasThrustVectoring: true,
+        maintainabilityModifier: 1.8,
+        radarSignatureModifier: 0.35,
+        lifecycleCostMultiplier: 2.2,
+        techLevelRequirement: 95,
+        position: [0, 0, 0]
     },
 
     // === MOTORES PARA BOMBARDEIROS ===
@@ -113,7 +139,12 @@ export const aircraft_engines = {
         cost_multiplier: 1.8,
         maintenance_hours: 80,
         advantages: ["Empuxo muito alto", "Confiabilidade excelente"],
-        disadvantages: ["Peso excessivo", "Não adequado para caças"]
+        disadvantages: ["Peso excessivo", "Não adequado para caças"],
+        maintainabilityModifier: 1.0,
+        radarSignatureModifier: 0.3,
+        lifecycleCostMultiplier: 1.4,
+        techLevelRequirement: 58,
+        position: [0, 0, 0]
     },
 
     turbojet_efficient: {
@@ -131,7 +162,12 @@ export const aircraft_engines = {
         cost_multiplier: 1.5,
         maintenance_hours: 95,
         advantages: ["Consumo baixíssimo", "Alcance excelente", "Confiável"],
-        disadvantages: ["Empuxo médio", "Caro para produzir"]
+        disadvantages: ["Empuxo médio", "Caro para produzir"],
+        maintainabilityModifier: 0.9,
+        radarSignatureModifier: 0.2,
+        lifecycleCostMultiplier: 1.2,
+        techLevelRequirement: 55,
+        position: [0, 0, 0]
     },
 
     // === MOTORES EXPERIMENTAIS ===
@@ -151,7 +187,12 @@ export const aircraft_engines = {
         maintenance_hours: 25,
         experimental: true,
         advantages: ["Empuxo excepcional", "Tecnologia avançada"],
-        disadvantages: ["Muito pouco confiável", "Custíssimo", "Requer especialistas"]
+        disadvantages: ["Muito pouco confiável", "Custíssimo", "Requer especialistas"],
+        maintainabilityModifier: 3.0,
+        radarSignatureModifier: 0.5,
+        lifecycleCostMultiplier: 4.0,
+        techLevelRequirement: 110,
+        position: [0, 0, 0]
     },
 
     // === TURBOFANS INICIAIS (EXPERIMENTAL) ===
@@ -172,7 +213,12 @@ export const aircraft_engines = {
         maintenance_hours: 30,
         experimental: true,
         advantages: ["Eficiência superior", "Ruído menor"],
-        disadvantages: ["Tecnologia não madura", "Muito caro", "Complexo"]
+        disadvantages: ["Tecnologia não madura", "Muito caro", "Complexo"],
+        maintainabilityModifier: 2.5,
+        radarSignatureModifier: 0.25,
+        lifecycleCostMultiplier: 3.0,
+        techLevelRequirement: 125,
+        position: [0, 0, 0]
     },
 
     // === MOTORES À PISTÃO ===
@@ -194,7 +240,12 @@ export const aircraft_engines = {
         cost_multiplier: 0.3,
         maintenance_hours: 150,
         advantages: ["Muito barato", "Simples", "Confiável", "Fácil manutenção"],
-        disadvantages: ["Potência baixa", "Obsoleto", "Vibração"]
+        disadvantages: ["Potência baixa", "Obsoleto", "Vibração"],
+        maintainabilityModifier: 0.8,
+        radarSignatureModifier: 0.1,
+        lifecycleCostMultiplier: 0.8,
+        techLevelRequirement: 15,
+        position: [0, 0, 0]
     },
 
     piston_inline: {
@@ -216,7 +267,12 @@ export const aircraft_engines = {
         cost_multiplier: 0.8,
         maintenance_hours: 120,
         advantages: ["Boa potência/peso", "Perfil aerodinâmico", "Performance em altitude"],
-        disadvantages: ["Sistema de refrigeração vulnerável", "Complexo", "Obsolescente"]
+        disadvantages: ["Sistema de refrigeração vulnerável", "Complexo", "Obsolescente"],
+        maintainabilityModifier: 1.0,
+        radarSignatureModifier: 0.15,
+        lifecycleCostMultiplier: 1.0,
+        techLevelRequirement: 35,
+        position: [0, 0, 0]
     },
 
     piston_inline_improved: {
@@ -239,7 +295,12 @@ export const aircraft_engines = {
         cost_multiplier: 1.2,
         maintenance_hours: 100,
         advantages: ["Potência máxima para pistão", "Injeção de água", "Performance excelente"],
-        disadvantages: ["Consumo alto", "Complexidade máxima", "Obsoleto"]
+        disadvantages: ["Consumo alto", "Complexidade máxima", "Obsoleto"],
+        maintainabilityModifier: 1.2,
+        radarSignatureModifier: 0.15,
+        lifecycleCostMultiplier: 1.3,
+        techLevelRequirement: 40,
+        position: [0, 0, 0]
     },
 
     piston_radial_small: {
@@ -260,7 +321,12 @@ export const aircraft_engines = {
         cost_multiplier: 0.4,
         maintenance_hours: 200,
         advantages: ["Muito confiável", "Simples", "Refrigeração a ar", "Durável"],
-        disadvantages: ["Potência limitada", "Arrasto alto", "Tecnologia antiga"]
+        disadvantages: ["Potência limitada", "Arrasto alto", "Tecnologia antiga"],
+        maintainabilityModifier: 0.7,
+        radarSignatureModifier: 0.1,
+        lifecycleCostMultiplier: 0.7,
+        techLevelRequirement: 20,
+        position: [0, 0, 0]
     },
 
     piston_radial: {
@@ -282,7 +348,12 @@ export const aircraft_engines = {
         cost_multiplier: 0.9,
         maintenance_hours: 140,
         advantages: ["Muito robusto", "Resistente a danos", "Confiável", "Potência boa"],
-        disadvantages: ["Peso alto", "Arrasto significativo", "Obsolescente"]
+        disadvantages: ["Peso alto", "Arrasto significativo", "Obsolescente"],
+        maintainabilityModifier: 0.9,
+        radarSignatureModifier: 0.15,
+        lifecycleCostMultiplier: 0.9,
+        techLevelRequirement: 32,
+        position: [0, 0, 0]
     },
 
     piston_radial_heavy: {
@@ -304,7 +375,12 @@ export const aircraft_engines = {
         cost_multiplier: 1.1,
         maintenance_hours: 110,
         advantages: ["Potência máxima", "Muito robusto", "Para aeronaves grandes"],
-        disadvantages: ["Muito pesado", "Arrasto excessivo", "Consumo alto", "Obsoleto"]
+        disadvantages: ["Muito pesado", "Arrasto excessivo", "Consumo alto", "Obsoleto"],
+        maintainabilityModifier: 1.0,
+        radarSignatureModifier: 0.2,
+        lifecycleCostMultiplier: 1.1,
+        techLevelRequirement: 38,
+        position: [0, 0, 0]
     },
 
     // === MOTORES TURBOPROP ===
@@ -327,7 +403,12 @@ export const aircraft_engines = {
         cost_multiplier: 2.5,
         maintenance_hours: 80,
         advantages: ["Muito eficiente", "Boa para transportes", "Velocidade média-alta"],
-        disadvantages: ["Tecnologia nova", "Caro", "Complexidade média", "Limitado em altitude"]
+        disadvantages: ["Tecnologia nova", "Caro", "Complexidade média", "Limitado em altitude"],
+        maintainabilityModifier: 1.5,
+        radarSignatureModifier: 0.2,
+        lifecycleCostMultiplier: 1.8,
+        techLevelRequirement: 70,
+        position: [0, 0, 0]
     },
 
     turboprop_improved: {
@@ -349,7 +430,12 @@ export const aircraft_engines = {
         cost_multiplier: 2.8,
         maintenance_hours: 95,
         advantages: ["Eficiência excelente", "Confiabilidade melhor", "Potência alta"],
-        disadvantages: ["Caro", "Tecnologia emergente", "Hélice grande"]
+        disadvantages: ["Caro", "Tecnologia emergente", "Hélice grande"],
+        maintainabilityModifier: 1.4,
+        radarSignatureModifier: 0.2,
+        lifecycleCostMultiplier: 1.7,
+        techLevelRequirement: 80,
+        position: [0, 0, 0]
     },
 
     turboprop_heavy: {
@@ -372,6 +458,11 @@ export const aircraft_engines = {
         maintenance_hours: 75,
         experimental: true,
         advantages: ["Potência máxima", "Eficiente para grandes aeronaves"],
-        disadvantages: ["Muito caro", "Experimental", "Peso alto", "Complexo"]
+        disadvantages: ["Muito caro", "Experimental", "Peso alto", "Complexo"],
+        maintainabilityModifier: 1.6,
+        radarSignatureModifier: 0.3,
+        lifecycleCostMultiplier: 2.0,
+        techLevelRequirement: 75,
+        position: [0, 0, 0]
     }
 };

@@ -14,7 +14,12 @@ export const aircraft_weapons = {
         tech_level: 40,
         cost_base: 45000, // USD
         advantages: ["Alta taxa de tiro", "Munição abundante"],
-        disadvantages: ["Alcance limitado", "Poder de parada médio"]
+        disadvantages: ["Alcance limitado", "Poder de parada médio"],
+        maintainabilityModifier: 1.1,
+        radarSignatureModifier: 0,
+        lifecycleCostMultiplier: 1.1,
+        techLevelRequirement: 40,
+        position: [0, 0, 0]
     },
 
     cannon_30mm: {
@@ -31,7 +36,12 @@ export const aircraft_weapons = {
         tech_level: 55,
         cost_base: 78000, // USD
         advantages: ["Alto poder destruitivo", "Eficaz contra bombardeiros"],
-        disadvantages: ["Taxa de tiro menor", "Peso alto", "Munição pesada"]
+        disadvantages: ["Taxa de tiro menor", "Peso alto", "Munição pesada"],
+        maintainabilityModifier: 1.2,
+        radarSignatureModifier: 0,
+        lifecycleCostMultiplier: 1.2,
+        techLevelRequirement: 55,
+        position: [0, 0, 0]
     },
 
     cannon_37mm: {
@@ -48,7 +58,12 @@ export const aircraft_weapons = {
         tech_level: 60,
         cost_base: 125000, // USD
         advantages: ["Poder destrutivo máximo", "Longo alcance"],
-        disadvantages: ["Taxa de tiro baixa", "Muito pesado", "Munição escassa"]
+        disadvantages: ["Taxa de tiro baixa", "Muito pesado", "Munição escassa"],
+        maintainabilityModifier: 1.3,
+        radarSignatureModifier: 0,
+        lifecycleCostMultiplier: 1.3,
+        techLevelRequirement: 60,
+        position: [0, 0, 0]
     },
 
     // === BOMBAS CONVENCIONAIS ===
@@ -65,7 +80,12 @@ export const aircraft_weapons = {
         cost_base: 800, // USD
         hardpoint_types: ["small", "medium", "large"],
         advantages: ["Leve", "Precisão boa", "Barato"],
-        disadvantages: ["Poder limitado", "Área de efeito pequena"]
+        disadvantages: ["Poder limitado", "Área de efeito pequena"],
+        maintainabilityModifier: 1.0,
+        radarSignatureModifier: 0.05,
+        lifecycleCostMultiplier: 1.0,
+        techLevelRequirement: 35,
+        position: [0, 0, 0]
     },
 
     bomb_250kg: {
@@ -81,7 +101,12 @@ export const aircraft_weapons = {
         cost_base: 1200, // USD
         hardpoint_types: ["medium", "large"],
         advantages: ["Balanceada", "Versátil", "Amplamente disponível"],
-        disadvantages: ["Peso médio", "Especialização limitada"]
+        disadvantages: ["Peso médio", "Especialização limitada"],
+        maintainabilityModifier: 1.0,
+        radarSignatureModifier: 0.1,
+        lifecycleCostMultiplier: 1.0,
+        techLevelRequirement: 40,
+        position: [0, 0, 0]
     },
 
     bomb_500kg: {
@@ -97,7 +122,12 @@ export const aircraft_weapons = {
         cost_base: 2100, // USD
         hardpoint_types: ["large"],
         advantages: ["Poder destrutivo alto", "Eficaz contra fortificações"],
-        disadvantages: ["Peso alto", "Reduz manobrabilidade", "Caro"]
+        disadvantages: ["Peso alto", "Reduz manobrabilidade", "Caro"],
+        maintainabilityModifier: 1.0,
+        radarSignatureModifier: 0.15,
+        lifecycleCostMultiplier: 1.0,
+        techLevelRequirement: 45,
+        position: [0, 0, 0]
     },
 
     bomb_1000kg: {
@@ -113,7 +143,12 @@ export const aircraft_weapons = {
         cost_base: 4200, // USD
         hardpoint_types: ["large", "centerline"],
         advantages: ["Poder destrutivo massivo", "Alvos estratégicos"],
-        disadvantages: ["Peso excessivo", "Impacto severo na performance"]
+        disadvantages: ["Peso excessivo", "Impacto severo na performance"],
+        maintainabilityModifier: 1.0,
+        radarSignatureModifier: 0.2,
+        lifecycleCostMultiplier: 1.0,
+        techLevelRequirement: 50,
+        position: [0, 0, 0]
     },
 
     // === BOMBAS ESPECIALIZADAS ===
@@ -130,7 +165,12 @@ export const aircraft_weapons = {
         cost_base: 1800, // USD
         hardpoint_types: ["medium", "large"],
         advantages: ["Penetração excelente", "Eficaz contra blindados"],
-        disadvantages: ["Área de efeito pequena", "Caro", "Uso específico"]
+        disadvantages: ["Área de efeito pequena", "Caro", "Uso específico"],
+        maintainabilityModifier: 1.1,
+        radarSignatureModifier: 0.1,
+        lifecycleCostMultiplier: 1.2,
+        techLevelRequirement: 48,
+        position: [0, 0, 0]
     },
 
     bomb_cluster_250kg: {
@@ -145,7 +185,12 @@ export const aircraft_weapons = {
         cost_base: 3200, // USD
         hardpoint_types: ["medium", "large"],
         advantages: ["Área de cobertura grande", "Eficaz contra pessoal"],
-        disadvantages: ["Complexo", "Caro", "Menos eficaz contra blindados"]
+        disadvantages: ["Complexo", "Caro", "Menos eficaz contra blindados"],
+        maintainabilityModifier: 1.4,
+        radarSignatureModifier: 0.1,
+        lifecycleCostMultiplier: 1.5,
+        techLevelRequirement: 70,
+        position: [0, 0, 0]
     },
 
     // === FOGUETES ===
@@ -164,7 +209,12 @@ export const aircraft_weapons = {
         cost_base: 180, // USD per rocket
         hardpoint_types: ["small", "medium"],
         advantages: ["Saturação de área", "Baixo custo unitário"],
-        disadvantages: ["Precisão baixa", "Alcance limitado"]
+        disadvantages: ["Precisão baixa", "Alcance limitado"],
+        maintainabilityModifier: 1.0,
+        radarSignatureModifier: 0.1,
+        lifecycleCostMultiplier: 1.0,
+        techLevelRequirement: 42,
+        position: [0, 0, 0]
     },
 
     rocket_127mm_he: {
@@ -182,7 +232,12 @@ export const aircraft_weapons = {
         cost_base: 650, // USD per rocket
         hardpoint_types: ["medium", "large"],
         advantages: ["Poder destrutivo alto", "Alcance bom"],
-        disadvantages: ["Peso alto", "Precisão média", "Caro"]
+        disadvantages: ["Peso alto", "Precisão média", "Caro"],
+        maintainabilityModifier: 1.0,
+        radarSignatureModifier: 0.15,
+        lifecycleCostMultiplier: 1.0,
+        techLevelRequirement: 48,
+        position: [0, 0, 0]
     },
 
     // === MÍSSEIS (EXPERIMENTAIS) ===
@@ -201,7 +256,12 @@ export const aircraft_weapons = {
         experimental: true,
         hardpoint_types: ["small", "medium"],
         advantages: ["Guiamento automático", "Alta manobrabilidade"],
-        disadvantages: ["Experimental", "Custíssimo", "Pouco confiável"]
+        disadvantages: ["Experimental", "Custíssimo", "Pouco confiável"],
+        maintainabilityModifier: 2.5,
+        radarSignatureModifier: 0.2,
+        lifecycleCostMultiplier: 3.0,
+        techLevelRequirement: 105,
+        position: [0, 0, 0]
     },
 
     missile_air_to_surface: {
@@ -219,7 +279,12 @@ export const aircraft_weapons = {
         experimental: true,
         hardpoint_types: ["large"],
         advantages: ["Alcance longo", "Precisão boa"],
-        disadvantages: ["Experimental", "Extremamente caro", "Complexo"]
+        disadvantages: ["Experimental", "Extremamente caro", "Complexo"],
+        maintainabilityModifier: 2.8,
+        radarSignatureModifier: 0.25,
+        lifecycleCostMultiplier: 3.5,
+        techLevelRequirement: 115,
+        position: [0, 0, 0]
     },
 
     // === TANQUES DE COMBUSTÍVEL ===
@@ -237,7 +302,12 @@ export const aircraft_weapons = {
         jettison_capable: true,
         hardpoint_types: ["small", "medium"],
         advantages: ["Alcance estendido", "Ejetável"],
-        disadvantages: ["Penalidade aerodinâmica", "Vulnerabilidade"]
+        disadvantages: ["Penalidade aerodinâmica", "Vulnerabilidade"],
+        maintainabilityModifier: 1.0,
+        radarSignatureModifier: 0.1,
+        lifecycleCostMultiplier: 1.0,
+        techLevelRequirement: 35,
+        position: [0, 0, 0]
     },
 
     fuel_tank_600l: {
@@ -254,7 +324,12 @@ export const aircraft_weapons = {
         jettison_capable: true,
         hardpoint_types: ["medium", "large"],
         advantages: ["Alcance muito estendido", "Ejetável"],
-        disadvantages: ["Penalidade aerodinâmica alta", "Peso significativo"]
+        disadvantages: ["Penalidade aerodinâmica alta", "Peso significativo"],
+        maintainabilityModifier: 1.0,
+        radarSignatureModifier: 0.15,
+        lifecycleCostMultiplier: 1.0,
+        techLevelRequirement: 40,
+        position: [0, 0, 0]
     },
 
     fuel_tank_1200l: {
@@ -271,7 +346,12 @@ export const aircraft_weapons = {
         jettison_capable: true,
         hardpoint_types: ["large", "centerline"],
         advantages: ["Alcance máximo", "Voos ferry"],
-        disadvantages: ["Penalidade aerodinâmica severa", "Muito pesado"]
+        disadvantages: ["Penalidade aerodinâmica severa", "Muito pesado"],
+        maintainabilityModifier: 1.0,
+        radarSignatureModifier: 0.2,
+        lifecycleCostMultiplier: 1.0,
+        techLevelRequirement: 45,
+        position: [0, 0, 0]
     },
 
     // === EQUIPAMENTOS ESPECIAIS ===
@@ -287,7 +367,12 @@ export const aircraft_weapons = {
         cost_base: 85000, // USD
         hardpoint_types: ["medium", "large"],
         advantages: ["Inteligência detalhada", "Múltiplos sensores"],
-        disadvantages: ["Peso alto", "Sem capacidade ofensiva", "Caro"]
+        disadvantages: ["Peso alto", "Sem capacidade ofensiva", "Caro"],
+        maintainabilityModifier: 1.5,
+        radarSignatureModifier: 0.3,
+        lifecycleCostMultiplier: 1.8,
+        techLevelRequirement: 75,
+        position: [0, 0, 0]
     },
 
     ecm_pod: {
@@ -303,6 +388,11 @@ export const aircraft_weapons = {
         experimental: true,
         hardpoint_types: ["medium", "large"],
         advantages: ["Proteção contra radar", "Tecnologia avançada"],
-        disadvantages: ["Experimental", "Consumo alto", "Custíssimo"]
+        disadvantages: ["Experimental", "Consumo alto", "Custíssimo"],
+        maintainabilityModifier: 2.2,
+        radarSignatureModifier: 0.4,
+        lifecycleCostMultiplier: 2.5,
+        techLevelRequirement: 95,
+        position: [0, 0, 0]
     }
 };

@@ -9,6 +9,7 @@ import { showNotification, Logger, showConfirmBox } from "../utils.js";
 import { initEconomicSimulator } from "../systems/economicSimulator.js";
 import { calculatePIBTotal, formatCurrency, formatPIBPerCapita } from "../utils/pibCalculations.js";
 import { runAdvancedEconomyMigration } from '../../scripts/migrate-advanced-economy.js';
+import { initTabSystem } from "../utils/tabSystem.js";
 
 // Catálogo local (fallback). Pode ser salvo no Firestore em configuracoes/campos
 const localCatalog = {
@@ -310,6 +311,16 @@ if (el.btnSalvarTurno) el.btnSalvarTurno.addEventListener('click', async ()=>{
 });
 if (el.logout) el.logout.addEventListener('click', (e)=>{ e.preventDefault(); auth.signOut(); });
 document.addEventListener('DOMContentLoaded', () => {
+  initTabSystem(); // Initialize the tab system
+
+  const openBtn = document.getElementById('btn-open-rules-editor');
+  const rulesPanel = document.getElementById('rules-editor-panel');
+  if(openBtn && rulesPanel) {
+    openBtn.addEventListener('click', () => {
+      rulesPanel.classList.toggle('hidden');
+    });
+  }
+
   const migrationButton = document.getElementById('btn-run-migration');
   if (migrationButton) {
     migrationButton.addEventListener('click', () => {
@@ -381,7 +392,7 @@ document.addEventListener('DOMContentLoaded', () => {
         consumptionButton.disabled = true;
         consumptionButton.textContent = '⏳ Calculando...';
 
-        const { applyResourceConsumption } = await import('../scripts/apply-resource-consumption.js');
+        const { applyResourceConsumption } = await import('../../scripts/apply-resource-consumption.js');
         await applyResourceConsumption();
 
         await carregarTudo();
@@ -612,7 +623,7 @@ document.addEventListener('DOMContentLoaded', () => {
         simulateButton.disabled = true;
         simulateButton.textContent = '⏳ Simulando...';
 
-        const { simulateConsumptionTurns } = await import('../scripts/apply-resource-consumption.js');
+        const { simulateConsumptionTurns } = await import('../../scripts/apply-resource-consumption.js');
         await simulateConsumptionTurns(3);
 
         alert('Simulação concluída! Veja os resultados no console (F12)');

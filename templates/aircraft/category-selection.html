@@ -1,0 +1,448 @@
+<!-- Category Selection Interface for Aircraft Creator -->
+<div id="aircraft-category-selection" class="space-y-6">
+
+  <!-- Section Header -->
+  <div class="flex items-center gap-3 mb-6">
+    <div class="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center">
+      <span class="text-xl">🎯</span>
+    </div>
+    <div>
+      <h2 class="text-xl font-bold text-slate-100">Definição da Aeronave</h2>
+      <p class="text-sm text-slate-400">Selecione a categoria e o tamanho da sua aeronave</p>
+    </div>
+  </div>
+
+  <!-- Category Selection -->
+  <div class="mb-8">
+    <h3 class="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
+      <span>🛩️</span>
+      <span>Categoria da Aeronave</span>
+    </h3>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+      <div id="category-cards">
+        <!-- Categories will be populated by JavaScript -->
+      </div>
+    </div>
+
+    <div id="category-info" class="hidden p-4 bg-slate-800/50 rounded-lg border border-slate-600/30">
+      <div class="flex items-start gap-4">
+        <div class="text-3xl" id="category-icon"></div>
+        <div class="flex-1">
+          <h4 class="font-semibold text-slate-200 mb-2" id="category-name"></h4>
+          <p class="text-sm text-slate-300 mb-3" id="category-description"></p>
+          <div class="flex flex-wrap gap-2" id="category-capabilities">
+            <!-- Capabilities badges -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Size Selection -->
+  <div class="mb-8">
+    <h3 class="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
+      <span>📏</span>
+      <span>Tamanho da Aeronave</span>
+    </h3>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+      <div id="size-cards">
+        <!-- Sizes will be populated by JavaScript -->
+      </div>
+    </div>
+
+    <div id="size-info" class="hidden p-4 bg-slate-800/50 rounded-lg border border-slate-600/30">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <h4 class="font-semibold text-slate-200 mb-3">Especificações Técnicas</h4>
+          <div id="size-specifications" class="space-y-2 text-sm text-slate-300">
+            <!-- Specifications will be populated -->
+          </div>
+        </div>
+        <div>
+          <h4 class="font-semibold text-slate-200 mb-3">Modificadores de Performance</h4>
+          <div id="size-modifiers" class="space-y-2 text-sm text-slate-300">
+            <!-- Modifiers will be populated -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Combination Validation -->
+  <div id="combination-validation" class="hidden">
+    <div class="p-4 rounded-lg border-l-4" id="validation-content">
+      <div class="flex items-center gap-2 mb-2">
+        <span id="validation-icon" class="text-xl"></span>
+        <span id="validation-title" class="font-semibold"></span>
+      </div>
+      <p id="validation-message" class="text-sm"></p>
+      <div id="validation-specs" class="mt-3 hidden">
+        <!-- Default specifications will be shown here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Statistics -->
+  <div id="filter-stats" class="hidden">
+    <div class="bg-slate-800/30 rounded-lg p-4 border border-slate-600/30">
+      <h4 class="font-semibold text-slate-200 mb-3 flex items-center gap-2">
+        <span>📊</span>
+        <span>Componentes Disponíveis</span>
+      </h4>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="text-center">
+          <div class="text-2xl font-bold text-cyan-400" id="stat-airframes">-</div>
+          <div class="text-xs text-slate-400">Fuselagens</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-green-400" id="stat-engines">-</div>
+          <div class="text-xs text-slate-400">Motores</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-orange-400" id="stat-weapons">-</div>
+          <div class="text-xs text-slate-400">Armamentos</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-purple-400" id="stat-avionics">-</div>
+          <div class="text-xs text-slate-400">Aviônicos</div>
+        </div>
+      </div>
+
+      <div class="mt-3 text-xs text-slate-500 text-center">
+        Baseado na categoria e tamanho selecionados
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+// Aircraft Category Selection Logic
+import { getAllCategories, getAllSizes, isValidCombination, getDefaultSpecifications, getCompatibleSizes, getCompatibleCategories } from '../../js/aircraft/data/AircraftCategories.js';
+import { componentFilter } from '../../js/aircraft/systems/ComponentFilter.js';
+
+class AircraftCategorySelection {
+    constructor() {
+        this.selectedCategory = null;
+        this.selectedSize = null;
+        this.initialized = false;
+    }
+
+    initialize() {
+        if (this.initialized) return;
+
+        console.log('🎯 Initializing Aircraft Category Selection');
+
+        this.loadCategories();
+        this.loadSizes();
+        this.initialized = true;
+    }
+
+    loadCategories() {
+        const container = document.getElementById('category-cards');
+        if (!container) return;
+
+        const categories = getAllCategories();
+
+        container.innerHTML = categories.map(category => `
+            <div
+                class="category-card cursor-pointer p-4 bg-slate-800/40 border-2 border-slate-700/50 rounded-lg hover:border-cyan-500/50 hover:bg-slate-700/40 transition-all duration-200"
+                data-category="${category.id}"
+                onclick="window.aircraftCategorySelection.selectCategory('${category.id}')"
+            >
+                <div class="text-center">
+                    <div class="text-3xl mb-2">${category.icon}</div>
+                    <h4 class="font-semibold text-slate-200 mb-1">${category.name}</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed">${category.description}</p>
+                </div>
+
+                <div class="mt-3 flex flex-wrap gap-1 justify-center">
+                    ${category.specialCapabilities.slice(0, 2).map(cap =>
+                        `<span class="px-2 py-1 bg-cyan-500/20 text-cyan-300 text-xs rounded">${cap}</span>`
+                    ).join('')}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    loadSizes() {
+        const container = document.getElementById('size-cards');
+        if (!container) return;
+
+        const sizes = getAllSizes();
+
+        container.innerHTML = sizes.map(size => `
+            <div
+                class="size-card cursor-pointer p-4 bg-slate-800/40 border-2 border-slate-700/50 rounded-lg hover:border-cyan-500/50 hover:bg-slate-700/40 transition-all duration-200"
+                data-size="${size.id}"
+                onclick="window.aircraftCategorySelection.selectSize('${size.id}')"
+            >
+                <div class="text-center">
+                    <div class="text-2xl mb-2">${size.icon}</div>
+                    <h4 class="font-semibold text-slate-200 mb-1">${size.name}</h4>
+                    <p class="text-xs text-slate-400">${size.description}</p>
+                </div>
+
+                <div class="mt-2 text-xs text-slate-500 text-center">
+                    ${Math.round(size.specifications.baseWeight.min/1000)}-${Math.round(size.specifications.baseWeight.max/1000)}t
+                </div>
+            </div>
+        `).join('');
+    }
+
+    selectCategory(categoryId) {
+        this.selectedCategory = categoryId;
+
+        // Update UI
+        this.updateCategoryCards(categoryId);
+        this.showCategoryInfo(categoryId);
+        this.updateSizeAvailability();
+        this.validateCombination();
+        this.updateFilters();
+
+        console.log(`🎯 Category selected: ${categoryId}`);
+    }
+
+    selectSize(sizeId) {
+        this.selectedSize = sizeId;
+
+        // Update UI
+        this.updateSizeCards(sizeId);
+        this.showSizeInfo(sizeId);
+        this.updateCategoryAvailability();
+        this.validateCombination();
+        this.updateFilters();
+
+        console.log(`📏 Size selected: ${sizeId}`);
+    }
+
+    updateCategoryCards(selectedId) {
+        document.querySelectorAll('.category-card').forEach(card => {
+            const isSelected = card.dataset.category === selectedId;
+
+            if (isSelected) {
+                card.classList.add('border-cyan-400', 'bg-cyan-500/10', 'ring-1', 'ring-cyan-400/50');
+                card.classList.remove('border-slate-700/50', 'bg-slate-800/40');
+            } else {
+                card.classList.remove('border-cyan-400', 'bg-cyan-500/10', 'ring-1', 'ring-cyan-400/50');
+                card.classList.add('border-slate-700/50', 'bg-slate-800/40');
+            }
+        });
+    }
+
+    updateSizeCards(selectedId) {
+        document.querySelectorAll('.size-card').forEach(card => {
+            const isSelected = card.dataset.size === selectedId;
+
+            if (isSelected) {
+                card.classList.add('border-cyan-400', 'bg-cyan-500/10', 'ring-1', 'ring-cyan-400/50');
+                card.classList.remove('border-slate-700/50', 'bg-slate-800/40');
+            } else {
+                card.classList.remove('border-cyan-400', 'bg-cyan-500/10', 'ring-1', 'ring-cyan-400/50');
+                card.classList.add('border-slate-700/50', 'bg-slate-800/40');
+            }
+        });
+    }
+
+    showCategoryInfo(categoryId) {
+        const categories = getAllCategories();
+        const category = categories.find(c => c.id === categoryId);
+        if (!category) return;
+
+        document.getElementById('category-icon').textContent = category.icon;
+        document.getElementById('category-name').textContent = category.name;
+        document.getElementById('category-description').textContent = category.description;
+
+        const capabilitiesContainer = document.getElementById('category-capabilities');
+        capabilitiesContainer.innerHTML = category.specialCapabilities.map(cap =>
+            `<span class="px-2 py-1 bg-cyan-500/20 text-cyan-300 text-xs rounded">${cap}</span>`
+        ).join('');
+
+        document.getElementById('category-info').classList.remove('hidden');
+    }
+
+    showSizeInfo(sizeId) {
+        const sizes = getAllSizes();
+        const size = sizes.find(s => s.id === sizeId);
+        if (!size) return;
+
+        // Specifications
+        const specs = size.specifications;
+        const specsContainer = document.getElementById('size-specifications');
+        specsContainer.innerHTML = `
+            <div>Peso Base: ${specs.baseWeight.min.toLocaleString()}-${specs.baseWeight.max.toLocaleString()} kg</div>
+            <div>MTOW: ${specs.maxTakeoffWeight.min.toLocaleString()}-${specs.maxTakeoffWeight.max.toLocaleString()} kg</div>
+            <div>Área Alar: ${specs.wingArea.min}-${specs.wingArea.max} m²</div>
+            <div>Combustível: ${specs.fuelCapacity.min.toLocaleString()}-${specs.fuelCapacity.max.toLocaleString()} kg</div>
+            <div>Tripulação: ${specs.crew.min}-${specs.crew.max}</div>
+            <div>Motores: ${specs.engines.min}-${specs.engines.max}</div>
+        `;
+
+        // Modifiers
+        const mods = size.modifiers;
+        const modifiersContainer = document.getElementById('size-modifiers');
+        modifiersContainer.innerHTML = `
+            <div>Custo: ${mods.cost > 1 ? '+' : ''}${Math.round((mods.cost - 1) * 100)}%</div>
+            <div>Manobrabilidade: ${mods.maneuverability > 1 ? '+' : ''}${Math.round((mods.maneuverability - 1) * 100)}%</div>
+            <div>Alcance: ${mods.range > 1 ? '+' : ''}${Math.round((mods.range - 1) * 100)}%</div>
+            <div>Carga Útil: ${mods.payload > 1 ? '+' : ''}${Math.round((mods.payload - 1) * 100)}%</div>
+            <div>Manutenção: ${mods.maintenance > 1 ? '+' : ''}${Math.round((mods.maintenance - 1) * 100)}%</div>
+        `;
+
+        document.getElementById('size-info').classList.remove('hidden');
+    }
+
+    updateSizeAvailability() {
+        if (!this.selectedCategory) return;
+
+        const compatibleSizes = getCompatibleSizes(this.selectedCategory);
+
+        document.querySelectorAll('.size-card').forEach(card => {
+            const sizeId = card.dataset.size;
+            const isCompatible = compatibleSizes.includes(sizeId);
+
+            if (isCompatible) {
+                card.classList.remove('opacity-50', 'cursor-not-allowed');
+                card.classList.add('cursor-pointer');
+            } else {
+                card.classList.add('opacity-50', 'cursor-not-allowed');
+                card.classList.remove('cursor-pointer');
+            }
+        });
+    }
+
+    updateCategoryAvailability() {
+        if (!this.selectedSize) return;
+
+        const compatibleCategories = getCompatibleCategories(this.selectedSize);
+
+        document.querySelectorAll('.category-card').forEach(card => {
+            const categoryId = card.dataset.category;
+            const isCompatible = compatibleCategories.includes(categoryId);
+
+            if (isCompatible) {
+                card.classList.remove('opacity-50', 'cursor-not-allowed');
+                card.classList.add('cursor-pointer');
+            } else {
+                card.classList.add('opacity-50', 'cursor-not-allowed');
+                card.classList.remove('cursor-pointer');
+            }
+        });
+    }
+
+    validateCombination() {
+        const validationElement = document.getElementById('combination-validation');
+
+        if (!this.selectedCategory || !this.selectedSize) {
+            validationElement.classList.add('hidden');
+            return;
+        }
+
+        const isValid = isValidCombination(this.selectedCategory, this.selectedSize);
+        const content = document.getElementById('validation-content');
+        const icon = document.getElementById('validation-icon');
+        const title = document.getElementById('validation-title');
+        const message = document.getElementById('validation-message');
+        const specs = document.getElementById('validation-specs');
+
+        if (isValid) {
+            content.className = 'p-4 rounded-lg border-l-4 bg-green-500/10 border-green-500';
+            icon.textContent = '✅';
+            title.textContent = 'Combinação Válida';
+            title.className = 'font-semibold text-green-400';
+            message.textContent = 'Esta combinação é compatível e está pronta para design.';
+            message.className = 'text-sm text-green-300';
+
+            // Show default specifications
+            const defaultSpecs = getDefaultSpecifications(this.selectedCategory, this.selectedSize);
+            if (defaultSpecs) {
+                specs.innerHTML = `
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                        <div>Peso Base: ${defaultSpecs.baseWeight.toLocaleString()} kg</div>
+                        <div>MTOW: ${defaultSpecs.maxTakeoffWeight.toLocaleString()} kg</div>
+                        <div>Área Alar: ${defaultSpecs.wingArea} m²</div>
+                        <div>Combustível: ${defaultSpecs.fuelCapacity.toLocaleString()} kg</div>
+                        <div>Tripulação: ${defaultSpecs.crew}</div>
+                        <div>Hardpoints: ${defaultSpecs.maxHardpoints}</div>
+                    </div>
+                `;
+                specs.classList.remove('hidden');
+            }
+
+            // Update ECS with selection
+            this.updateAircraftECS();
+
+        } else {
+            content.className = 'p-4 rounded-lg border-l-4 bg-red-500/10 border-red-500';
+            icon.textContent = '❌';
+            title.textContent = 'Combinação Inválida';
+            title.className = 'font-semibold text-red-400';
+            message.textContent = 'Esta combinação não é compatível. Selecione outra categoria ou tamanho.';
+            message.className = 'text-sm text-red-300';
+            specs.classList.add('hidden');
+        }
+
+        validationElement.classList.remove('hidden');
+    }
+
+    updateFilters() {
+        if (!this.selectedCategory && !this.selectedSize) return;
+
+        // Get tech level from user country
+        const techLevel = window.currentUserCountry?.aircraftTech || 50;
+
+        componentFilter.setFilters({
+            category: this.selectedCategory,
+            size: this.selectedSize,
+            techLevel: techLevel
+        });
+
+        this.updateFilterStatistics();
+    }
+
+    updateFilterStatistics() {
+        if (!window.AIRCRAFT_COMPONENTS) return;
+
+        const stats = componentFilter.getFilterStatistics(window.AIRCRAFT_COMPONENTS);
+
+        document.getElementById('stat-airframes').textContent = `${stats.airframes.filtered}/${stats.airframes.total}`;
+        document.getElementById('stat-engines').textContent = `${stats.engines.filtered}/${stats.engines.total}`;
+        document.getElementById('stat-weapons').textContent = `${stats.weapons.filtered}/${stats.weapons.total}`;
+        document.getElementById('stat-avionics').textContent = `${stats.avionics.filtered}/${stats.avionics.total}`;
+
+        document.getElementById('filter-stats').classList.remove('hidden');
+    }
+
+    updateAircraftECS() {
+        if (!window.legacyBridge || !this.selectedCategory || !this.selectedSize) return;
+
+        const aircraftId = window.legacyBridge.getActiveAircraftId();
+        if (!aircraftId) return;
+
+        try {
+            // Update aircraft category in ECS
+            if (window.aircraftEntityManager) {
+                window.aircraftEntityManager.updateComponent(aircraftId, 'Identity', {
+                    category: this.selectedCategory
+                });
+
+                window.aircraftEntityManager.updateComponent(aircraftId, 'Structure', {
+                    size: this.selectedSize
+                });
+
+                console.log(`✅ Aircraft ECS updated: ${this.selectedCategory} ${this.selectedSize}`);
+            }
+
+        } catch (error) {
+            console.error('❌ Error updating aircraft ECS:', error);
+        }
+    }
+}
+
+// Initialize and make globally available
+window.aircraftCategorySelection = new AircraftCategorySelection();
+window.aircraftCategorySelection.initialize();
+</script>

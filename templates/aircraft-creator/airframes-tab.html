@@ -1,221 +1,474 @@
-<div class="aircraft-tab-content" data-tab="airframes">
-  <!-- Header Section -->
-  <div class="mb-6">
-    <div class="flex items-center justify-between">
-      <div>
-        <h2 class="text-2xl font-bold text-slate-100 tracking-tight">Árvores Tecnológicas – Fuselagens (1954–1980)</h2>
-        <p class="text-slate-400 mt-1">Layout em timeline vertical com progressão tecnológica</p>
-      </div>
-      <div class="text-right">
-        <div class="text-sm text-slate-400">Selecionada:</div>
-        <div class="text-lg font-semibold text-cyan-300" id="selected-airframe-name">Nenhuma</div>
-      </div>
-    </div>
-  </div>
+<!-- Airframes Tab Template for Aircraft Creator -->
+<div class="airframes-tab-content">
+    <div class="airframes-section">
+        <h3>Estrutura e Fuselagem</h3>
 
-  <!-- Technology Trees Tabs -->
-  <nav class="flex flex-wrap gap-2 mb-8">
-    <button class="tech-tree-tab active" data-tree="fighters">
-      <span class="icon">✈️</span>
-      <span class="label">Caças</span>
-    </button>
-    <button class="tech-tree-tab" data-tree="bombers">
-      <span class="icon">🎯</span>
-      <span class="label">Bombardeiros</span>
-    </button>
-    <button class="tech-tree-tab" data-tree="attackers">
-      <span class="icon">💥</span>
-      <span class="label">Aeronaves de Ataque</span>
-    </button>
-    <button class="tech-tree-tab" data-tree="transports">
-      <span class="icon">📦</span>
-      <span class="label">Transportes</span>
-    </button>
-    <button class="tech-tree-tab" data-tree="helicopters">
-      <span class="icon">🚁</span>
-      <span class="label">Helicópteros</span>
-    </button>
-  </nav>
-
-  <!-- Timeline Section -->
-  <section class="relative mb-8">
-    <!-- Central Spine -->
-    <div class="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-[3px] bg-gradient-to-b from-cyan-400/60 via-cyan-300/30 to-cyan-400/60 rounded-full"></div>
-
-    <!-- Timeline Content -->
-    <div id="tech-timeline" class="grid grid-cols-1 gap-6">
-      <!-- Timeline items will be loaded dynamically here -->
-    </div>
-  </section>
-
-  <!-- Selection Info -->
-  <div id="airframe-details" class="hidden mt-6 p-6 bg-slate-800/40 border border-slate-700/50 rounded-xl">
-    <h3 class="text-lg font-semibold text-slate-100 mb-4 flex items-center gap-2">
-      <span>📊</span>
-      <span>Especificações Técnicas</span>
-    </h3>
-    <div id="airframe-details-content">
-      <!-- Details will be populated when an airframe is selected -->
-    </div>
-  </div>
-
-  <!-- Legend -->
-  <div class="mt-10 grid sm:grid-cols-3 gap-3 text-xs">
-    <div class="rounded-xl bg-slate-800/40 border border-slate-700/50 p-4">
-      <div class="font-semibold text-slate-100 mb-2 flex items-center gap-2">
-        <span>📖</span>
-        <span>Como usar</span>
-      </div>
-      <p class="text-slate-400">A timeline avança de cima para baixo. Cada cartão é uma fuselagem disponível. Clique para selecionar e ver os pré-requisitos.</p>
-    </div>
-    <div class="rounded-xl bg-slate-800/40 border border-slate-700/50 p-4">
-      <div class="font-semibold text-slate-100 mb-2 flex items-center gap-2">
-        <span>🏷️</span>
-        <span>Tags de Categoria</span>
-      </div>
-      <div class="flex gap-2 flex-wrap mt-2">
-        <span class="tag-piston">Pistão</span>
-        <span class="tag-subsonic">Sub/Transônico</span>
-        <span class="tag-supersonic">Supersônico</span>
-        <span class="tag-special">Especializado</span>
-      </div>
-    </div>
-    <div class="rounded-xl bg-slate-800/40 border border-slate-700/50 p-4">
-      <div class="font-semibold text-slate-100 mb-2 flex items-center gap-2">
-        <span>⚡</span>
-        <span>Progressão</span>
-      </div>
-      <p class="text-slate-400">Fuselagens destacadas são marcos importantes. Siga a linha cronológica para desbloquear tecnologias avançadas.</p>
-    </div>
-  </div>
-
-  <!-- Compatibility Warnings -->
-  <div id="airframe-warnings" class="hidden mt-4">
-    <div class="bg-amber-900/20 border border-amber-800/50 rounded-xl p-4">
-      <div class="flex items-start gap-3">
-        <span class="text-xl">⚠️</span>
-        <div>
-          <h4 class="font-semibold text-amber-300 mb-2">Avisos de Compatibilidade</h4>
-          <div id="airframe-warnings-list" class="text-sm text-amber-200 space-y-1">
-            <!-- Warnings will be populated here -->
-          </div>
+        <!-- Fuselage Type Selection -->
+        <div class="fuselage-section">
+            <h4>Tipo de Fuselagem</h4>
+            <div class="fuselage-types">
+                <div class="fuselage-option" data-type="conventional">
+                    <div class="fuselage-icon">
+                        <svg viewBox="0 0 100 30" class="fuselage-svg">
+                            <ellipse cx="50" cy="15" rx="45" ry="8" fill="#007bff"/>
+                        </svg>
+                    </div>
+                    <span>Convencional</span>
+                </div>
+                <div class="fuselage-option" data-type="area-rule">
+                    <div class="fuselage-icon">
+                        <svg viewBox="0 0 100 30" class="fuselage-svg">
+                            <path d="M5,15 Q25,8 50,15 Q75,22 95,15" stroke="#007bff" fill="none" stroke-width="8"/>
+                        </svg>
+                    </div>
+                    <span>Regra das Áreas</span>
+                </div>
+                <div class="fuselage-option" data-type="blended">
+                    <div class="fuselage-icon">
+                        <svg viewBox="0 0 100 30" class="fuselage-svg">
+                            <path d="M10,15 L30,8 L70,8 L90,15 L70,22 L30,22 Z" fill="#007bff"/>
+                        </svg>
+                    </div>
+                    <span>Asa-Fuselagem Integrada</span>
+                </div>
+                <div class="fuselage-option" data-type="lifting-body">
+                    <div class="fuselage-icon">
+                        <svg viewBox="0 0 100 30" class="fuselage-svg">
+                            <path d="M20,15 L40,5 L60,5 L80,15 L60,25 L40,25 Z" fill="#007bff"/>
+                        </svg>
+                    </div>
+                    <span>Corpo Sustentador</span>
+                </div>
+            </div>
         </div>
-      </div>
+
+        <!-- Fuselage Dimensions -->
+        <div class="dimensions-section">
+            <h4>Dimensões da Fuselagem</h4>
+            <div class="dimensions-grid">
+                <div class="dimension-group">
+                    <h5>Comprimento</h5>
+                    <div class="input-group">
+                        <label for="fuselage-length">Comprimento Total (m):</label>
+                        <input type="number" id="fuselage-length" min="8" max="50" step="0.1" value="15.0">
+                    </div>
+                    <div class="input-group">
+                        <label for="nose-length">Comprimento do Nariz (m):</label>
+                        <input type="number" id="nose-length" min="2" max="8" step="0.1" value="4.0">
+                    </div>
+                    <div class="input-group">
+                        <label for="tail-length">Comprimento da Cauda (m):</label>
+                        <input type="number" id="tail-length" min="2" max="8" step="0.1" value="3.5">
+                    </div>
+                </div>
+
+                <div class="dimension-group">
+                    <h5>Seção Transversal</h5>
+                    <div class="input-group">
+                        <label for="max-width">Largura Máxima (m):</label>
+                        <input type="number" id="max-width" min="1" max="6" step="0.1" value="1.8">
+                    </div>
+                    <div class="input-group">
+                        <label for="max-height">Altura Máxima (m):</label>
+                        <input type="number" id="max-height" min="1" max="4" step="0.1" value="1.6">
+                    </div>
+                    <div class="input-group">
+                        <label for="cross-section">Forma da Seção:</label>
+                        <select id="cross-section">
+                            <option value="circular">Circular</option>
+                            <option value="oval">Oval</option>
+                            <option value="rectangular">Retangular</option>
+                            <option value="triangular">Triangular</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="dimension-group">
+                    <h5>Volume e Capacidade</h5>
+                    <div class="input-group">
+                        <label for="internal-volume">Volume Interno (m³):</label>
+                        <input type="number" id="internal-volume" min="5" max="200" step="0.5" value="25">
+                    </div>
+                    <div class="input-group">
+                        <label for="fuel-volume">Volume Combustível (m³):</label>
+                        <input type="number" id="fuel-volume" min="1" max="50" step="0.1" value="8.0">
+                    </div>
+                    <div class="input-group">
+                        <label for="payload-volume">Volume Carga (m³):</label>
+                        <input type="number" id="payload-volume" min="0" max="100" step="0.5" value="5.0">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Structural Configuration -->
+        <div class="structure-section">
+            <h4>Configuração Estrutural</h4>
+            <div class="structure-grid">
+                <div class="structure-group">
+                    <h5>Tipo de Estrutura</h5>
+                    <div class="structure-options">
+                        <label class="structure-option">
+                            <input type="radio" name="structure_type" value="truss">
+                            <span>Treliça</span>
+                        </label>
+                        <label class="structure-option">
+                            <input type="radio" name="structure_type" value="monocoque" checked>
+                            <span>Monocoque</span>
+                        </label>
+                        <label class="structure-option">
+                            <input type="radio" name="structure_type" value="semi_monocoque">
+                            <span>Semi-Monocoque</span>
+                        </label>
+                        <label class="structure-option">
+                            <input type="radio" name="structure_type" value="space_frame">
+                            <span>Space Frame</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="structure-group">
+                    <h5>Material Principal</h5>
+                    <div class="material-selector">
+                        <select id="primary-material">
+                            <option value="aluminum">Liga de Alumínio</option>
+                            <option value="steel">Aço</option>
+                            <option value="titanium">Titânio</option>
+                            <option value="carbon-fiber">Fibra de Carbono</option>
+                            <option value="composite">Compósito Avançado</option>
+                        </select>
+                        <div class="material-properties">
+                            <span class="property">Densidade: <span id="material-density">2.7</span> g/cm³</span>
+                            <span class="property">Resistência: <span id="material-strength">276</span> MPa</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="structure-group">
+                    <h5>Configuração das Cavernas</h5>
+                    <div class="input-group">
+                        <label for="frame-count">Número de Cavernas:</label>
+                        <input type="number" id="frame-count" min="8" max="30" value="15">
+                    </div>
+                    <div class="input-group">
+                        <label for="frame-spacing">Espaçamento (m):</label>
+                        <input type="number" id="frame-spacing" min="0.3" max="1.5" step="0.1" value="0.6">
+                    </div>
+                    <div class="input-group">
+                        <label for="frame-type">Tipo de Caverna:</label>
+                        <select id="frame-type">
+                            <option value="ring">Anel Completo</option>
+                            <option value="partial">Parcial</option>
+                            <option value="bulkhead">Antepara</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cockpit Configuration -->
+        <div class="cockpit-section">
+            <h4>Configuração da Cabine</h4>
+            <div class="cockpit-grid">
+                <div class="cockpit-group">
+                    <h5>Tipo de Cabine</h5>
+                    <div class="cockpit-options">
+                        <label class="cockpit-option">
+                            <input type="radio" name="cockpit_type" value="single" checked>
+                            <span>Monoposto</span>
+                        </label>
+                        <label class="cockpit-option">
+                            <input type="radio" name="cockpit_type" value="tandem">
+                            <span>Tandem</span>
+                        </label>
+                        <label class="cockpit-option">
+                            <input type="radio" name="cockpit_type" value="side-by-side">
+                            <span>Lado a Lado</span>
+                        </label>
+                        <label class="cockpit-option">
+                            <input type="radio" name="cockpit_type" value="multi-crew">
+                            <span>Multi-Tripulante</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="cockpit-group">
+                    <h5>Visibilidade</h5>
+                    <div class="input-group">
+                        <label for="canopy-type">Tipo de Canopy:</label>
+                        <select id="canopy-type">
+                            <option value="conventional">Convencional</option>
+                            <option value="bubble">Bolha</option>
+                            <option value="wraparound">Panorâmico</option>
+                            <option value="frameless">Sem Estrutura</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="visibility-forward">Visão Frontal (°):</label>
+                        <input type="number" id="visibility-forward" min="45" max="180" value="120">
+                    </div>
+                    <div class="input-group">
+                        <label for="visibility-rear">Visão Traseira (°):</label>
+                        <input type="number" id="visibility-rear" min="0" max="180" value="60">
+                    </div>
+                </div>
+
+                <div class="cockpit-group">
+                    <h5>Sistemas de Emergência</h5>
+                    <div class="emergency-options">
+                        <label class="emergency-option">
+                            <input type="checkbox" name="ejection_seat" value="true">
+                            <span>Assento Ejetável</span>
+                        </label>
+                        <label class="emergency-option">
+                            <input type="checkbox" name="escape_hatch" value="true">
+                            <span>Escotilha de Emergência</span>
+                        </label>
+                        <label class="emergency-option">
+                            <input type="checkbox" name="armor_protection" value="true">
+                            <span>Blindagem da Cabine</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Landing Gear Configuration -->
+        <div class="landing-gear-section">
+            <h4>Trem de Pouso</h4>
+            <div class="gear-grid">
+                <div class="gear-group">
+                    <h5>Configuração</h5>
+                    <div class="gear-options">
+                        <label class="gear-option">
+                            <input type="radio" name="gear_config" value="tricycle" checked>
+                            <span>Triciclo</span>
+                        </label>
+                        <label class="gear-option">
+                            <input type="radio" name="gear_config" value="tailwheel">
+                            <span>Bequilha</span>
+                        </label>
+                        <label class="gear-option">
+                            <input type="radio" name="gear_config" value="bicycle">
+                            <span>Bicicleta</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="gear-group">
+                    <h5>Tipo de Retração</h5>
+                    <div class="retraction-options">
+                        <label class="retraction-option">
+                            <input type="radio" name="retraction_type" value="fixed">
+                            <span>Fixo</span>
+                        </label>
+                        <label class="retraction-option">
+                            <input type="radio" name="retraction_type" value="retractable" checked>
+                            <span>Retrátil</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="gear-group">
+                    <h5>Especificações</h5>
+                    <div class="input-group">
+                        <label for="gear-load">Carga Máxima (kg):</label>
+                        <input type="number" id="gear-load" min="1000" max="50000" value="8000">
+                    </div>
+                    <div class="input-group">
+                        <label for="tire-pressure">Pressão Pneus (psi):</label>
+                        <input type="number" id="tire-pressure" min="50" max="400" value="200">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Indicators -->
+        <div class="airframe-performance">
+            <h4>Indicadores de Performance</h4>
+            <div class="performance-grid">
+                <div class="performance-card">
+                    <div class="performance-label">Peso Estrutural</div>
+                    <div class="performance-value" id="structural-weight">--</div>
+                    <div class="performance-unit">kg</div>
+                </div>
+                <div class="performance-card">
+                    <div class="performance-label">Resistência Estrutural</div>
+                    <div class="performance-value" id="structural-strength">--</div>
+                    <div class="performance-unit">G</div>
+                </div>
+                <div class="performance-card">
+                    <div class="performance-label">Arrasto Parasita</div>
+                    <div class="performance-value" id="parasitic-drag">--</div>
+                    <div class="performance-unit">CD0</div>
+                </div>
+                <div class="performance-card">
+                    <div class="performance-label">Custo Estrutural</div>
+                    <div class="performance-value" id="structural-cost">--</div>
+                    <div class="performance-unit">k$</div>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 
 <style>
-/* Tech Tree Tabs */
-.tech-tree-tab {
-  @apply px-3 py-2 rounded-xl text-sm font-medium transition border flex items-center gap-2;
-  @apply bg-slate-800/50 text-slate-300 border-slate-700/50 hover:text-slate-100 hover:bg-slate-700/50;
+.airframes-tab-content {
+    color: #fff;
 }
 
-.tech-tree-tab.active {
-  @apply bg-cyan-500/15 text-cyan-200 border-cyan-400/40;
+.airframes-section h3 {
+    color: #fff;
+    margin-bottom: 25px;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 10px;
 }
 
-.tech-tree-tab .icon {
-  @apply text-base;
+.airframes-section h4, .airframes-section h5 {
+    color: #007bff;
+    margin: 20px 0 15px 0;
 }
 
-/* Timeline Node Cards */
-.timeline-node-card {
-  @apply relative w-full max-w-[480px] rounded-2xl backdrop-blur-sm p-4 sm:p-5 shadow-lg border transition-all duration-200 cursor-pointer;
-  @apply bg-slate-800/40 border-slate-700/40 hover:bg-slate-700/50 hover:border-slate-600/50;
+.fuselage-types {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
 }
 
-.timeline-node-card.selected {
-  @apply border-cyan-400/60 bg-cyan-900/20 ring-1 ring-cyan-400/30;
+.fuselage-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    background: #2d2d2d;
+    border: 2px solid #444;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
 }
 
-.timeline-node-card.highlight {
-  @apply border-emerald-400/40 shadow-[0_0_20px_rgba(16,185,129,0.15)];
+.fuselage-option:hover {
+    border-color: #007bff;
+    background: #3d3d3d;
 }
 
-.timeline-node-card.left {
-  @apply ml-auto pr-6;
+.fuselage-option.selected {
+    border-color: #007bff;
+    background: #004085;
 }
 
-.timeline-node-card.right {
-  @apply mr-auto pl-6;
+.fuselage-icon {
+    margin-bottom: 15px;
 }
 
-/* Node connector dots */
-.timeline-node-card.left::before {
-  content: '';
-  @apply absolute top-6 right-0 h-3 w-3 rounded-full bg-cyan-400 shadow-[0_0_0_4px_rgba(6,182,212,0.15)];
+.fuselage-svg {
+    width: 100px;
+    height: 30px;
 }
 
-.timeline-node-card.right::before {
-  content: '';
-  @apply absolute top-6 left-0 h-3 w-3 rounded-full bg-cyan-400 shadow-[0_0_0_4px_rgba(6,182,212,0.15)];
+.dimensions-grid, .structure-grid, .cockpit-grid, .gear-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
 }
 
-.timeline-node-card.selected::before {
-  @apply bg-emerald-400 shadow-[0_0_0_4px_rgba(16,185,129,0.15)];
+.dimension-group, .structure-group, .cockpit-group, .gear-group {
+    background: #2d2d2d;
+    padding: 20px;
+    border-radius: 8px;
 }
 
-/* Era Pills */
-.era-pill {
-  @apply text-[10px] uppercase tracking-wider font-bold text-indigo-200 bg-indigo-500/10 px-2 py-0.5 rounded-md ring-1 ring-indigo-400/30;
+.input-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
 }
 
-/* Technology Tags */
-.tag-piston {
-  @apply inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-slate-500/10 text-slate-300 ring-1 ring-inset ring-slate-400/30;
+.input-group label {
+    color: #ccc;
+    flex: 1;
 }
 
-.tag-subsonic {
-  @apply inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-300 ring-1 ring-inset ring-blue-400/30;
+.input-group input, .input-group select {
+    width: 120px;
+    padding: 6px 8px;
+    background: #333;
+    color: #fff;
+    border: 1px solid #555;
+    border-radius: 4px;
 }
 
-.tag-supersonic {
-  @apply inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-rose-500/10 text-rose-300 ring-1 ring-inset ring-rose-400/30;
+.structure-options, .cockpit-options, .gear-options, .retraction-options, .emergency-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
-.tag-special {
-  @apply inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-amber-500/10 text-amber-300 ring-1 ring-inset ring-amber-400/30;
+.structure-option, .cockpit-option, .gear-option, .retraction-option, .emergency-option {
+    display: flex;
+    align-items: center;
+    color: #ccc;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    transition: background 0.3s;
 }
 
-/* Decade Tick */
-.decade-tick {
-  @apply relative h-20 flex items-center justify-center text-xs text-slate-400;
+.structure-option:hover, .cockpit-option:hover, .gear-option:hover,
+.retraction-option:hover, .emergency-option:hover {
+    background: #3d3d3d;
 }
 
-.decade-tick span {
-  @apply px-2 py-0.5 rounded-md bg-slate-800/50 border border-slate-700/50;
+.structure-option input, .cockpit-option input, .gear-option input,
+.retraction-option input, .emergency-option input {
+    margin-right: 10px;
 }
 
-.decade-tick::after {
-  content: '';
-  @apply absolute left-1/2 -translate-x-1/2 h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_0_6px_rgba(6,182,212,0.12)];
+.material-selector select {
+    width: 100%;
+    margin-bottom: 10px;
 }
 
-/* Meta data grid */
-.node-meta {
-  @apply mt-3 grid grid-cols-2 gap-x-6 gap-y-1 text-[12px] text-slate-300;
+.material-properties {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 12px;
+    color: #888;
 }
 
-.node-meta .meta-item {
-  @apply flex items-center justify-between border-b border-slate-700/30 pb-0.5;
+.performance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
 }
 
-.node-meta .meta-key {
-  @apply text-slate-500;
+.performance-card {
+    background: #2d2d2d;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    border-left: 4px solid #007bff;
 }
 
-.node-meta .meta-value {
-  @apply font-medium text-slate-200;
+.performance-label {
+    font-size: 12px;
+    color: #ccc;
+    margin-bottom: 8px;
 }
 
-/* Prerequisites indicator */
-.prerequisites-indicator {
-  @apply absolute -top-1 -right-1 w-3 h-3 rounded-full bg-amber-400 border-2 border-slate-800;
+.performance-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #007bff;
+    margin-bottom: 5px;
 }
 
-.prerequisites-indicator.locked {
-  @apply bg-red-400;
+.performance-unit {
+    font-size: 12px;
+    color: #888;
 }
 </style>

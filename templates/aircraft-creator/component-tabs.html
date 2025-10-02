@@ -1,31 +1,305 @@
-<!-- COMPONENT SELECTION TABS (Aircraft) -->
-<section class="mb-8">
-  <div class="glass rounded-2xl">
-    <!-- Tab Navigation -->
-    <div class="flex border-b border-slate-700 overflow-x-auto">
-      <button class="tab-button px-6 py-4 font-medium transition-colors border-b-2 border-transparent hover:border-brand-400 hover:text-brand-300" data-tab="airframe">
-        🛩️ Fuselagem
-      </button>
-      <button class="tab-button px-6 py-4 font-medium transition-colors border-b-2 border-transparent hover:border-brand-400 hover:text-brand-300" data-tab="engine">
-        🔧 Grupo Motopropulsor
-      </button>
-      <button class="tab-button px-6 py-4 font-medium transition-colors border-b-2 border-transparent hover:border-brand-400 hover:text-brand-300" data-tab="weapons">
-        🎯 Armamentos
-      </button>
-      <button class="tab-button px-6 py-4 font-medium transition-colors border-b-2 border-transparent hover:border-brand-400 hover:text-brand-300" data-tab="avionics">
-        📡 Aviônicos
-      </button>
+<!-- Component Tabs Template for Aircraft Creator -->
+<div class="component-tabs-container">
+    <div class="tabs-header">
+        <div class="tab-navigation">
+            <button class="tab-btn active" data-tab="engines">
+                <i class="icon-engine"></i>
+                <span>Motores</span>
+            </button>
+            <button class="tab-btn" data-tab="airframes">
+                <i class="icon-fuselage"></i>
+                <span>Fuselagem</span>
+            </button>
+            <button class="tab-btn" data-tab="wings">
+                <i class="icon-wing"></i>
+                <span>Asas</span>
+            </button>
+            <button class="tab-btn" data-tab="avionics">
+                <i class="icon-electronics"></i>
+                <span>Aviônica</span>
+            </button>
+            <button class="tab-btn" data-tab="weapons">
+                <i class="icon-weapon"></i>
+                <span>Armamentos</span>
+            </button>
+            <button class="tab-btn" data-tab="special">
+                <i class="icon-special"></i>
+                <span>Especiais</span>
+            </button>
+        </div>
     </div>
-    
-    <!-- Tab Content Panels -->
-    <div id="tab-content" class="p-6">
-      <!-- Dynamic content will be loaded here -->
-    </div>
-  </div>
-  
-  <!-- Performance Radar (optional) -->
-  <div class="mt-6 glass rounded-2xl p-6">
-    <canvas id="performance-radar" height="200"></canvas>
-  </div>
-</section>
 
+    <div class="tabs-content">
+        <!-- Engines Tab -->
+        <div class="tab-pane active" id="engines-tab">
+            <div class="component-section">
+                <h3>Seleção de Motores</h3>
+                <div class="engine-selector">
+                    <div class="engine-type-filter">
+                        <label>Tipo de Motor:</label>
+                        <select id="engine-type-filter">
+                            <option value="all">Todos</option>
+                            <option value="piston">Pistão</option>
+                            <option value="turbojet">Turbojet</option>
+                            <option value="turbofan">Turbofan</option>
+                            <option value="turboprop">Turboprop</option>
+                            <option value="rocket">Foguete</option>
+                        </select>
+                    </div>
+                    <div class="engine-list" id="available-engines">
+                        <!-- Engines will be populated by JavaScript -->
+                    </div>
+                </div>
+                <div class="selected-engine-info" id="selected-engine-info">
+                    <h4>Motor Selecionado</h4>
+                    <div class="engine-details">
+                        <p>Nenhum motor selecionado</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Airframes Tab -->
+        <div class="tab-pane" id="airframes-tab">
+            <div class="component-section">
+                <h3>Estrutura da Fuselagem</h3>
+                <div class="airframe-selector">
+                    <div class="airframe-categories">
+                        <button class="category-btn active" data-category="fuselage">Fuselagem</button>
+                        <button class="category-btn" data-category="structure">Estrutura</button>
+                        <button class="category-btn" data-category="materials">Materiais</button>
+                    </div>
+                    <div class="airframe-options" id="airframe-options">
+                        <!-- Airframe options will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wings Tab will be loaded from separate file -->
+        <div class="tab-pane" id="wings-tab">
+            <!-- Content loaded from wings-tab.html -->
+        </div>
+
+        <!-- Avionics Tab will be loaded from separate file -->
+        <div class="tab-pane" id="avionics-tab">
+            <!-- Content loaded from avionics-tab.html -->
+        </div>
+
+        <!-- Weapons Tab will be loaded from separate file -->
+        <div class="tab-pane" id="weapons-tab">
+            <!-- Content loaded from weapons-tab.html -->
+        </div>
+
+        <!-- Special Equipment Tab -->
+        <div class="tab-pane" id="special-tab">
+            <div class="component-section">
+                <h3>Equipamentos Especiais</h3>
+                <div class="special-equipment-grid">
+                    <div class="equipment-category">
+                        <h4>Sistemas de Propulsão Avançados</h4>
+                        <div class="equipment-options">
+                            <label class="equipment-option">
+                                <input type="checkbox" name="afterburner" value="true">
+                                <span>Sistema Pós-Queimador</span>
+                            </label>
+                            <label class="equipment-option">
+                                <input type="checkbox" name="thrust_vectoring" value="true">
+                                <span>Vetorização de Empuxo</span>
+                            </label>
+                            <label class="equipment-option">
+                                <input type="checkbox" name="variable_cycle" value="true">
+                                <span>Motor de Ciclo Variável</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="equipment-category">
+                        <h4>Sistemas de Sobrevivência</h4>
+                        <div class="equipment-options">
+                            <label class="equipment-option">
+                                <input type="checkbox" name="ejection_seat" value="true">
+                                <span>Assento Ejetável</span>
+                            </label>
+                            <label class="equipment-option">
+                                <input type="checkbox" name="armor_plating" value="true">
+                                <span>Blindagem</span>
+                            </label>
+                            <label class="equipment-option">
+                                <input type="checkbox" name="self_sealing_tanks" value="true">
+                                <span>Tanques Auto-Selantes</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.component-tabs-container {
+    background: #1a1a1a;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 20px 0;
+}
+
+.tabs-header {
+    background: #2d2d2d;
+    border-bottom: 2px solid #444;
+}
+
+.tab-navigation {
+    display: flex;
+    overflow-x: auto;
+}
+
+.tab-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px 20px;
+    background: none;
+    border: none;
+    color: #ccc;
+    cursor: pointer;
+    transition: all 0.3s;
+    min-width: 100px;
+}
+
+.tab-btn:hover {
+    background: #3d3d3d;
+    color: #fff;
+}
+
+.tab-btn.active {
+    background: #007bff;
+    color: #fff;
+}
+
+.tab-btn i {
+    font-size: 24px;
+    margin-bottom: 5px;
+}
+
+.tabs-content {
+    padding: 20px;
+}
+
+.tab-pane {
+    display: none;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+.component-section h3 {
+    color: #fff;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 10px;
+}
+
+.engine-selector, .airframe-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.engine-type-filter {
+    margin-bottom: 15px;
+}
+
+.engine-type-filter label {
+    color: #ccc;
+    margin-right: 10px;
+}
+
+.engine-type-filter select {
+    padding: 8px;
+    background: #333;
+    color: #fff;
+    border: 1px solid #555;
+    border-radius: 4px;
+}
+
+.engine-list {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 10px;
+}
+
+.selected-engine-info {
+    background: #2d2d2d;
+    padding: 15px;
+    border-radius: 4px;
+}
+
+.selected-engine-info h4 {
+    color: #007bff;
+    margin-bottom: 10px;
+}
+
+.airframe-categories {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.category-btn {
+    padding: 10px 15px;
+    background: #333;
+    color: #ccc;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.category-btn:hover {
+    background: #444;
+}
+
+.category-btn.active {
+    background: #007bff;
+    color: #fff;
+}
+
+.special-equipment-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.equipment-category h4 {
+    color: #007bff;
+    margin-bottom: 15px;
+}
+
+.equipment-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.equipment-option {
+    display: flex;
+    align-items: center;
+    color: #ccc;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    transition: background 0.3s;
+}
+
+.equipment-option:hover {
+    background: #333;
+}
+
+.equipment-option input {
+    margin-right: 10px;
+}
+</style>

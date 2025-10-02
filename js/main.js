@@ -1,3 +1,4 @@
+import './accessibility/a11y.js';
 import {
   auth,
   checkUserPermissions,
@@ -21,6 +22,7 @@ import {
   renderDetailedCountryPanel
 } from "./ui/renderer.js";
 import { showNotification } from "./utils.js";
+import { initializeMobileMenu } from './mobile/mobile-optimizations.js';
 
 // Elementos do DOM
 const authButton = document.getElementById('auth-button');

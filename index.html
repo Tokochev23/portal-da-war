@@ -6,132 +6,13 @@
   <title>WAR • Era 1954 — Portal Oficial</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%23ffb400%22/%3E%3Ctext x=%228%22 y=%2211%22 font-size=%2210%22 text-anchor=%22middle%22 fill=%22%230b1020%22%3EW%3C/text%3E%3C/svg%3E" />
 
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Twemoji for consistent flag rendering -->
-  <script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js" crossorigin="anonymous"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            bg: {
-              DEFAULT: "#0b1020",
-              soft: "#10172a",
-              ring: "#1e293b"
-            },
-            brand: {
-              50:"#fff7e6",100:"#ffefcc",200:"#ffe099",300:"#ffd166",400:"#ffc233",
-              500:"#ffb400",600:"#e09f00",700:"#b37d00",800:"#805900",900:"#4d3600"
-            }
-          }
-        }
-      }
-    }
-  </script>
-
   <!-- Inter Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  
-  <style>
-    :root { color-scheme: dark; }
-    body { 
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
-      background: #0b1020;
-      color: #e2e8f0;
-    }
 
-    .main-grid {
-      display: grid;
-      grid-template-columns: 1fr 320px;
-      gap: 2rem;
-      align-items: start;
-    }
-
-    .kpis-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 1rem;
-    }
-
-    .kpi-card {
-      background: #10172a;
-      border: 1px solid rgba(30, 41, 59, 0.7);
-      border-radius: 1rem;
-      padding: 1rem;
-      transition: all 0.3s ease;
-      box-shadow: 0 1px 0 0 rgba(255,255,255,0.03) inset, 0 6px 20px -12px rgba(0,0,0,0.6);
-    }
-
-    .kpi-card:hover {
-      box-shadow: 0 8px 25px -12px rgba(0,0,0,0.8);
-      border-color: rgba(71, 85, 105, 0.6);
-    }
-
-
-    .narrator-tools {
-      background: #10172a;
-      border: 1px solid rgba(30, 41, 59, 0.7);
-      border-radius: 1rem;
-      padding: 1.5rem;
-      box-shadow: 0 1px 0 0 rgba(255,255,255,0.03) inset, 0 6px 20px -12px rgba(0,0,0,0.6);
-    }
-
-    .loading-shimmer {
-      background: linear-gradient(90deg, rgba(30,41,59,0.4) 25%, rgba(30,41,59,0.6) 50%, rgba(30,41,59,0.4) 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
-      border-radius: 0.25rem;
-      height: 1em;
-      width: 3em;
-    }
-
-    @keyframes shimmer {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
-    }
-
-    @media (max-width: 1024px) {
-      .main-grid {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-      }
-      
-      .kpis-grid {
-        grid-template-columns: repeat(3, 1fr);
-      }
-    }
-
-    @media (max-width: 768px) {
-      .kpis-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    /* Mobile Menu Styles */
-    .mobile-menu-item {
-      @apply flex items-center gap-3 w-full p-3 text-left text-slate-200 hover:bg-white/5 rounded-lg transition-colors;
-    }
-
-    .mobile-menu-item:active {
-      @apply bg-white/10 scale-[0.98];
-    }
-
-    /* Enhanced touch targets for mobile */
-    @media (max-width: 768px) {
-      button, .btn, .country-card {
-        min-height: 44px;
-        min-width: 44px;
-      }
-
-      .btn-primary, .btn-secondary {
-        padding: 0.875rem 1.5rem;
-        font-size: 1rem;
-      }
-    }
-  </style>
+  <!-- Main CSS with Tailwind -->
+  <link rel="stylesheet" href="/css/main.css">
 </head>
 <body class="bg-bg text-slate-200">
 
@@ -652,63 +533,8 @@
     </div>
   </footer>
 
-  <script src="./js/accessibility/a11y.js" type="module"></script>
-  <script src="./js/services/firebase.js" type="module"></script>
-  <script src="./js/ui/renderer.js" type="module"></script>
-  <script src="./js/utils.js" type="module"></script>
-  <script src="./js/main.js" type="module"></script>
-  <script src="./js/mobile/mobile-optimizations.js" type="module"></script>
+  <script type="module" src="/js/main.js"></script>
 
-  <!-- Mobile Menu JavaScript -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-      const mobileMenuOverlay = document.getElementById('mobile-menu-overlay');
-      const mobileMenu = document.getElementById('mobile-menu');
-      const closeMobileMenu = document.getElementById('close-mobile-menu');
 
-      function openMobileMenu() {
-        mobileMenuOverlay.classList.remove('hidden');
-        setTimeout(() => {
-          mobileMenu.style.transform = 'translateX(0)';
-        }, 10);
-        document.body.style.overflow = 'hidden';
-      }
-
-      function closeMobileMenuFunc() {
-        mobileMenu.style.transform = 'translateX(100%)';
-        setTimeout(() => {
-          mobileMenuOverlay.classList.add('hidden');
-          document.body.style.overflow = '';
-        }, 300);
-      }
-
-      // Event listeners
-      mobileMenuBtn?.addEventListener('click', openMobileMenu);
-      closeMobileMenu?.addEventListener('click', closeMobileMenuFunc);
-
-      // Close on overlay click
-      mobileMenuOverlay?.addEventListener('click', (e) => {
-        if (e.target === mobileMenuOverlay) {
-          closeMobileMenuFunc();
-        }
-      });
-
-      // Close on link click
-      const mobileMenuItems = document.querySelectorAll('.mobile-menu-item');
-      mobileMenuItems.forEach(item => {
-        item.addEventListener('click', () => {
-          closeMobileMenuFunc();
-        });
-      });
-
-      // Close on escape key
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !mobileMenuOverlay.classList.contains('hidden')) {
-          closeMobileMenuFunc();
-        }
-      });
-    });
-  </script>
 </body>
 </html>

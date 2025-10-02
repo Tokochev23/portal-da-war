@@ -3,6 +3,9 @@
 
 import { auth, checkPlayerCountry, getCountryData, getGameConfig } from './services/firebase.js';
 
+// Import Aircraft ECS system
+import { legacyBridge } from './aircraft/core/LegacyBridge.js';
+
 // Global state for the creator
 let currentUserCountry = null;
 
@@ -52,7 +55,18 @@ async function initializeAircraftCreatorApp() {
                         window.currentUserCountry = currentUserCountry;
                         
                         console.log(`✅ País do usuário carregado: ${currentUserCountry.name} | Ano: ${currentUserCountry.year}`, currentUserCountry);
-                        
+
+                        // Initialize Aircraft ECS system
+                        updateLoadingStatus('Inicializando sistema de aeronaves...');
+                        legacyBridge.initialize();
+
+                        // Validate the bridge
+                        if (!legacyBridge.validateBridge()) {
+                            throw new Error('Falha na inicialização do sistema ECS de aeronaves');
+                        }
+
+                        console.log('✅ Aircraft ECS system initialized successfully');
+
                         if (window.aircraftCreatorApp && !window.aircraftCreatorApp.isInitialized) {
                             await window.aircraftCreatorApp.initialize();
                         }

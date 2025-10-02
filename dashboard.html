@@ -6,28 +6,13 @@
   <title>WAR • Meu Painel</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%23ffb400%22/%3E%3Ctext x=%228%22 y=%2211%22 font-size=%2210%22 text-anchor=%22middle%22 fill=%22%230b1020%22%3EW%3C/text%3E%3C/svg%3E" />
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            bg: { DEFAULT: "#0b1020", soft: "#10172a", ring: "#1e293b" },
-            brand: { 500: "#ffb400" }
-          }
-        }
-      }
-    }
-  </script>
-
+  <!-- Inter Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <style>
-    :root { color-scheme: dark; }
-    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif; background: #0b1020; color: #e2e8f0; }
-  </style>
+  <!-- Main CSS with Tailwind -->
+  <link rel="stylesheet" href="/css/main.css">
 
 </head>
 <body class="bg-bg text-slate-200">
@@ -60,26 +45,88 @@
 
   <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
     <div id="dashboard-content">
-      <div class="rounded-xl border border-bg-ring/70 p-6 bg-bg-soft">
-        <div class="loading-shimmer w-28"></div>
-        <div class="loading-shimmer w-48 mt-2"></div>
+      <div id="country-header" class="mb-8"></div>
+
+      <!-- Tabs -->
+      <div class="mb-4 border-b border-gray-200 dark:border-gray-700">
+          <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" id="dashboard-tabs" role="tablist">
+              <li class="mr-2" role="presentation">
+                  <button class="inline-block p-4 border-b-2 rounded-t-lg" id="overview-tab" data-tabs-target="#overview" type="button" role="tab" aria-controls="overview" aria-selected="false">Visão Geral</button>
+              </li>
+              <li class="mr-2" role="presentation">
+                  <button class="inline-block p-4 border-b-2 rounded-t-lg" id="inventory-tab" data-tabs-target="#inventory" type="button" role="tab" aria-controls="inventory" aria-selected="false">Inventário</button>
+              </li>
+              <li class="mr-2" role="presentation">
+                  <button class="inline-block p-4 border-b-2 rounded-t-lg" id="market-tab" data-tabs-target="#market" type="button" role="tab" aria-controls="market" aria-selected="false">Mercado</button>
+              </li>
+              <li role="presentation">
+                  <button class="inline-block p-4 border-b-2 rounded-t-lg" id="fleets-tab" data-tabs-target="#fleets" type="button" role="tab" aria-controls="fleets" aria-selected="false">Frotas</button>
+              </li>
+          </ul>
+      </div>
+      <div id="dashboard-tab-content">
+          <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="overview" role="tabpanel" aria-labelledby="overview-tab">
+              <p class="text-sm text-gray-500 dark:text-gray-400">Visão geral do país.</p>
+          </div>
+          <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="inventory" role="tabpanel" aria-labelledby="inventory-tab">
+              <h2 class="text-xl font-semibold mb-4">Inventário Nacional</h2>
+              <div id="inventory-resources" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
+              <h3 class="text-lg font-semibold mt-6 mb-4">Veículos</h3>
+              <div id="inventory-vehicles" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+          </div>
+          <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="market" role="tabpanel" aria-labelledby="market-tab">
+              <p class="text-sm text-gray-500 dark:text-gray-400">WIP: Mercado Internacional.</p>
+          </div>
+          <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="fleets" role="tabpanel" aria-labelledby="fleets-tab">
+              <p class="text-sm text-gray-500 dark:text-gray-400">WIP: Gestão de Frotas.</p>
+          </div>
       </div>
     </div>
   </main>
 
-  <script src="./js/services/firebase.js" type="module"></script>
-  <script src="./js/systems/resourceProductionCalculator.js" type="module"></script>
-  <script src="./js/systems/resourceConsumptionCalculator.js" type="module"></script>
+  <!-- Mobile Menu Overlay -->
+  <div id="mobile-menu-overlay" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden md:hidden">
+    <div id="mobile-menu" class="fixed right-0 top-0 h-full w-80 max-w-[85vw] bg-bg border-l border-bg-ring/70 shadow-xl transform translate-x-full transition-transform duration-300">
+      <div class="flex items-center justify-between p-4 border-b border-bg-ring/70">
+        <h2 class="text-lg font-semibold text-slate-100">Menu</h2>
+        <button id="close-mobile-menu" class="p-2 text-slate-400 hover:text-slate-200 transition-colors">
+          <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <nav class="p-4">
+        <div class="space-y-3">
+          <a href="index.html" class="mobile-menu-item">
+            <span class="text-lg">🏠</span>
+            <span>Início</span>
+          </a>
+          <a href="#" id="mobile-logout-link" class="mobile-menu-item">
+            <span class="text-lg">🚪</span>
+            <span>Sair</span>
+          </a>
+        </div>
+      </nav>
+    </div>
+  </div>
+
   <script type="module">
     import { initDashboard } from './js/pages/dashboard.js';
     import ResourceProductionCalculator from './js/systems/resourceProductionCalculator.js';
     import ResourceConsumptionCalculator from './js/systems/resourceConsumptionCalculator.js';
+    import { getFlagHTML } from './js/ui/renderer.js';
+    import { initMobileMenu } from './js/utils/mobileMenu.js';
 
     // Expose calculators globally for marketplace system
     window.ResourceProductionCalculator = ResourceProductionCalculator;
     window.ResourceConsumptionCalculator = ResourceConsumptionCalculator;
+    window.getFlagHTML = getFlagHTML;
 
-    document.addEventListener('DOMContentLoaded', initDashboard);
+    document.addEventListener('DOMContentLoaded', () => {
+      initDashboard();
+      initMobileMenu();
+    });
   </script>
 </body>
 </html>

@@ -81,7 +81,21 @@
       "Bash(start narrador.html)",
       "Bash(start:*)",
       "Bash(touch:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "WebFetch(domain:firebasestorage.googleapis.com)",
+      "Bash(git checkout:*)",
+      "Bash(code:*)",
+      "Bash(findstr:*)",
+      "Bash(echo $APPDATA)",
+      "Read(//c/Users/Administrador/AppData/Roaming/Code/User/**)",
+      "Bash(npm install:*)",
+      "Bash(npx tailwindcss init:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)",
+      "Bash(git config:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

@@ -5,17 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>WAR • Painel do Narrador</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%23ffb400%22/%3E%3Ctext x=%228%22 y=%2211%22 font-size=%2210%22 text-anchor=%22middle%22 fill=%22%230b1020%22%3EN%3C/text%3E%3C/svg%3E" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = { theme: { extend: { colors: { bg: { DEFAULT: "#0b1020", soft: "#10172a", ring: "#1e293b" }, brand: { 50:"#fff7e6",100:"#ffefcc",200:"#ffe099",300:"#ffd166",400:"#ffc233",500:"#ffb400",600:"#e09f00",700:"#b37d00",800:"#805900",900:"#4d3600" } } } } }
-  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    :root { color-scheme: dark; }
-    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif; background: #0b1020; color: #e2e8f0; }
-  </style>
+  <link rel="stylesheet" href="/css/main.css">
 </head>
 <body class="bg-bg text-slate-200">
   <header class="border-b border-bg-ring/70 sticky top-0 z-40 bg-bg/90 backdrop-blur">
@@ -543,116 +536,6 @@
     </div>
   </main>
 
-  <!-- Tab System JavaScript -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Tab system functionality
-      const tabButtons = document.querySelectorAll('.tab-button');
-      const tabPanels = document.querySelectorAll('.tab-panel');
-
-      function switchTab(targetTab) {
-        // Remove active states
-        tabButtons.forEach(btn => {
-          btn.classList.remove('border-brand-500', 'text-brand-300');
-          btn.classList.add('border-transparent', 'text-slate-400');
-          btn.setAttribute('aria-selected', 'false');
-        });
-
-        // Hide all panels
-        tabPanels.forEach(panel => {
-          panel.classList.add('hidden');
-        });
-
-        // Activate target tab
-        const targetButton = document.querySelector(`[data-tab="${targetTab}"]`);
-        const targetPanel = document.getElementById(`panel-${targetTab}`);
-
-        if (targetButton && targetPanel) {
-          targetButton.classList.remove('border-transparent', 'text-slate-400');
-          targetButton.classList.add('border-brand-500', 'text-brand-300');
-          targetButton.setAttribute('aria-selected', 'true');
-          
-          targetPanel.classList.remove('hidden');
-        }
-
-        // Trigger updates when switching to specific tabs
-        if (targetTab === 'players') {
-          // Refresh players data when switching to players tab
-          setTimeout(() => {
-            if (window.playerManager) {
-              window.playerManager.loadPlayers();
-              window.playerManager.loadCountries();
-            }
-          }, 100);
-        } else if (targetTab === 'gameplay') {
-          // Update stats when switching to gameplay
-          setTimeout(() => {
-            if (window.updateQuickStats) {
-              window.updateQuickStats();
-            }
-          }, 100);
-        }
-      }
-
-      // Add click event listeners
-      tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-          const tab = button.getAttribute('data-tab');
-          switchTab(tab);
-        });
-      });
-
-      // Initialize with gameplay tab active
-      switchTab('gameplay');
-
-      // Global function to update tab badges from external scripts
-      window.updateTabBadges = function(badgeData) {
-        const gameplayBadge = document.getElementById('gameplay-badge');
-        const playersBadge = document.getElementById('players-badge');
-        
-        if (gameplayBadge && badgeData?.vehiclesPending > 0) {
-          gameplayBadge.textContent = badgeData.vehiclesPending;
-          gameplayBadge.classList.remove('hidden');
-        } else if (gameplayBadge) {
-          gameplayBadge.classList.add('hidden');
-        }
-        
-        if (playersBadge && badgeData?.playersOnline > 0) {
-          playersBadge.textContent = badgeData.playersOnline;
-          playersBadge.classList.remove('hidden');
-        } else if (playersBadge) {
-          playersBadge.classList.add('hidden');
-        }
-      };
-
-      // Make tab switching globally available
-      window.switchTab = switchTab;
-    });
-  </script>
-
-  <script src="./js/services/firebase.js" type="module"></script>
-  <script src="./js/services/changeHistory.js" type="module"></script>
-  <script src="./js/services/realTimeUpdates.js" type="module"></script>
-  <script src="./js/services/playerManager.js" type="module"></script>
-  <script src="./js/services/eventSimulator.js" type="module"></script>
-  <script src="./js/components/rulesEditor.js" type="module"></script>
-  <script src="./js/components/advancedTools.js" type="module"></script>
   <script src="./js/pages/narrador.js" type="module"></script>
-  <script src="./migrar-agora.js" type="module"></script>
-  <script src="./verificar-migracao.js" type="module"></script>
-  <script src="./sincronizar-dados.js" type="module"></script>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const openBtn = document.getElementById('btn-open-rules-editor');
-      const rulesPanel = document.getElementById('rules-editor-panel');
-      if(openBtn && rulesPanel) {
-        openBtn.addEventListener('click', () => {
-          rulesPanel.classList.toggle('hidden');
-        });
-      }
-    });
-  </script>
-
 </body>
 </html>

@@ -34,7 +34,13 @@ export const airframes = {
         cd_0: 0.028, // Slightly more drag than wood/fabric
         aspect_ratio: 6.2,
         oswald_efficiency: 0.8,
-        max_speed_kph: 700
+        max_speed_kph: 700,
+        // --- Novos Parâmetros Sistêmicos ---
+        maintainabilityModifier: 1.0,
+        radarSignatureModifier: 1.0,
+        lifecycleCostMultiplier: 1.0,
+        techLevelRequirement: 30,
+        position: [0, 0, 0]
     },
     
     // === CAÇAS A JATO INICIAL (1950-1952) ===
@@ -64,7 +70,13 @@ export const airframes = {
         cd_0: 0.022,
         aspect_ratio: 5.5,
         oswald_efficiency: 0.75,
-        max_speed_kph: 1100 // Será depreciado
+        max_speed_kph: 1100, // Será depreciado
+        // --- Novos Parâmetros Sistêmicos ---
+        maintainabilityModifier: 1.1,
+        radarSignatureModifier: 0.95,
+        lifecycleCostMultiplier: 1.2,
+        techLevelRequirement: 60,
+        position: [0, 0, 0]
     },
 
     // === CAÇA DE 1ª GERAÇÃO A JATO (1952-1954) ===
@@ -94,7 +106,13 @@ export const airframes = {
         cd_0: 0.021,
         aspect_ratio: 5.8,
         oswald_efficiency: 0.77,
-        max_speed_kph: 1200 // Será depreciado
+        max_speed_kph: 1200, // Será depreciado
+        // --- Novos Parâmetros Sistêmicos ---
+        maintainabilityModifier: 1.15,
+        radarSignatureModifier: 0.9,
+        lifecycleCostMultiplier: 1.3,
+        techLevelRequirement: 75,
+        position: [0, 0, 0]
     },
 
     // === CAÇA SUPERSÔNICO 2ª GERAÇÃO (1954-1956) ===
@@ -124,7 +142,13 @@ export const airframes = {
         cd_0: 0.018,
         aspect_ratio: 4.5,
         oswald_efficiency: 0.72,
-        max_speed_kph: 1450 // Será depreciado
+        max_speed_kph: 1450, // Será depreciado
+        // --- Novos Parâmetros Sistêmicos ---
+        maintainabilityModifier: 1.4,
+        radarSignatureModifier: 0.8,
+        lifecycleCostMultiplier: 1.6,
+        techLevelRequirement: 90,
+        position: [0, 0, 0]
     },
 
     // ========== ÁRVORE TECNOLÓGICA: AERONAVES DE ATAQUE =========
@@ -154,7 +178,13 @@ export const airframes = {
         cd_0: 0.038,
         aspect_ratio: 5.8,
         oswald_efficiency: 0.75,
-        max_speed_kph: 550 // Será depreciado
+        max_speed_kph: 550, // Será depreciado
+        // --- Novos Parâmetros Sistêmicos ---
+        maintainabilityModifier: 0.9,
+        radarSignatureModifier: 1.2,
+        lifecycleCostMultiplier: 0.9,
+        techLevelRequirement: 25,
+        position: [0, 0, 0]
     },
 
     // ... (outras aeronaves de ataque mantidas como no original)
@@ -187,7 +217,13 @@ export const airframes = {
         cd_0: 0.033,
         aspect_ratio: 7.0,
         oswald_efficiency: 0.82,
-        max_speed_kph: 580 // Será depreciado
+        max_speed_kph: 580, // Será depreciado
+        // --- Novos Parâmetros Sistêmicos ---
+        maintainabilityModifier: 1.2,
+        radarSignatureModifier: 1.5,
+        lifecycleCostMultiplier: 1.2,
+        techLevelRequirement: 30,
+        position: [0, 0, 0]
     },
 
     strategic_bomber_piston: {
@@ -216,7 +252,13 @@ export const airframes = {
         cd_0: 0.030,
         aspect_ratio: 8.5,
         oswald_efficiency: 0.85,
-        max_speed_kph: 480 // Será depreciado
+        max_speed_kph: 480, // Será depreciado
+        // --- Novos Parâmetros Sistêmicos ---
+        maintainabilityModifier: 1.8,
+        radarSignatureModifier: 2.5,
+        lifecycleCostMultiplier: 2.0,
+        techLevelRequirement: 35,
+        position: [0, 0, 0]
     },
 
     // ... (outros bombardeiros e transportes mantidos como no original, mas com adição dos parâmetros)
@@ -248,7 +290,13 @@ export const airframes = {
         cl_max: 1.2,
         cd_0: 0.019,
         aspect_ratio: 4.0,
-        oswald_efficiency: 0.70
+        oswald_efficiency: 0.70,
+        // --- Novos Parâmetros Sistêmicos ---
+        maintainabilityModifier: 1.6,
+        radarSignatureModifier: 1.1,
+        lifecycleCostMultiplier: 1.8,
+        techLevelRequirement: 100,
+        position: [0, 0, 0]
     },
     multi_role_fighter: {
         name: "Caça Multi-Propósito",
@@ -275,6 +323,12 @@ export const airframes = {
         cl_max: 1.4,
         cd_0: 0.024,
         aspect_ratio: 5.0,
-        oswald_efficiency: 0.78
+        oswald_efficiency: 0.78,
+        // --- Novos Parâmetros Sistêmicos ---
+        maintainabilityModifier: 1.3,
+        radarSignatureModifier: 1.0,
+        lifecycleCostMultiplier: 1.4,
+        techLevelRequirement: 85,
+        position: [0, 0, 0]
     }
 };

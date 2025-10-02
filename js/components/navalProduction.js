@@ -332,6 +332,7 @@ export class NavalProductionSystem {
                             <span class="px-2 py-1 text-xs rounded-full ${this.getStatusBadge(order.status)}">${this.getStatusLabel(order.status)}</span>
                         </div>
                         <div class="text-xs text-slate-400 space-y-1">
+                            {/* TODO: UI for Production Line Bonus can be added here, using order.initialLineBonus */}
                             <div>👤 <strong>Jogador:</strong> ${order.userName || 'Desconhecido'}</div>
                             <div>🏠 <strong>País:</strong> ${order.countryName || 'Desconhecido'}</div>
                             <div>🚢 <strong>Tipo:</strong> ${hullName}</div>
@@ -581,7 +582,22 @@ export class NavalProductionSystem {
             const unitCost = order.totalCost / requestedQuantity;
 
             const updateTimeline = async (quantity) => {
-                const schedule = await this.calculateProductionSchedule(productionData, quantity, order.paisId);
+                // --- Production Line Logic for Preview ---
+                const countryRef = db.collection('paises').doc(order.paisId);
+                const countryDoc = await countryRef.get();
+                const countryData = countryDoc.exists() ? countryDoc.data() : {};
+                const productionLines = countryData.productionLines || { naval: {} };
+                const navalLines = productionLines.naval || {};
+                const line = navalLines[order.design.name];
+                
+                let initialBonus = line ? (line.efficiency || 0) : -0.10; // Use penalty if no line exists
+                // --- End of Preview Logic ---
+
+                const schedule = await this.calculateProductionSchedule(productionData, quantity, order.paisId, {
+                    initialBonus,
+                    bonusPerShip: 0.05,
+                    maxBonus: 0.40
+                });
                 timelineDiv.innerHTML = this.renderSchedulePreview(schedule, order.design.name);
             };
 
@@ -620,48 +636,59 @@ export class NavalProductionSystem {
         }
     }
 
-    async calculateProductionSchedule(hullOrProductionData, quantity, countryId = null) {
-        // Accept either hull object with production property or production data directly
-        let productionData = hullOrProductionData.production || hullOrProductionData;
-
-        // Apply shipyard bonuses if countryId is provided
-        if (countryId) {
-            const shipyardLevel = await this.shipyardSystem.getCurrentShipyardLevel(countryId);
-            productionData = this.shipyardSystem.applyShipyardBonusToProduction(productionData, shipyardLevel);
-            console.log(`🏭 Estaleiro nível ${shipyardLevel} aplicado:`, {
-                originalTime: hullOrProductionData.production?.build_time_months || hullOrProductionData.build_time_months,
-                newTime: productionData.build_time_months,
-                originalParallel: hullOrProductionData.production?.max_parallel || hullOrProductionData.max_parallel || 1,
-                newParallel: productionData.max_parallel
-            });
-        }
-
-        const buildTimeMonths = productionData.build_time_months;
-        const maxParallel = productionData.max_parallel || 1;
-        const currentTurn = window.gameConfig?.currentTurn || 1;
+    async calculateProductionSchedule(hullOrProductionData, quantity, countryId, productionLine) {
+        const { initialBonus, bonusPerShip, maxBonus } = productionLine;
         
+        // Get base production data from hull
+        let baseProductionData = hullOrProductionData.production || hullOrProductionData;
+        
+        // Get shipyard level and base bonuses (time reduction, parallel capacity)
+        const shipyardLevel = await this.shipyardSystem.getCurrentShipyardLevel(countryId);
+        const shipyardBonuses = this.shipyardSystem.calculateProductionBonus(shipyardLevel);
+        const maxParallel = Math.ceil((baseProductionData.max_parallel || 1) * shipyardBonuses.parallelMultiplier);
+
+        const currentTurn = window.gameConfig?.currentTurn || 1;
+        const productionSlots = Array(maxParallel).fill(currentTurn); // Each slot is available at a certain turn
         const batches = [];
-        let remainingQuantity = quantity;
-        let currentTurnOffset = 1;
+        
+        let shipsScheduled = 0;
+        while(shipsScheduled < quantity) {
+            // Find the earliest available production slot
+            const earliestSlotTurn = Math.min(...productionSlots);
+            const slotIndex = productionSlots.indexOf(earliestSlotTurn);
 
-        while (remainingQuantity > 0) {
-            const batchSize = Math.min(remainingQuantity, maxParallel);
-            const completionTurn = currentTurn + currentTurnOffset + Math.ceil(buildTimeMonths / 3) - 1;
-            
-            batches.push({
-                quantity: batchSize,
-                startTurn: currentTurn + currentTurnOffset,
-                completionTurn: completionTurn,
-                buildTimeMonths: buildTimeMonths
-            });
+            // Calculate bonus for the current ship
+            const currentShipIndex = shipsScheduled;
+            const lineBonus = Math.min(maxBonus, initialBonus + (currentShipIndex * bonusPerShip));
 
-            remainingQuantity -= batchSize;
-            
-            // If we can't build all in parallel, schedule next batch
-            if (remainingQuantity > 0) {
-                currentTurnOffset += Math.ceil(buildTimeMonths / 6); // Overlap by 50%
+            // Calculate this specific ship's build time
+            const finalProductionData = this.shipyardSystem.applyShipyardBonusToProduction(baseProductionData, shipyardLevel, lineBonus);
+            const shipBuildTimeTurns = Math.ceil(finalProductionData.build_time_months / 3);
+
+            // This ship will be completed 'shipBuildTimeTurns' after the slot is free
+            const completionTurn = earliestSlotTurn + shipBuildTimeTurns;
+
+            // The slot will be free again on the completion turn
+            productionSlots[slotIndex] = completionTurn;
+
+            // Add ship to a batch for the schedule
+            let batch = batches.find(b => b.completionTurn === completionTurn);
+            if (batch) {
+                batch.quantity++;
+            } else {
+                batches.push({
+                    quantity: 1,
+                    startTurn: earliestSlotTurn,
+                    completionTurn: completionTurn,
+                    buildTimeMonths: finalProductionData.build_time_months,
+                    appliedBonus: lineBonus
+                });
             }
+            shipsScheduled++;
         }
+
+        // Sort batches by completion turn
+        batches.sort((a, b) => a.completionTurn - b.completionTurn);
 
         return {
             totalQuantity: quantity,

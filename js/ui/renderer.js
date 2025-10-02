@@ -47,47 +47,47 @@ function calculateBudget(country) {
   const estabilidade = (parseFloat(country.Estabilidade) || 0) / 100;
   return pibBruto * 0.25 * burocracia * estabilidade * 1.5;
 }
-function calculateVehicleProductionCapacity(country) {
-  const pibBruto = parseFloat(country.PIB) || 0;
-  const tecnologiaCivil = (parseFloat(country.Tecnologia) || 0) / 100;
-  const urbanizacao = (parseFloat(country.Urbanizacao) || 0) / 100;
-  const tecnologiaVeiculos = (parseFloat(country.Veiculos) || 0) / 100; // campo Veiculos = tecnologia de veículos
-  
-  const fatorMultiplicador = 0.15;
-  return pibBruto * tecnologiaCivil * urbanizacao * tecnologiaVeiculos * fatorMultiplicador;
-}
-function calculateAircraftProductionCapacity(country) {
-  const pibBruto = parseFloat(country.PIB) || 0;
-  const tecnologiaCivil = (parseFloat(country.Tecnologia) || 0) / 100;
-  const urbanizacao = (parseFloat(country.Urbanizacao) || 0) / 100;
-  const tecnologiaAeronautica = (parseFloat(country.Aeronautica) || 0) / 100;
-  
-  const fatorMultiplicador = 0.12;
-  return pibBruto * tecnologiaCivil * urbanizacao * tecnologiaAeronautica * fatorMultiplicador;
-}
-function calculateShipProductionCapacity(country) {
-  const pibBruto = parseFloat(country.PIB) || 0;
-  const tecnologiaCivil = (parseFloat(country.Tecnologia) || 0) / 100;
-  const urbanizacao = (parseFloat(country.Urbanizacao) || 0) / 100;
-  const tecnologiaMarinha = (parseFloat(country.Marinha) || 0) / 100;
-  
-  const fatorMultiplicador = 0.18;
-  return pibBruto * tecnologiaCivil * urbanizacao * tecnologiaMarinha * fatorMultiplicador;
+function calculateMilitaryBudget(country) {
+  const generalBudget = calculateBudget(country);
+  const percentualMilitar = (parseFloat(country.MilitaryBudgetPercent) || 30) / 100;
+  return generalBudget * percentualMilitar;
 }
 
-// Bandeiras com segurança de encoding
-function flagEmojiFromCode(cc) {
-  if (!cc || cc.length !== 2) return '🏴';
-  const code = cc.toUpperCase();
-  const base = 127397; // regional indicator base
-  return String.fromCodePoint(code.charCodeAt(0) + base, code.charCodeAt(1) + base);
+function getMilitaryDistribution(country) {
+  const vehicles = (parseFloat(country.MilitaryDistributionVehicles) || 40) / 100;
+  const aircraft = (parseFloat(country.MilitaryDistributionAircraft) || 30) / 100;
+  const naval = (parseFloat(country.MilitaryDistributionNaval) || 30) / 100;
+
+  return {
+    vehicles: vehicles,
+    aircraft: aircraft,
+    naval: naval,
+    maintenancePercent: 0.15
+  };
 }
-function countryFlagEmoji(name) {
-  const key = (name || '').toLowerCase()
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '');
-  const map = {
-    // Países principais já existentes
+
+function calculateVehicleProductionCapacity(country) {
+  const orcamentoMilitar = calculateMilitaryBudget(country);
+  const distribution = getMilitaryDistribution(country);
+  return orcamentoMilitar * distribution.vehicles;
+}
+function calculateAircraftProductionCapacity(country) {
+  const orcamentoMilitar = calculateMilitaryBudget(country);
+  const distribution = getMilitaryDistribution(country);
+  return orcamentoMilitar * distribution.aircraft;
+}
+function calculateShipProductionCapacity(country) {
+  const orcamentoMilitar = calculateMilitaryBudget(country);
+  const distribution = getMilitaryDistribution(country);
+  return orcamentoMilitar * distribution.naval;
+}
+
+
+
+// === SISTEMA DE BANDEIRAS OTIMIZADO ===
+
+// Mapeamento de nomes de países para códigos de duas letras
+const COUNTRY_CODE_MAP = {
     'afeganistao':'AF','afghanistan':'AF',
     'africa do sul':'ZA','south africa':'ZA',
     'alemanha':'DE','germany':'DE',
@@ -131,7 +131,9 @@ function countryFlagEmoji(name) {
     'polonia':'PL','poland':'PL',
     'portugal':'PT',
     'reino unido':'GB','inglaterra':'GB','uk':'GB','united kingdom':'GB',
-    'russia':'RU','urss':'RU','uniao sovietica':'RU',
+    'russia':'RU',
+    'urss':'RU',
+    'uniao sovietica':'RU',
     'singapura':'SG','singapore':'SG',
     'suecia':'SE','sweden':'SE',
     'suica':'CH','switzerland':'CH',
@@ -140,146 +142,243 @@ function countryFlagEmoji(name) {
     'uruguai':'UY',
     'venezuela':'VE',
     'vietna':'VN','vietnam':'VN',
-    'equador':'EC','paraguai':'PY',
-    
-    // Países adicionados com emojis disponíveis
-    'albania':'AL','albania':'AL',
+    'equador':'EC',
+    'paraguai':'PY',
+    'albania':'AL',
     'argelia':'DZ','algeria':'DZ',
-    'andorra':'AD','andorra':'AD',
-    'angola':'AO','angola':'AO',
+    'andorra':'AD',
+    'angola':'AO',
     'antigua e barbuda':'AG','antigua and barbuda':'AG',
-    'armenia':'AM','armenia':'AM',
+    'armenia':'AM',
     'azerbaijao':'AZ','azerbaijan':'AZ',
-    'bahamas':'BS','bahamas':'BS',
+    'bahamas':'BS',
     'bahrein':'BH','bahrain':'BH',
-    'bangladesh':'BD','bangladesh':'BD',
-    'barbados':'BB','barbados':'BB',
-    'belarus':'BY','belarus':'BY','bielorrússia':'BY',
-    'belize':'BZ','belize':'BZ',
-    'benin':'BJ','benin':'BJ',
+    'bangladesh':'BD',
+    'barbados':'BB',
+    'belarus':'BY','bielorrússia':'BY',
+    'belize':'BZ',
+    'benin':'BJ',
     'butao':'BT','bhutan':'BT',
     'bosnia e herzegovina':'BA','bosnia and herzegovina':'BA',
     'botsuana':'BW','botswana':'BW',
-    'brunei':'BN','brunei':'BN',
-    'bulgaria':'BG','bulgaria':'BG',
-    'burkina faso':'BF','burkina faso':'BF',
-    'burundi':'BI','burundi':'BI',
+    'brunei':'BN',
+    'bulgaria':'BG',
+    'burkina faso':'BF',
+    'burundi':'BI',
     'camboja':'KH','cambodia':'KH',
     'camarões':'CM','cameroon':'CM',
     'cabo verde':'CV','cape verde':'CV',
     'republica centro-africana':'CF','central african republic':'CF',
     'chade':'TD','chad':'TD',
     'comores':'KM','comoros':'KM',
-    'congo':'CG','congo':'CG',
-    'costa rica':'CR','costa rica':'CR',
+    'congo':'CG',
+    'costa rica':'CR',
     'croacia':'HR','croatia':'HR',
     'chipre':'CY','cyprus':'CY',
     'republica tcheca':'CZ','czech republic':'CZ','tchequia':'CZ',
     'republica dominicana':'DO','dominican republic':'DO',
     'timor-leste':'TL','east timor':'TL',
-    'el salvador':'SV','el salvador':'SV',
+    'el salvador':'SV',
     'guine equatorial':'GQ','equatorial guinea':'GQ',
-    'eritreia':'ER','eritrea':'ER',
-    'estonia':'EE','estonia':'EE',
+    'eritreia':'ER',
+    'estonia':'EE',
     'etiopia':'ET','ethiopia':'ET',
-    'fiji':'FJ','fiji':'FJ',
+    'fiji':'FJ',
     'gabao':'GA','gabon':'GA',
-    'gambia':'GM','gambia':'GM',
-    'georgia':'GE','georgia':'GE',
+    'gambia':'GM',
+    'georgia':'GE',
     'gana':'GH','ghana':'GH',
-    'guatemala':'GT','guatemala':'GT',
+    'guatemala':'GT',
     'guine':'GN','guinea':'GN',
     'guine-bissau':'GW','guinea-bissau':'GW',
     'guiana':'GY','guyana':'GY',
-    'haiti':'HT','haiti':'HT',
-    'honduras':'HN','honduras':'HN',
+    'haiti':'HT',
+    'honduras':'HN',
     'islandia':'IS','iceland':'IS',
-    'jamaica':'JM','jamaica':'JM',
+    'jamaica':'JM',
     'jordania':'JO','jordan':'JO',
     'cazaquistao':'KZ','kazakhstan':'KZ',
     'quenia':'KE','kenya':'KE',
-    'kiribati':'KI','kiribati':'KI',
-    'kuwait':'KW','kuwait':'KW',
+    'kiribati':'KI',
+    'kuwait':'KW',
     'quirguistao':'KG','kyrgyzstan':'KG',
-    'laos':'LA','laos':'LA',
+    'laos':'LA',
     'letonia':'LV','latvia':'LV',
     'libano':'LB','lebanon':'LB',
     'lesoto':'LS','lesotho':'LS',
-    'liberia':'LR','liberia':'LR',
+    'liberia':'LR',
     'libia':'LY','libya':'LY',
-    'liechtenstein':'LI','liechtenstein':'LI',
+    'liechtenstein':'LI',
     'lituania':'LT','lithuania':'LT',
     'luxemburgo':'LU','luxembourg':'LU',
-    'madagascar':'MG','madagascar':'MG',
-    'malawi':'MW','malawi':'MW',
+    'madagascar':'MG',
+    'malawi':'MW',
     'maldivas':'MV','maldives':'MV',
-    'mali':'ML','mali':'ML',
-    'malta':'MT','malta':'MT',
+    'mali':'ML',
+    'malta':'MT',
     'ilhas marshall':'MH','marshall islands':'MH',
-    'mauritania':'MR','mauritania':'MR',
+    'mauritania':'MR',
     'mauricio':'MU','mauritius':'MU',
-    'micronesia':'FM','micronesia':'FM',
-    'moldova':'MD','moldova':'MD',
-    'monaco':'MC','monaco':'MC',
-    'mongolia':'MN','mongolia':'MN',
-    'montenegro':'ME','montenegro':'ME',
+    'micronesia':'FM',
+    'moldova':'MD',
+    'monaco':'MC',
+    'mongolia':'MN',
+    'montenegro':'ME',
     'mocambique':'MZ','mozambique':'MZ',
-    'myanmar':'MM','myanmar':'MM','birmania':'MM',
-    'namibia':'NA','namibia':'NA',
-    'nauru':'NR','nauru':'NR',
-    'nepal':'NP','nepal':'NP',
-    'nicaragua':'NI','nicaragua':'NI',
-    'niger':'NE','niger':'NE',
+    'myanmar':'MM','birmania':'MM',
+    'namibia':'NA',
+    'nauru':'NR',
+    'nepal':'NP',
+    'nicaragua':'NI',
+    'niger':'NE',
     'macedonia do norte':'MK','north macedonia':'MK',
     'oma':'OM','oman':'OM',
     'paquistao':'PK','pakistan':'PK',
-    'palau':'PW','palau':'PW',
-    'panama':'PA','panama':'PA',
+    'palau':'PW',
+    'panama':'PA',
     'papua-nova guine':'PG','papua new guinea':'PG',
     'filipinas':'PH','philippines':'PH',
     'catar':'QA','qatar':'QA',
     'romenia':'RO','romania':'RO',
-    'ruanda':'RW','rwanda':'RW',
+    'ruanda':'RW',
     'sao cristovao e nevis':'KN','saint kitts and nevis':'KN',
     'santa lucia':'LC','saint lucia':'LC',
     'sao vicente e granadinas':'VC','saint vincent and the grenadines':'VC',
-    'samoa':'WS','samoa':'WS',
-    'san marino':'SM','san marino':'SM',
+    'samoa':'WS',
+    'san marino':'SM',
     'sao tome e principe':'ST','sao tome and principe':'ST',
     'arabia saudita':'SA','saudi arabia':'SA',
-    'senegal':'SN','senegal':'SN',
+    'senegal':'SN',
     'servia':'RS','serbia':'RS',
     'seicheles':'SC','seychelles':'SC',
     'serra leoa':'SL','sierra leone':'SL',
     'eslovaquia':'SK','slovakia':'SK',
     'eslovenia':'SI','slovenia':'SI',
     'ilhas salomao':'SB','solomon islands':'SB',
-    'somalia':'SO','somalia':'SO',
-    'sri lanka':'LK','sri lanka':'LK',
+    'somalia':'SO',
+    'sri lanka':'LK',
     'sudao':'SD','sudan':'SD',
-    'suriname':'SR','suriname':'SR',
+    'suriname':'SR',
     'siria':'SY','syria':'SY',
     'tajiquistao':'TJ','tajikistan':'TJ',
-    'tanzania':'TZ','tanzania':'TZ',
+    'tanzania':'TZ',
     'tailandia':'TH','thailand':'TH',
-    'togo':'TG','togo':'TG',
-    'tonga':'TO','tonga':'TO',
+    'togo':'TG',
+    'tonga':'TO',
     'trinidad e tobago':'TT','trinidad and tobago':'TT',
-    'tunisia':'TN','tunisia':'TN',
+    'tunisia':'TN',
     'turcomenistao':'TM','turkmenistan':'TM',
-    'tuvalu':'TV','tuvalu':'TV',
-    'uganda':'UG','uganda':'UG',
+    'tuvalu':'TV',
+    'uganda':'UG',
     'emirados arabes unidos':'AE','united arab emirates':'AE',
     'uzbequistao':'UZ','uzbekistan':'UZ',
-    'vanuatu':'VU','vanuatu':'VU',
+    'vanuatu':'VU',
     'cidade do vaticano':'VA','vatican city':'VA','vaticano':'VA',
     'iemen':'YE','yemen':'YE',
-    'zambia':'ZM','zambia':'ZM',
+    'zambia':'ZM',
     'zimbabue':'ZW','zimbabwe':'ZW'
-  };
-  const code = map[key];
-  return code ? flagEmojiFromCode(code) : '🏴';
+};
+
+// Função para normalizar nomes de países para busca de código
+function getCountryCode(name) {
+  if (!name) return null;
+  const key = (name || '').toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '');
+  return COUNTRY_CODE_MAP[key] || null;
 }
+
+// Função para normalizar nomes de países para busca de bandeira histórica
+function normalizeName(name) {
+  return (name || '').toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^\w\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Base de dados das bandeiras históricas de 1954
+const HISTORICAL_FLAGS_1954 = {
+  // África
+  'africa equatorial francesa': 'assets/flags/historical/África Equatorial Francesa_.png',
+  'africa ocidental francesa': 'assets/flags/historical/África Ocidental Francesa.gif',
+  'africa portuguesa': 'assets/flags/historical/África Portuguesa.png',
+  
+  // Alemanhas
+  'alemanha ocidental': 'assets/flags/historical/Alemanha Ocidental_.png',
+  'alemanha oriental': 'assets/flags/historical/Alemanha Oriental.png',
+  
+  // Países europeus
+  'andorra': 'assets/flags/historical/Andorra.png',
+  'bulgaria': 'assets/flags/historical/Flag_of_Bulgaria_(1948–1967).svg.png',
+  'canada': 'assets/flags/historical/Flag_of_Canada_(1921–1957).svg.png',
+  'espanha': 'assets/flags/historical/Flag_of_Spain_(1945–1977).svg.png',
+  'grecia': 'assets/flags/historical/State_Flag_of_Greece_(1863-1924_and_1935-1973).svg.png',
+  'hungria': 'assets/flags/historical/Flag_of_Hungary_(1949-1956).svg.png',
+  'iugoslavia': 'assets/flags/historical/Flag_of_Yugoslavia_(1946-1992).svg.png',
+  'romenia': 'assets/flags/historical/Flag_of_Romania_(1952–1965).svg.png',
+  
+  // Oriente Médio e África
+  'caribe britanico': 'assets/flags/historical/Caribe Britânico.png',
+  'congo': 'assets/flags/historical/Flag_of_the_Congo_Free_State.svg.png',
+  'costa do ouro': 'assets/flags/historical/Flag_of_the_Gold_Coast_(1877–1957).svg.png',
+  'egito': 'assets/flags/historical/Flag_of_Egypt_(1952–1958).svg.png',
+  'etiopia': 'assets/flags/historical/Flag_of_Ethiopia_(1897–1974).svg.png',
+  'ira': 'assets/flags/historical/State_flag_of_the_Imperial_State_of_Iran_(with_standardized_lion_and_sun).svg.png',
+  'iran': 'assets/flags/historical/State_flag_of_the_Imperial_State_of_Iran_(with_standardized_lion_and_sun).svg.png',
+  'iraque': 'assets/flags/historical/Flag_of_Iraq_(1924–1959).svg.png',
+  'quenia': 'assets/flags/historical/Flag_of_Kenya_(1921–1963).svg.png',
+  'kenya': 'assets/flags/historical/Flag_of_Kenya_(1921–1963).svg.png',
+  'rodesia do sul': 'assets/flags/historical/Flag_of_Southern_Rhodesia_(1924–1964).svg.png',
+  'siria': 'assets/flags/historical/Flag_of_the_United_Arab_Republic_(1958–1971),_Flag_of_Syria_(1980–2024).svg.png',
+  'syria': 'assets/flags/historical/Flag_of_the_United_Arab_Republic_(1958–1971),_Flag_of_Syria_(1980–2024).svg.png',
+  
+  // União Soviética e variações
+  'uniao sovietica': 'assets/flags/historical/Flag_of_the_Soviet_Union_(1936_–_1955).svg.png',
+  'urss': 'assets/flags/historical/Flag_of_the_Soviet_Union_(1936_–_1955).svg.png',
+  'russia': 'assets/flags/historical/Flag_of_the_Soviet_Union_(1936_–_1955).svg.png'
+};
+
+// Busca bandeira histórica por nome
+function getHistoricalFlagUrl(countryName) {
+  if (!countryName) return null;
+  const normalized = normalizeName(countryName);
+  // Busca exata
+  if (HISTORICAL_FLAGS_1954[normalized]) {
+    return HISTORICAL_FLAGS_1954[normalized];
+  }
+  // Busca parcial
+  for (const [key, url] of Object.entries(HISTORICAL_FLAGS_1954)) {
+    if (normalized.includes(key) || key.includes(normalized)) {
+      return url;
+    }
+  }
+  return null;
+}
+
+// Gera HTML da bandeira com sistema de prioridades
+export function getFlagHTML(name, innerSizeClass = 'h-full w-full') {
+  if (!name) return `<span class="text-slate-400 text-xs">🏴</span>`;
+
+  // PRIORIDADE 1: Bandeiras históricas customizadas
+  const historicalUrl = getHistoricalFlagUrl(name);
+  if (historicalUrl) {
+    return `<img src="${historicalUrl}" alt="Bandeira de ${name}" class="${innerSizeClass} object-contain" loading="lazy">`;
+  }
+
+  // PRIORIDADE 2: Bandeiras de países (PNG local)
+  const countryCode = getCountryCode(name);
+  if (countryCode) {
+    const flagUrl = `assets/flags/countries/${countryCode.toLowerCase()}.png`;
+    return `<img src="${flagUrl}" alt="Bandeira de ${name}" class="${innerSizeClass} object-contain" loading="lazy">`;
+  }
+
+  // PRIORIDADE 3: Fallback
+  NO_FLAG_COUNTRIES.add(String(name || '').trim());
+  return `<span class="text-slate-400 text-xs">🏴</span>`;
+}
+
 
 // Lista pública de países
 const NO_FLAG_COUNTRIES = new Set();
@@ -319,11 +418,7 @@ export function renderPublicCountries(countries) {
       Urbanizacao: urbanizacao
     };
     const wpi = calculateWPI(countryForWPI);
-    const bandeira = countryFlagEmoji(country.Pais);
     const flagHTML = getFlagHTML(country.Pais);
-    if (bandeira === '🏴') {
-      NO_FLAG_COUNTRIES.add(String(country.Pais || '').trim());
-    }
 
     const cardHtml = `
       <button class="country-card-button group relative w-full rounded-2xl border border-slate-800/70 bg-slate-900/60 p-3 text-left shadow-[0_1px_0_0_rgba(255,255,255,0.03)_inset,0_6px_20px_-12px_rgba(0,0,0,0.6)] hover:border-slate-600/60 hover:bg-slate-900/70 transition-all" data-country-id="${country.id}">
@@ -377,10 +472,7 @@ export function renderPublicCountries(countries) {
     DOM.countryListContainer.innerHTML += cardHtml;
   });
 
-  // Converte emojis em imagens SVG para compatibilidade
-  if (window.twemoji) {
-    window.twemoji.parse(DOM.countryListContainer, { folder: 'svg', ext: '.svg' });
-  }
+
 }
 
 // Painel detalhado (compacto)
@@ -583,9 +675,7 @@ export function renderDetailedCountryPanel(country) {
     </div>`;
 
   DOM.countryPanelContent.innerHTML = html;
-  if (window.twemoji) {
-    window.twemoji.parse(DOM.countryPanelContent, { folder: 'svg', ext: '.svg' });
-  }
+
   // show with transition
   const modal = DOM.countryPanelModal;
   modal.classList.remove('hidden');
@@ -596,113 +686,7 @@ export function renderDetailedCountryPanel(country) {
   });
 }
 
-// === SISTEMA DE BANDEIRAS REFORMULADO ===
-
-// Função para normalizar nomes de países
-function normalizeName(name) {
-  return (name || '').toLowerCase()
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .replace(/[^\w\s]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-// Base de dados das bandeiras históricas de 1954
-const HISTORICAL_FLAGS_1954 = {
-  // África
-  'africa equatorial francesa': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2F%C3%81frica%20Equatorial%20Francesa_.png?alt=media&token=3ef2ac9b-81ff-4a8b-828c-ccc246341739',
-  'africa ocidental francesa': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2F%C3%81frica%20Ocidental%20Francesa.gif?alt=media&token=f984580d-1e4f-46e8-8bd0-e8a6279f52c8',
-  'africa portuguesa': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2F%C3%81frica%20Portuguesa.png?alt=media&token=8f218f9a-b46b-458a-a540-a4ecc1c156e6',
-  
-  // Alemanhas
-  'alemanha ocidental': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FAlemanha%20Ocidental_.png?alt=media&token=bc41191f-1d0f-460e-a334-2fd015654072',
-  'alemanha oriental': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FAlemanha%20Oriental.png?alt=media&token=5bea43b6-77c0-4888-a3d2-dc970463c74e',
-  
-  // Países europeus
-  'andorra': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FAndorra.png?alt=media&token=7b8a51ec-de52-4dc1-90cc-e55635127803',
-  'bulgaria': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_Bulgaria_(1948%E2%80%931967).svg.png?alt=media&token=d253a233-1d89-403b-9075-be46d15a8614',
-  'canada': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_Canada_(1921%E2%80%931957).svg.png?alt=media&token=faf763ab-f398-4f77-9ebe-c52e4ec0cc4b',
-  'espanha': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_Spain_(1945%E2%80%931977).svg.png?alt=media&token=e250ea84-9d19-4f26-b6fe-5c053e3b28fd',
-  'grecia': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FState_Flag_of_Greece_(1863-1924_and_1935-1973).svg.png?alt=media&token=a58b32ed-51d9-44f6-b5e3-7a4716dcdaed',
-  'hungria': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_Hungary_(1949-1956).svg.png?alt=media&token=26eba285-19b2-4887-8cf5-77b814d939a0',
-  'iugoslavia': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_Yugoslavia_(1946-1992).svg.png?alt=media&token=11c27f51-de49-4641-b148-494f885ac44e',
-  'romenia': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_Romania_(1952%E2%80%931965).svg.png?alt=media&token=b5447c2f-614b-4b24-9e39-c7268458bea9',
-  
-  // Oriente Médio e África
-  'caribe britanico': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FCaribe%20Brit%C3%A2nico.png?alt=media&token=2491db8f-1968-46a7-ace4-b9a9939f3189',
-  'congo': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_the_Congo_Free_State.svg.png?alt=media&token=937cf3af-0a79-43d1-954b-24408c0e6785',
-  'costa do ouro': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_the_Gold_Coast_(1877%E2%80%931957).svg.png?alt=media&token=bf378944-4e6e-44b6-9d43-f2d47a5f7bc2',
-  'egito': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_Egypt_(1952%E2%80%931958).svg.png?alt=media&token=68bfc78a-1c3b-43df-95ed-5a958e959f8b',
-  'etiopia': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_Ethiopia_(1897%E2%80%931974).svg.png?alt=media&token=4a8f73cf-8af9-45e3-ab76-755dd37a06e7',
-  'ira': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FState_flag_of_the_Imperial_State_of_Iran_(with_standardized_lion_and_sun).svg.png?alt=media&token=688927bf-5b95-4fe1-afc9-65accb0e5040',
-  'iran': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FState_flag_of_the_Imperial_State_of_Iran_(with_standardized_lion_and_sun).svg.png?alt=media&token=688927bf-5b95-4fe1-afc9-65accb0e5040',
-  'iraque': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_Iraq_(1924%E2%80%931959).svg.png?alt=media&token=0268f7f2-4cb2-458c-bea6-dc98f670b793',
-  'quenia': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_Kenya_(1921%E2%80%931963).svg.png?alt=media&token=4fe87826-a664-45c2-b627-f078b561ef42',
-  'kenya': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_Kenya_(1921%E2%80%931963).svg.png?alt=media&token=4fe87826-a664-45c2-b627-f078b561ef42',
-  'rodesia do sul': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_Southern_Rhodesia_(1924%E2%80%931964).svg.png?alt=media&token=6492bef0-bc54-40a1-b7fb-1ba83b496c66',
-  'siria': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_the_United_Arab_Republic_(1958%E2%80%931971)%2C_Flag_of_Syria_(1980%E2%80%932024).svg.png?alt=media&token=bb88bb61-7995-4b9a-a76f-00f72bfa3e9f',
-  'syria': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_the_United_Arab_Republic_(1958%E2%80%931971)%2C_Flag_of_Syria_(1980%E2%80%932024).svg.png?alt=media&token=bb88bb61-7995-4b9a-a76f-00f72bfa3e9f',
-  
-  // União Soviética e variações
-  'uniao sovietica': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_the_Soviet_Union_(1936_%E2%80%93_1955).svg.png?alt=media&token=9fee6c50-c4db-4e08-817a-941eb31724bf',
-  'urss': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_the_Soviet_Union_(1936_%E2%80%93_1955).svg.png?alt=media&token=9fee6c50-c4db-4e08-817a-941eb31724bf',
-  'russia': 'https://firebasestorage.googleapis.com/v0/b/war-1954-1799c.firebasestorage.app/o/images%2Fbandeiras%2FFlag_of_the_Soviet_Union_(1936_%E2%80%93_1955).svg.png?alt=media&token=9fee6c50-c4db-4e08-817a-941eb31724bf'
-};
-
-// Busca bandeira histórica por nome
-function getHistoricalFlagUrl(countryName) {
-  if (!countryName) return null;
-  
-  const normalized = normalizeName(countryName);
-  console.log(`[FLAG DEBUG] Buscando bandeira histórica para: "${countryName}" -> normalizado: "${normalized}"`);
-  
-  // Busca exata
-  if (HISTORICAL_FLAGS_1954[normalized]) {
-    console.log(`[FLAG DEBUG] ✅ Bandeira histórica encontrada (exata): ${normalized}`);
-    return HISTORICAL_FLAGS_1954[normalized];
-  }
-  
-  // Busca parcial
-  for (const [key, url] of Object.entries(HISTORICAL_FLAGS_1954)) {
-    if (normalized.includes(key) || key.includes(normalized)) {
-      console.log(`[FLAG DEBUG] ✅ Bandeira histórica encontrada (parcial): ${key} para ${normalized}`);
-      return url;
-    }
-  }
-  
-  console.log(`[FLAG DEBUG] ❌ Nenhuma bandeira histórica encontrada para: ${normalized}`);
-  return null;
-}
-
-// Gera HTML da bandeira com sistema de prioridades
-function getFlagHTML(name, innerSizeClass = 'h-full w-full') {
-  if (!name) return `<span class="text-slate-400 text-xs">—</span>`;
-  
-  console.log(`[FLAG DEBUG] Processando bandeira para: "${name}"`);
-  
-  // PRIORIDADE 1: Bandeiras históricas customizadas
-  const historicalUrl = getHistoricalFlagUrl(name);
-  if (historicalUrl) {
-    console.log(`[FLAG DEBUG] 🏴 Usando bandeira histórica para: ${name}`);
-    // Removidos crossorigin e referrerpolicy para evitar CORS
-    return `<img src="${historicalUrl}" alt="Bandeira de ${name}" class="${innerSizeClass} object-contain" loading="lazy" onerror="console.warn('[FLAG] Falha ao carregar bandeira histórica de ${name}:', this.src); this.onerror=null; this.style.display='none'; this.parentElement.innerHTML='<span class=\\'text-slate-400 text-xs\\'>🏴</span>';">`;
-  }
-  
-  // PRIORIDADE 2: Emojis de bandeiras modernas
-  const emoji = countryFlagEmoji(name);
-  if (emoji && emoji !== '🏴') {
-    const cps = Array.from(emoji).map(ch => ch.codePointAt(0).toString(16)).join('-');
-    const emojiUrl = `https://twemoji.maxcdn.com/v/latest/svg/${cps}.svg`;
-    console.log(`[FLAG DEBUG] 🏳️ Usando emoji para: ${name}`);
-    // Twemoji geralmente não tem problema com CORS
-    return `<img src="${emojiUrl}" alt="Bandeira de ${name}" class="${innerSizeClass} object-contain" loading="lazy" crossorigin="anonymous" onerror="console.warn('[FLAG] Falha ao carregar emoji de ${name}'); this.onerror=null; this.style.display='none'; this.parentElement.innerHTML='<span class=\\'text-slate-400 text-xs\\'>—</span>';">`;
-  }
-  
-  // PRIORIDADE 3: Fallback
-  console.log(`[FLAG DEBUG] ➖ Usando fallback para: ${name}`);
-  return `<span class="text-slate-400 text-xs">—</span>`;
-}
+// Bloco de bandeiras duplicado removido — as definições originais estão no topo do arquivo
 
 // UI do narrador
 export function updateNarratorUI(isNarrator, isAdmin) {

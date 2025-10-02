@@ -1,9 +1,13 @@
 // js/components/aircraftTabLoaders.js - Abas específicas do criador de aeronaves (Fase 1)
 
+import { optimizedTemplateLoader } from './OptimizedTemplateLoader.js';
+
 class TabLoaders {
-  constructor() { 
-    this.tabContent = null; 
+  constructor() {
+    this.tabContent = null;
     this.currentTechLevel = 50; // Default tech level
+    this.loadingCache = new Map(); // Local loading cache
+    this.componentLoadPromise = null; // Shared component loading promise
   }
 
   getTabContent() {
@@ -13,7 +17,9 @@ class TabLoaders {
 
   showLoadingState(message = 'Carregando componentes...') {
     const el = this.getTabContent();
-    if (el) el.innerHTML = `<div class="text-center text-slate-400 p-8">${message}</div>`;
+    if (el) {
+      optimizedTemplateLoader.showOptimizedLoadingState(el, message);
+    }
   }
 
   showEmptyState(message) {
@@ -87,31 +93,934 @@ class TabLoaders {
   }
 
   // ========= AIRCRAFT TABS =========
-  loadCellTab() {
-    console.log('🔄 Loading Cell Tab (Airframes)...');
-    this.loadAirframeTab();
+
+  // NEW: Category Selection Tab
+  loadCategoryTab() {
+    console.log('🔄 Loading Category Selection Tab...');
+
+    // Create category selection interface
+    const html = this.createCategorySelectionInterface();
+    this.getTabContent().innerHTML = html;
+
+    // Initialize category controls
+    this.initializeCategoryControls();
   }
 
-  loadAirframeTab() {
+  createCategorySelectionInterface() {
+    return `
+      <div class="space-y-6">
+        <!-- Header -->
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
+            <span class="text-xl">🎯</span>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold text-slate-100">Categoria da Aeronave</h2>
+            <p class="text-sm text-slate-400">Escolha o tipo geral da sua aeronave</p>
+          </div>
+        </div>
+
+        <!-- Category Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+          <!-- Fighter Category -->
+          <div class="category-option p-6 border border-slate-600 rounded-xl cursor-pointer hover:border-slate-500 transition-colors" data-category="fighter">
+            <div class="flex items-center gap-3 mb-4">
+              <span class="text-4xl">🛩️</span>
+              <h3 class="text-xl font-semibold text-slate-200">Caça</h3>
+            </div>
+            <p class="text-sm text-slate-400 mb-4">Aeronaves de combate ágeis, focadas em superioridade aérea e interceptação</p>
+            <div class="space-y-2 text-xs text-slate-300">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-green-400 rounded-full"></span>
+                <span>Alta manobrabilidade</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-green-400 rounded-full"></span>
+                <span>Velocidade elevada</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                <span>Alcance médio</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-red-400 rounded-full"></span>
+                <span>Capacidade de carga limitada</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bomber Category -->
+          <div class="category-option p-6 border border-slate-600 rounded-xl cursor-pointer hover:border-slate-500 transition-colors" data-category="bomber">
+            <div class="flex items-center gap-3 mb-4">
+              <span class="text-4xl">💣</span>
+              <h3 class="text-xl font-semibold text-slate-200">Bombardeiro</h3>
+            </div>
+            <p class="text-sm text-slate-400 mb-4">Aeronaves pesadas para bombardeio estratégico e tático</p>
+            <div class="space-y-2 text-xs text-slate-300">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-green-400 rounded-full"></span>
+                <span>Grande capacidade de bombas</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-green-400 rounded-full"></span>
+                <span>Longo alcance</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-red-400 rounded-full"></span>
+                <span>Baixa manobrabilidade</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-red-400 rounded-full"></span>
+                <span>Vulnerável a caças</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Transport Category -->
+          <div class="category-option p-6 border border-slate-600 rounded-xl cursor-pointer hover:border-slate-500 transition-colors" data-category="transport">
+            <div class="flex items-center gap-3 mb-4">
+              <span class="text-4xl">✈️</span>
+              <h3 class="text-xl font-semibold text-slate-200">Transporte</h3>
+            </div>
+            <p class="text-sm text-slate-400 mb-4">Aeronaves para transporte de tropas, suprimentos e equipamentos</p>
+            <div class="space-y-2 text-xs text-slate-300">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-green-400 rounded-full"></span>
+                <span>Grande capacidade de carga</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-green-400 rounded-full"></span>
+                <span>Versátil</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                <span>Velocidade moderada</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-red-400 rounded-full"></span>
+                <span>Sem armamento pesado</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Attack Category -->
+          <div class="category-option p-6 border border-slate-600 rounded-xl cursor-pointer hover:border-slate-500 transition-colors" data-category="attack">
+            <div class="flex items-center gap-3 mb-4">
+              <span class="text-4xl">⚔️</span>
+              <h3 class="text-xl font-semibold text-slate-200">Ataque ao Solo</h3>
+            </div>
+            <p class="text-sm text-slate-400 mb-4">Aeronaves especializadas em apoio aéreo aproximado</p>
+            <div class="space-y-2 text-xs text-slate-300">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-green-400 rounded-full"></span>
+                <span>Armamento variado</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-green-400 rounded-full"></span>
+                <span>Boa proteção</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                <span>Velocidade moderada</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                <span>Manobrabilidade média</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Experimental Category -->
+          <div class="category-option p-6 border border-slate-600 rounded-xl cursor-pointer hover:border-slate-500 transition-colors" data-category="experimental">
+            <div class="flex items-center gap-3 mb-4">
+              <span class="text-4xl">🧪</span>
+              <h3 class="text-xl font-semibold text-slate-200">Experimental</h3>
+            </div>
+            <p class="text-sm text-slate-400 mb-4">Projetos experimentais e protótipos avançados</p>
+            <div class="space-y-2 text-xs text-slate-300">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-green-400 rounded-full"></span>
+                <span>Tecnologia avançada</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-green-400 rounded-full"></span>
+                <span>Performance única</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-red-400 rounded-full"></span>
+                <span>Custo muito alto</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-red-400 rounded-full"></span>
+                <span>Confiabilidade baixa</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Helicopter Category -->
+          <div class="category-option p-6 border border-slate-600 rounded-xl cursor-pointer hover:border-slate-500 transition-colors" data-category="helicopter">
+            <div class="flex items-center gap-3 mb-4">
+              <span class="text-4xl">🚁</span>
+              <h3 class="text-xl font-semibold text-slate-200">Helicóptero</h3>
+            </div>
+            <p class="text-sm text-slate-400 mb-4">Aeronaves de asas rotativas para missões especiais e suporte</p>
+            <div class="space-y-2 text-xs text-slate-300">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-green-400 rounded-full"></span>
+                <span>Decolagem vertical</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-green-400 rounded-full"></span>
+                <span>Capacidade de hover</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-green-400 rounded-full"></span>
+                <span>Alta manobrabilidade</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-red-400 rounded-full"></span>
+                <span>Alcance limitado</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Selected Category Info -->
+        <div id="selected-category-info" class="hidden bg-slate-800/40 border border-slate-700/50 rounded-xl p-6">
+          <h3 class="text-lg font-semibold text-slate-200 mb-4">Categoria Selecionada: <span id="selected-category-name">-</span></h3>
+          <div id="category-description" class="text-sm text-slate-300 mb-4"></div>
+
+          <div class="flex items-center justify-between">
+            <div class="text-sm text-slate-400">
+              Prossiga para a aba <strong>Célula</strong> para escolher a fuselagem específica
+            </div>
+            <button id="continue-to-cell-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+              Continuar →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <style>
+        .category-option.selected {
+          border-color: rgb(6 182 212);
+          background: rgb(6 182 212 / 0.1);
+        }
+        .category-option.selected h3 {
+          color: rgb(103 232 249);
+        }
+      </style>
+    `;
+  }
+
+  initializeCategoryControls() {
+    let selectedCategory = null;
+
+    const categoryOptions = document.querySelectorAll('.category-option');
+    const selectedInfo = document.getElementById('selected-category-info');
+    const selectedName = document.getElementById('selected-category-name');
+    const categoryDescription = document.getElementById('category-description');
+    const continueBtn = document.getElementById('continue-to-cell-btn');
+
+    categoryOptions.forEach(option => {
+      option.addEventListener('click', () => {
+        // Remove selection from all options
+        categoryOptions.forEach(opt => opt.classList.remove('selected'));
+
+        // Add selection to clicked option
+        option.classList.add('selected');
+
+        // Update selected category
+        selectedCategory = option.dataset.category;
+
+        // Update info display
+        this.updateCategoryInfo(selectedCategory, selectedName, categoryDescription, selectedInfo);
+
+        // Store in global aircraft state
+        if (!window.currentAircraft) {
+          window.currentAircraft = {};
+        }
+        window.currentAircraft.category = selectedCategory;
+      });
+    });
+
+    // Continue button functionality
+    if (continueBtn) {
+      continueBtn.addEventListener('click', () => {
+        // Switch to cell tab
+        const cellTab = document.querySelector('[data-tab="cell"]');
+        if (cellTab) {
+          cellTab.click();
+        }
+      });
+    }
+
+    // Set default selection to Fighter when page loads
+    const defaultOption = document.querySelector('[data-category="fighter"]');
+    if (defaultOption) {
+      // Trigger click to select fighter by default
+      defaultOption.click();
+    }
+  }
+
+  updateCategoryInfo(category, nameElement, descriptionElement, containerElement) {
+    const categories = {
+      fighter: {
+        name: 'Caça',
+        description: 'Aeronaves de combate projetadas para domínio aéreo. Priorizam velocidade, manobrabilidade e capacidade de combate ar-ar. Ideais para interceptação e superioridade aérea.'
+      },
+      bomber: {
+        name: 'Bombardeiro',
+        description: 'Aeronaves pesadas focadas em bombardeio estratégico e tático. Grande capacidade de carga de bombas e longo alcance, mas com menor agilidade.'
+      },
+      transport: {
+        name: 'Transporte',
+        description: 'Aeronaves versáteis para transporte de tropas, equipamentos e suprimentos. Focam em capacidade de carga e alcance em vez de performance de combate.'
+      },
+      helicopter: {
+        name: 'Helicóptero',
+        description: 'Aeronaves de asas rotativas para missões especiais e suporte. Capacidade de decolagem e pouso vertical, hover e operação em baixa altitude.'
+      },
+      attack: {
+        name: 'Ataque ao Solo',
+        description: 'Aeronaves especializadas em apoio aéreo aproximado e ataque a alvos terrestres. Balanceiam armamento, proteção e manobrabilidade.'
+      },
+      experimental: {
+        name: 'Experimental',
+        description: 'Projetos avançados e protótipos que testam novas tecnologias. Oferece capacidades únicas mas com custos elevados e confiabilidade questionável.'
+      }
+    };
+
+    const categoryData = categories[category];
+    nameElement.textContent = categoryData.name;
+    descriptionElement.textContent = categoryData.description;
+
+    containerElement.classList.remove('hidden');
+  }
+
+  // NEW: Structure & Materials Tab
+  loadStructureTab() {
+    console.log('🔄 Loading Structure & Materials Tab...');
+
+    this.updateTechLevel();
+
+    // Create simplified structure interface directly
+    const html = this.createSimplifiedStructureInterface();
+    this.getTabContent().innerHTML = html;
+
+    // Initialize simple controls
+    this.initializeSimpleStructureControls();
+  }
+
+  createSimplifiedStructureInterface() {
+    return `
+      <div class="space-y-6">
+        <!-- Header -->
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center">
+            <span class="text-xl">🏗️</span>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold text-slate-100">Estrutura e Materiais</h2>
+            <p class="text-sm text-slate-400">Configure a estrutura da sua aeronave</p>
+          </div>
+        </div>
+
+        <!-- Material Selection -->
+        <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-6">
+          <h3 class="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
+            <span>🔩</span>
+            <span>Material Estrutural</span>
+          </h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="material-option p-4 border border-slate-600 rounded-lg cursor-pointer hover:border-slate-500 transition-colors" data-material="aluminum">
+              <div class="flex items-center gap-3 mb-2">
+                <span class="text-2xl">🔩</span>
+                <h4 class="font-semibold text-slate-200">Alumínio</h4>
+              </div>
+              <p class="text-sm text-slate-400 mb-3">Liga de alumínio padrão, equilibrando peso e custo</p>
+              <div class="text-xs text-slate-300">
+                <div>Custo: <span class="text-green-400">Padrão</span></div>
+                <div>Peso: <span class="text-yellow-400">Leve</span></div>
+                <div>Durabilidade: <span class="text-blue-400">Boa</span></div>
+              </div>
+            </div>
+
+            <div class="material-option p-4 border border-slate-600 rounded-lg cursor-pointer hover:border-slate-500 transition-colors" data-material="steel">
+              <div class="flex items-center gap-3 mb-2">
+                <span class="text-2xl">⚙️</span>
+                <h4 class="font-semibold text-slate-200">Aço</h4>
+              </div>
+              <p class="text-sm text-slate-400 mb-3">Estrutura de aço resistente, mais pesada mas durável</p>
+              <div class="text-xs text-slate-300">
+                <div>Custo: <span class="text-green-400">Baixo</span></div>
+                <div>Peso: <span class="text-red-400">Pesado</span></div>
+                <div>Durabilidade: <span class="text-green-400">Excelente</span></div>
+              </div>
+            </div>
+
+            <div class="material-option p-4 border border-slate-600 rounded-lg cursor-pointer hover:border-slate-500 transition-colors" data-material="composite">
+              <div class="flex items-center gap-3 mb-2">
+                <span class="text-2xl">🧪</span>
+                <h4 class="font-semibold text-slate-200">Compósito</h4>
+              </div>
+              <p class="text-sm text-slate-400 mb-3">Materiais avançados, leves mas caros (Experimental)</p>
+              <div class="text-xs text-slate-300">
+                <div>Custo: <span class="text-red-400">Alto</span></div>
+                <div>Peso: <span class="text-green-400">Muito Leve</span></div>
+                <div>Durabilidade: <span class="text-yellow-400">Boa</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="selected-material-info" class="mt-4 p-4 bg-slate-700/30 rounded-lg hidden">
+            <h4 class="font-semibold text-slate-200 mb-2">Material Selecionado: <span id="selected-material-name">-</span></h4>
+            <div id="material-effects" class="text-sm text-slate-300">
+              <!-- Effects will be populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Center of Gravity -->
+        <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-6">
+          <h3 class="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
+            <span>⚖️</span>
+            <span>Centro de Gravidade</span>
+          </h3>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- CG Visualization -->
+            <div>
+              <div class="relative mb-4">
+                <div class="h-8 bg-slate-700 rounded-lg overflow-hidden">
+                  <div class="absolute left-0 top-0 w-4 h-full bg-red-500/30 border-r border-red-500"></div>
+                  <div class="absolute left-1/4 top-0 w-1/2 h-full bg-green-500/20"></div>
+                  <div class="absolute right-0 top-0 w-4 h-full bg-red-500/30 border-l border-red-500"></div>
+                  <div id="cg-indicator" class="absolute top-0 w-2 h-full bg-yellow-400 transition-all duration-300" style="left: 45%;"></div>
+                </div>
+                <div class="flex justify-between text-xs text-slate-400 mt-1">
+                  <span>Nariz</span>
+                  <span>Faixa Ideal</span>
+                  <span>Cauda</span>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span class="text-slate-400">Posição:</span>
+                  <span id="cg-position" class="text-slate-200 font-mono">45% MAC</span>
+                </div>
+                <div>
+                  <span class="text-slate-400">Massa Total:</span>
+                  <span id="cg-total-mass" class="text-slate-200 font-mono">2500 kg</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mass Distribution -->
+            <div>
+              <h4 class="font-semibold text-slate-200 mb-3">Distribuição de Massa</h4>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="text-slate-400">Fuselagem:</span>
+                  <span class="text-slate-200" id="mass-airframe">1800 kg</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-400">Motor:</span>
+                  <span class="text-slate-200" id="mass-engine">800 kg</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-400">Combustível:</span>
+                  <span class="text-slate-200" id="mass-fuel">450 kg</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-400">Armamento:</span>
+                  <span class="text-slate-200" id="mass-weapons">150 kg</span>
+                </div>
+                <div class="border-t border-slate-600 pt-2 mt-2">
+                  <div class="flex justify-between font-semibold">
+                    <span class="text-slate-300">Total:</span>
+                    <span class="text-slate-100" id="mass-total">3200 kg</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style>
+        .material-option.selected {
+          border-color: rgb(6 182 212);
+          background: rgb(6 182 212 / 0.1);
+        }
+        .material-option.selected h4 {
+          color: rgb(103 232 249);
+        }
+      </style>
+    `;
+  }
+
+  initializeSimpleStructureControls() {
+    // Initialize material selection
+    let selectedMaterial = 'aluminum';
+
+    const materialOptions = document.querySelectorAll('.material-option');
+    const selectedInfo = document.getElementById('selected-material-info');
+    const selectedName = document.getElementById('selected-material-name');
+    const materialEffects = document.getElementById('material-effects');
+
+    materialOptions.forEach(option => {
+      option.addEventListener('click', () => {
+        // Remove selection from all options
+        materialOptions.forEach(opt => opt.classList.remove('selected'));
+
+        // Add selection to clicked option
+        option.classList.add('selected');
+
+        // Update selected material
+        selectedMaterial = option.dataset.material;
+
+        // Update info display
+        this.updateMaterialInfo(selectedMaterial, selectedName, materialEffects, selectedInfo);
+
+        // Store in global aircraft state
+        if (!window.currentAircraft.structure) {
+          window.currentAircraft.structure = {};
+        }
+        window.currentAircraft.structure.material = selectedMaterial;
+
+        // Update calculations and display
+        this.updateStructureCalculations(selectedMaterial);
+      });
+    });
+
+    // Set default selection and trigger calculations
+    const defaultOption = document.querySelector('[data-material="aluminum"]');
+    if (defaultOption) {
+      defaultOption.click();
+    } else {
+      // Fallback if element not found immediately
+      setTimeout(() => {
+        const retryOption = document.querySelector('[data-material="aluminum"]');
+        if (retryOption) retryOption.click();
+      }, 100);
+    }
+  }
+
+  updateMaterialInfo(material, nameElement, effectsElement, containerElement) {
+    const materials = {
+      aluminum: {
+        name: 'Alumínio',
+        effects: [
+          'Custo base padrão (100%)',
+          'Peso estrutural normal',
+          'Manutenção padrão',
+          'Resistência à corrosão boa'
+        ]
+      },
+      steel: {
+        name: 'Aço',
+        effects: [
+          'Custo reduzido (-20%)',
+          'Peso estrutural aumentado (+30%)',
+          'Durabilidade aumentada (+50%)',
+          'Manutenção reduzida (-10%)'
+        ]
+      },
+      composite: {
+        name: 'Compósito',
+        effects: [
+          'Custo elevado (+80%)',
+          'Peso estrutural reduzido (-25%)',
+          'Assinatura radar reduzida (-30%)',
+          'Requer tech level 70+'
+        ]
+      }
+    };
+
+    const materialData = materials[material];
+    nameElement.textContent = materialData.name;
+    effectsElement.innerHTML = materialData.effects.map(effect =>
+      `<div class="flex items-center gap-2"><span class="text-cyan-400">•</span>${effect}</div>`
+    ).join('');
+
+    containerElement.classList.remove('hidden');
+  }
+
+  updateStructureCalculations(material) {
+    // Material modifiers
+    const materialData = {
+      aluminum: { weightModifier: 1.0, costModifier: 1.0, cgOffset: 0 },
+      steel: { weightModifier: 1.3, costModifier: 0.8, cgOffset: -0.02 }, // Steel is heavier, shifts CG forward
+      composite: { weightModifier: 0.75, costModifier: 1.8, cgOffset: 0.01 } // Composite is lighter, shifts CG aft
+    };
+
+    const modifiers = materialData[material];
+
+    // Base aircraft data (get from current aircraft state or defaults)
+    const baseAirframeWeight = window.currentAircraft?.airframe?.base_weight ||
+                              window.currentAircraft?.selectedAirframe?.base_weight || 1800;
+    const baseEngineWeight = window.currentAircraft?.engine?.weight ||
+                            window.currentAircraft?.selectedEngine?.weight || 800;
+    const baseFuelWeight = window.currentAircraft?.fuel_capacity ||
+                          window.currentAircraft?.selectedAirframe?.internal_fuel_kg || 450;
+    const baseWeaponsWeight = window.currentAircraft?.weapons?.total_weight || 150;
+
+    console.log('🔄 Structure calculations:', {
+      material,
+      baseAirframeWeight,
+      baseEngineWeight,
+      baseFuelWeight,
+      baseWeaponsWeight,
+      modifiers
+    });
+
+    // Calculate new weights based on material
+    const newAirframeWeight = Math.round(baseAirframeWeight * modifiers.weightModifier);
+    const totalWeight = newAirframeWeight + baseEngineWeight + baseFuelWeight + baseWeaponsWeight;
+
+    // Calculate new center of gravity
+    // Base CG at 45% MAC, material affects this
+    const baseCG = 45; // 45% MAC
+    const newCG = Math.max(25, Math.min(65, baseCG + (modifiers.cgOffset * 100))); // Keep within reasonable bounds
+
+    // Update DOM elements
+    this.updateDisplayValues({
+      airframeWeight: newAirframeWeight,
+      engineWeight: baseEngineWeight,
+      fuelWeight: baseFuelWeight,
+      weaponsWeight: baseWeaponsWeight,
+      totalWeight: totalWeight,
+      cgPosition: newCG
+    });
+
+    // Store calculated values in global state
+    if (!window.currentAircraft.calculatedValues) {
+      window.currentAircraft.calculatedValues = {};
+    }
+
+    window.currentAircraft.calculatedValues.totalWeight = totalWeight;
+    window.currentAircraft.calculatedValues.cgPosition = newCG;
+    window.currentAircraft.calculatedValues.airframeWeight = newAirframeWeight;
+  }
+
+  updateDisplayValues(values) {
+    // Update mass display
+    const massAirframe = document.getElementById('mass-airframe');
+    const massEngine = document.getElementById('mass-engine');
+    const massFuel = document.getElementById('mass-fuel');
+    const massWeapons = document.getElementById('mass-weapons');
+    const massTotal = document.getElementById('mass-total');
+
+    if (massAirframe) massAirframe.textContent = `${values.airframeWeight} kg`;
+    if (massEngine) massEngine.textContent = `${values.engineWeight} kg`;
+    if (massFuel) massFuel.textContent = `${values.fuelWeight} kg`;
+    if (massWeapons) massWeapons.textContent = `${values.weaponsWeight} kg`;
+    if (massTotal) massTotal.textContent = `${values.totalWeight} kg`;
+
+    // Update CG display
+    const cgPosition = document.getElementById('cg-position');
+    const cgTotalMass = document.getElementById('cg-total-mass');
+    const cgIndicator = document.getElementById('cg-indicator');
+
+    if (cgPosition) cgPosition.textContent = `${values.cgPosition.toFixed(1)}% MAC`;
+    if (cgTotalMass) cgTotalMass.textContent = `${values.totalWeight} kg`;
+
+    // Update CG indicator position (visual bar)
+    if (cgIndicator) {
+      const position = Math.max(0, Math.min(96, (values.cgPosition / 100) * 96)); // Convert to percentage within the bar
+      cgIndicator.style.left = `${position}%`;
+
+      // Change color based on CG position
+      if (values.cgPosition < 30 || values.cgPosition > 60) {
+        cgIndicator.style.background = '#ef4444'; // Red for dangerous positions
+      } else if (values.cgPosition < 35 || values.cgPosition > 55) {
+        cgIndicator.style.background = '#f59e0b'; // Yellow for marginal positions
+      } else {
+        cgIndicator.style.background = '#10b981'; // Green for optimal positions
+      }
+    }
+
+    // Update weight indicator in the top dashboard if it exists
+    if (typeof window.updateWeightDisplay === 'function') {
+      window.updateWeightDisplay(values.totalWeight);
+    }
+  }
+
+  loadCellTab() {
+    console.log('🔄 Loading Cell Tab (Airframes)...');
+
+    // Create simplified airframe selection interface
+    const html = this.createSimplifiedAirframeInterface();
+    this.getTabContent().innerHTML = html;
+
+    // Initialize airframe controls
+    this.initializeSimpleAirframeControls();
+
+    // Restore previous selection if it exists
+    this.restoreAirframeSelection();
+  }
+
+  createSimplifiedAirframeInterface() {
+    const selectedCategory = window.currentAircraft?.category || 'fighter';
+    const categoryName = this.getCategoryDisplayName(selectedCategory);
+
+    return `
+      <div class="space-y-6">
+        <!-- Header -->
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+            <span class="text-xl">✈️</span>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold text-slate-100">Células/Fuselagens</h2>
+            <p class="text-sm text-slate-400">Fuselagens disponíveis para categoria: <strong class="text-blue-400">${categoryName}</strong></p>
+          </div>
+        </div>
+
+        ${!window.currentAircraft?.category ? `
+        <div class="bg-yellow-600/20 border border-yellow-600/30 rounded-lg p-4 mb-6">
+          <div class="flex items-center gap-2">
+            <span class="text-yellow-400">⚠️</span>
+            <span class="text-yellow-100 font-medium">Categoria não selecionada</span>
+          </div>
+          <p class="text-yellow-200 text-sm mt-1">
+            Volte para a aba <strong>Categoria</strong> para escolher o tipo de aeronave primeiro.
+          </p>
+        </div>
+        ` : ''}
+
+        <!-- Airframe Options -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          ${this.generateAirframeOptions(selectedCategory)}
+        </div>
+
+        <!-- Selected Airframe Info -->
+        <div id="selected-airframe-info" class="hidden bg-slate-800/40 border border-slate-700/50 rounded-xl p-6">
+          <h3 class="text-lg font-semibold text-slate-200 mb-4">Fuselagem Selecionada: <span id="selected-airframe-name">-</span></h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 class="font-semibold text-slate-300 mb-3">Especificações</h4>
+              <div id="airframe-specs" class="space-y-2 text-sm text-slate-300">
+                <!-- Specs will be populated -->
+              </div>
+            </div>
+
+            <div>
+              <h4 class="font-semibold text-slate-300 mb-3">Características</h4>
+              <div id="airframe-characteristics" class="space-y-2 text-sm text-slate-300">
+                <!-- Characteristics will be populated -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style>
+        .airframe-option.selected {
+          border-color: rgb(6 182 212);
+          background: rgb(6 182 212 / 0.1);
+        }
+        .airframe-option.selected h4 {
+          color: rgb(103 232 249);
+        }
+      </style>
+    `;
+  }
+
+  initializeSimpleAirframeControls() {
+    let selectedAirframe = null;
+
+    const airframeOptions = document.querySelectorAll('.airframe-option');
+    const selectedInfo = document.getElementById('selected-airframe-info');
+    const selectedName = document.getElementById('selected-airframe-name');
+    const airframeSpecs = document.getElementById('airframe-specs');
+    const airframeCharacteristics = document.getElementById('airframe-characteristics');
+
+    airframeOptions.forEach(option => {
+      option.addEventListener('click', () => {
+        // Remove selection from all options
+        airframeOptions.forEach(opt => opt.classList.remove('selected'));
+
+        // Add selection to clicked option
+        option.classList.add('selected');
+
+        // Update selected airframe
+        selectedAirframe = option.dataset.airframe;
+
+        // Update info display
+        this.updateAirframeInfo(selectedAirframe, selectedName, airframeSpecs, airframeCharacteristics, selectedInfo);
+
+        // Store in global aircraft state
+        if (!window.currentAircraft) {
+          window.currentAircraft = {};
+        }
+        window.currentAircraft.selectedAirframe = this.getAirframeData(selectedAirframe);
+        window.currentAircraft.airframeType = selectedAirframe;
+        // Also save in the expected format for other tabs
+        window.currentAircraft.airframe = selectedAirframe;
+
+        // Update calculations
+        if (typeof this.updateStructureCalculations === 'function') {
+          this.updateStructureCalculations(window.currentAircraft.structure?.material || 'aluminum');
+        }
+
+        console.log(`✅ Airframe selected: ${selectedAirframe}`);
+      });
+    });
+  }
+
+  restoreAirframeSelection() {
+    // Check if there's a previously selected airframe
+    const savedAirframe = window.currentAircraft?.airframe || window.currentAircraft?.airframeType;
+
+    if (savedAirframe) {
+      console.log(`🔄 Restoring airframe selection: ${savedAirframe}`);
+
+      // Find and select the corresponding option
+      const airframeOption = document.querySelector(`[data-airframe="${savedAirframe}"]`);
+      if (airframeOption) {
+        // Remove previous selections
+        document.querySelectorAll('.airframe-option').forEach(opt => opt.classList.remove('selected'));
+
+        // Select the saved option
+        airframeOption.classList.add('selected');
+
+        // Update info display
+        const selectedInfo = document.getElementById('selected-airframe-info');
+        const selectedName = document.getElementById('selected-airframe-name');
+        const airframeSpecs = document.getElementById('airframe-specs');
+        const airframeCharacteristics = document.getElementById('airframe-characteristics');
+
+        this.updateAirframeInfo(savedAirframe, selectedName, airframeSpecs, airframeCharacteristics, selectedInfo);
+
+        console.log(`✅ Airframe selection restored: ${savedAirframe}`);
+      } else {
+        console.warn(`⚠️ Could not find airframe option for: ${savedAirframe}`);
+      }
+    } else {
+      console.log('ℹ️ No previous airframe selection to restore');
+    }
+  }
+
+  getAirframeData(airframe) {
+    const airframes = {
+      light_fighter: {
+        name: 'Caça Leve',
+        base_weight: 1800,
+        max_takeoff_weight: 3200,
+        g_limit: 9,
+        hardpoints: 2,
+        internal_fuel_kg: 450,
+        advantages: ['Excelente manobrabilidade', 'Baixo custo', 'Leve'],
+        disadvantages: ['Armamento limitado', 'Alcance curto']
+      },
+      early_jet_fighter: {
+        name: 'Caça a Jato Inicial',
+        base_weight: 2200,
+        max_takeoff_weight: 4000,
+        g_limit: 8,
+        hardpoints: 4,
+        internal_fuel_kg: 600,
+        advantages: ['Boa velocidade', 'Moderadamente ágil'],
+        disadvantages: ['Consumo alto', 'Tecnologia inicial']
+      },
+      multirole_fighter: {
+        name: 'Caça Multifunção',
+        base_weight: 2800,
+        max_takeoff_weight: 5500,
+        g_limit: 7.5,
+        hardpoints: 6,
+        internal_fuel_kg: 800,
+        advantages: ['Versátil', 'Bom alcance', 'Múltiplas missões'],
+        disadvantages: ['Peso médio', 'Custo elevado']
+      },
+      heavy_fighter: {
+        name: 'Caça Pesado',
+        base_weight: 3500,
+        max_takeoff_weight: 7000,
+        g_limit: 6,
+        hardpoints: 8,
+        internal_fuel_kg: 1200,
+        advantages: ['Alta capacidade', 'Muito resistente', 'Longo alcance'],
+        disadvantages: ['Pouco ágil', 'Caro', 'Pesado']
+      },
+      light_bomber: {
+        name: 'Bombardeiro Leve',
+        base_weight: 4200,
+        max_takeoff_weight: 8500,
+        g_limit: 5,
+        hardpoints: 12,
+        internal_fuel_kg: 1800,
+        advantages: ['Grande capacidade de bombas', 'Excelente alcance'],
+        disadvantages: ['Muito lento', 'Vulnerável', 'Pouco ágil']
+      },
+      transport: {
+        name: 'Transporte',
+        base_weight: 5800,
+        max_takeoff_weight: 12000,
+        g_limit: 4,
+        hardpoints: 2,
+        internal_fuel_kg: 2500,
+        advantages: ['Enorme capacidade', 'Excelente alcance', 'Múltiplas configurações'],
+        disadvantages: ['Muito lento', 'Vulnerável', 'Caro']
+      }
+    };
+
+    return airframes[airframe] || airframes.light_fighter;
+  }
+
+  updateAirframeInfo(airframe, nameElement, specsElement, characteristicsElement, containerElement) {
+    const data = this.getAirframeData(airframe);
+
+    nameElement.textContent = data.name;
+
+    // Update specs
+    specsElement.innerHTML = `
+      <div class="flex justify-between"><span>Peso Base:</span><span>${data.base_weight} kg</span></div>
+      <div class="flex justify-between"><span>Peso Máx Decolagem:</span><span>${data.max_takeoff_weight} kg</span></div>
+      <div class="flex justify-between"><span>Limite G:</span><span>${data.g_limit}G</span></div>
+      <div class="flex justify-between"><span>Hardpoints:</span><span>${data.hardpoints}</span></div>
+      <div class="flex justify-between"><span>Combustível Interno:</span><span>${data.internal_fuel_kg} kg</span></div>
+    `;
+
+    // Update characteristics
+    characteristicsElement.innerHTML = `
+      <div>
+        <h5 class="text-green-400 font-medium mb-1">Vantagens:</h5>
+        ${data.advantages.map(adv => `<div class="flex items-center gap-2"><span class="text-green-400">•</span>${adv}</div>`).join('')}
+      </div>
+      <div class="mt-3">
+        <h5 class="text-red-400 font-medium mb-1">Desvantagens:</h5>
+        ${data.disadvantages.map(dis => `<div class="flex items-center gap-2"><span class="text-red-400">•</span>${dis}</div>`).join('')}
+      </div>
+    `;
+
+    containerElement.classList.remove('hidden');
+  }
+
+  async loadAirframeTab() {
     console.log('🔄 Loading Airframe Tab...');
-    
+
     // Check if components are loaded
     if (!window.AIRCRAFT_COMPONENTS || !window.AIRCRAFT_COMPONENTS.airframes) {
       console.warn('⚠️ AIRCRAFT_COMPONENTS not loaded, attempting to load...');
       // Show loading state
       this.showLoadingState('Carregando componentes de aeronaves...');
-      
-      // Try to trigger component loading
-      if (window.loadAircraftComponents) {
-        window.loadAircraftComponents().then(() => {
-          console.log('✅ Components loaded, retrying...');
-          this.loadAirframeTab();
-        }).catch(error => {
-          console.error('❌ Failed to load components:', error);
-          this.showEmptyState('Erro ao carregar componentes de aeronaves.');
-        });
-      } else {
-        this.showEmptyState('Sistema de componentes não encontrado.');
+
+      try {
+        // Use optimized component loading with caching
+        await this.ensureComponentsLoaded(['airframes']);
+        console.log('✅ Components loaded, retrying...');
+        this.loadAirframeTab();
+      } catch (error) {
+        console.error('❌ Failed to load components:', error);
+        this.showEmptyState('Erro ao carregar componentes de aeronaves.');
       }
       return;
     }
@@ -686,246 +1595,295 @@ class TabLoaders {
       </button>`;
   }
 
-  loadWingsTab() {
+  async loadWingsTab() {
     console.log('🔄 Loading Wings Tab...');
-    this.updateTechLevel();
 
-    // Ensure components are loaded
-    if (!window.AIRCRAFT_COMPONENTS?.wing_types || !window.AIRCRAFT_COMPONENTS?.wing_features) {
-      // Attempt to load them if they are missing
-      if (window.loadAircraftComponents) {
-        this.showLoadingState('Carregando componentes de asas...');
-        window.loadAircraftComponents().then(() => this.loadWingsTab());
-      } else {
-        this.showEmptyState('Componentes de asas não encontrados.');
-      }
-      return;
+    try {
+      // Load the new intuitive wings template
+      const template = await this.loadOptimizedTemplate('templates/aircraft-creator/wings-tab.html');
+
+      // Inject with smooth transition
+      optimizedTemplateLoader.injectWithTransition(this.getTabContent(), template);
+
+      // Initialize the new wings interface
+      setTimeout(() => {
+        this.initializeWingsInterface();
+      }, 100);
+
+    } catch (error) {
+      console.error('❌ Failed to load wings tab template:', error);
+      this.showEmptyState('Erro ao carregar a aba de Asas.');
     }
-
-    // Fetch and render the tab template
-    fetch('templates/aircraft-creator/wings-tab.html')
-      .then(response => {
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        return response.text();
-      })
-      .then(html => {
-        this.getTabContent().innerHTML = html;
-        this.populateWingsTab();
-      })
-      .catch(error => {
-        console.error('❌ Failed to load wings tab template:', error);
-        this.showEmptyState('Erro ao carregar a aba de Asas.');
-      });
   }
 
-  populateWingsTab() {
-    const wingTypeSelect = document.getElementById('wing_type');
-    const wingFeaturesContainer = document.getElementById('wing_features_checkboxes');
-    const noteElement = document.getElementById('wing_type_note');
+  initializeWingsInterface() {
+    console.log('🦅 Initializing intuitive wings interface...');
 
-    if (!wingTypeSelect || !wingFeaturesContainer || !noteElement) {
-        console.error('Wing tab elements not found');
-        return;
+    // Default selections
+    this.selectedWingType = 'straight';
+    this.selectedWingSize = 'medium';
+    this.selectedFlaps = 'basic';
+    this.selectedControls = 'standard';
+
+    // Set up event listeners for wing type cards
+    document.querySelectorAll('.wing-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const wingType = card.dataset.wingType;
+        this.selectWingType(wingType);
+      });
+    });
+
+    // Set up event listeners for wing size cards
+    document.querySelectorAll('.size-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const size = card.dataset.size;
+        this.selectWingSize(size);
+      });
+    });
+
+    // Set up event listeners for flap options
+    document.querySelectorAll('.flap-option').forEach(option => {
+      option.addEventListener('click', () => {
+        const flapType = option.dataset.flap;
+        this.selectFlaps(flapType);
+      });
+    });
+
+    // Set up event listeners for control options
+    document.querySelectorAll('.control-option').forEach(option => {
+      option.addEventListener('click', () => {
+        const controlType = option.dataset.control;
+        this.selectControls(controlType);
+      });
+    });
+
+    // Set defaults
+    this.selectWingType(this.selectedWingType);
+    this.selectWingSize(this.selectedWingSize);
+    this.selectFlaps(this.selectedFlaps);
+    this.selectControls(this.selectedControls);
+
+    console.log('✅ Wings interface initialized successfully');
+  }
+
+  selectWingType(wingType) {
+    this.selectedWingType = wingType;
+
+    // Update visual selection
+    document.querySelectorAll('.wing-card').forEach(card => {
+      const isSelected = card.dataset.wingType === wingType;
+      card.classList.toggle('border-cyan-400', isSelected);
+      card.classList.toggle('bg-cyan-900/20', isSelected);
+      card.classList.toggle('ring-1', isSelected);
+      card.classList.toggle('ring-cyan-400/50', isSelected);
+    });
+
+    // Update aircraft configuration
+    if (!window.currentAircraft.wings) window.currentAircraft.wings = {};
+    window.currentAircraft.wings.type = wingType;
+
+    this.updateWingPerformance();
+    this.updateWingRecommendations();
+
+    console.log(`🦅 Wing type selected: ${wingType}`);
+  }
+
+  selectWingSize(size) {
+    this.selectedWingSize = size;
+
+    // Update visual selection
+    document.querySelectorAll('.size-card').forEach(card => {
+      const isSelected = card.dataset.size === size;
+      card.classList.toggle('border-cyan-400', isSelected);
+      card.classList.toggle('bg-cyan-900/20', isSelected);
+      card.classList.toggle('ring-1', isSelected);
+      card.classList.toggle('ring-cyan-400/50', isSelected);
+    });
+
+    // Update aircraft configuration
+    if (!window.currentAircraft.wings) window.currentAircraft.wings = {};
+    window.currentAircraft.wings.size = size;
+
+    this.updateWingPerformance();
+
+    console.log(`📏 Wing size selected: ${size}`);
+  }
+
+  selectFlaps(flapType) {
+    this.selectedFlaps = flapType;
+
+    // Update visual selection
+    document.querySelectorAll('.flap-option').forEach(option => {
+      const isSelected = option.dataset.flap === flapType;
+      option.classList.toggle('border-cyan-500', isSelected);
+      option.classList.toggle('bg-cyan-900/20', isSelected);
+    });
+
+    // Update aircraft configuration
+    if (!window.currentAircraft.wings) window.currentAircraft.wings = {};
+    window.currentAircraft.wings.flaps = flapType;
+
+    this.updateWingPerformance();
+
+    console.log(`⬆️ Flaps selected: ${flapType}`);
+  }
+
+  selectControls(controlType) {
+    this.selectedControls = controlType;
+
+    // Update visual selection
+    document.querySelectorAll('.control-option').forEach(option => {
+      const isSelected = option.dataset.control === controlType;
+      option.classList.toggle('border-cyan-500', isSelected);
+      option.classList.toggle('bg-cyan-900/20', isSelected);
+    });
+
+    // Update aircraft configuration
+    if (!window.currentAircraft.wings) window.currentAircraft.wings = {};
+    window.currentAircraft.wings.controls = controlType;
+
+    this.updateWingPerformance();
+
+    console.log(`🎮 Controls selected: ${controlType}`);
+  }
+
+  updateWingPerformance() {
+    const performance = this.calculateWingPerformance();
+
+    // Update performance displays
+    const liftRating = document.getElementById('lift-rating');
+    const maneuverRating = document.getElementById('maneuver-rating');
+    const speedRating = document.getElementById('speed-rating');
+    const stabilityRating = document.getElementById('stability-rating');
+
+    if (liftRating) liftRating.textContent = performance.lift;
+    if (maneuverRating) maneuverRating.textContent = performance.maneuverability;
+    if (speedRating) speedRating.textContent = performance.speed;
+    if (stabilityRating) stabilityRating.textContent = performance.stability;
+
+    // Trigger global calculations
+    if (typeof window.updateAircraftCalculations === 'function') {
+      window.updateAircraftCalculations();
     }
+  }
 
-    const wingTypes = this.filterAvailableComponents(window.AIRCRAFT_COMPONENTS.wing_types);
-    const wingFeatures = this.filterAvailableComponents(window.AIRCRAFT_COMPONENTS.wing_features);
-
-    // Categorize wing types
-    const categories = {
-      obsolete: [], // Tech <= 30
-      piston: [],   // Tech 31-45  
-      earlyJet: [], // Tech 46-60
-      experimental: [] // Tech 61+
+  calculateWingPerformance() {
+    const wingTypePerformance = {
+      straight: { lift: 7, maneuverability: 6, speed: 5, stability: 9 },
+      swept: { lift: 6, maneuverability: 7, speed: 9, stability: 7 },
+      delta: { lift: 5, maneuverability: 4, speed: 10, stability: 8 },
+      variable: { lift: 8, maneuverability: 9, speed: 9, stability: 6 },
+      'forward-swept': { lift: 8, maneuverability: 10, speed: 7, stability: 4 },
+      canard: { lift: 7, maneuverability: 9, speed: 8, stability: 7 }
     };
-    
-    for (const [id, type] of Object.entries(wingTypes)) {
-      const techLevel = type.tech_level || 0;
-      if (techLevel <= 30) categories.obsolete.push({id, type});
-      else if (techLevel <= 45) categories.piston.push({id, type});
-      else if (techLevel <= 60) categories.earlyJet.push({id, type});
-      else categories.experimental.push({id, type});
-    }
 
-    // Find optgroups and populate them
-    const optGroups = wingTypeSelect.querySelectorAll('optgroup');
-    
-    // Clear existing options except the default
-    wingTypeSelect.innerHTML = '<option value="">-- Selecione um Tipo de Asa --</option>';
-    
-    // Recreate optgroups and populate
-    if (categories.obsolete.length > 0) {
-      const obsoleteGroup = document.createElement('optgroup');
-      obsoleteGroup.label = '🏛️ Era da Hélice (Obsoletas)';
-      categories.obsolete.forEach(({id, type}) => {
-        const isSelected = window.currentAircraft?.wings?.type === id;
-        const option = document.createElement('option');
-        option.value = id;
-        option.textContent = `${type.name} (Tech ${type.tech_level || 0})`;
-        option.selected = isSelected;
-        obsoleteGroup.appendChild(option);
-      });
-      wingTypeSelect.appendChild(obsoleteGroup);
-    }
-    
-    if (categories.piston.length > 0) {
-      const pistonGroup = document.createElement('optgroup');
-      pistonGroup.label = '✈️ Caças a Hélice (1945-1950)';
-      categories.piston.forEach(({id, type}) => {
-        const isSelected = window.currentAircraft?.wings?.type === id;
-        const option = document.createElement('option');
-        option.value = id;
-        option.textContent = `${type.name} (Tech ${type.tech_level || 0})`;
-        option.selected = isSelected;
-        pistonGroup.appendChild(option);
-      });
-      wingTypeSelect.appendChild(pistonGroup);
-    }
-    
-    if (categories.earlyJet.length > 0) {
-      const jetGroup = document.createElement('optgroup');
-      jetGroup.label = '🚀 Primeiros Jatos (1950-1954)';
-      categories.earlyJet.forEach(({id, type}) => {
-        const isSelected = window.currentAircraft?.wings?.type === id;
-        const option = document.createElement('option');
-        option.value = id;
-        option.textContent = `${type.name} (Tech ${type.tech_level || 0})`;
-        option.selected = isSelected;
-        jetGroup.appendChild(option);
-      });
-      wingTypeSelect.appendChild(jetGroup);
-    }
-    
-    if (categories.experimental.length > 0) {
-      const expGroup = document.createElement('optgroup');
-      expGroup.label = '🔬 Experimentais (1954)';
-      categories.experimental.forEach(({id, type}) => {
-        const isSelected = window.currentAircraft?.wings?.type === id;
-        const option = document.createElement('option');
-        option.value = id;
-        option.textContent = `${type.name} (Tech ${type.tech_level || 0})`;
-        option.selected = isSelected;
-        expGroup.appendChild(option);
-      });
-      wingTypeSelect.appendChild(expGroup);
-    }
-
-    // Populate Wing Features organized by category
-    wingFeaturesContainer.innerHTML = '';
-    
-    // Categorize wing features
-    const featureCategories = {
-      hyperlift: [],    // Flaps, slats
-      naval: [],        // Naval systems
-      control: [],      // Control surfaces
-      advanced: [],     // Advanced systems
-      payload: []       // Tanks, hardpoints
+    const sizeModifiers = {
+      small: { lift: -1, maneuverability: +2, speed: +1, stability: -1 },
+      medium: { lift: 0, maneuverability: 0, speed: 0, stability: 0 },
+      large: { lift: +2, maneuverability: -2, speed: -1, stability: +1 }
     };
-    
-    for (const [id, feature] of Object.entries(wingFeatures)) {
-      if (id.includes('flaps') || id.includes('slats')) featureCategories.hyperlift.push({id, feature});
-      else if (id.includes('folding') || id.includes('reinforced')) featureCategories.naval.push({id, feature});
-      else if (id.includes('ailerons') || id.includes('spoilers') || id.includes('air_brakes')) featureCategories.control.push({id, feature});
-      else if (id.includes('fences') || id.includes('boundary_layer')) featureCategories.advanced.push({id, feature});
-      else if (id.includes('tanks') || id.includes('hardpoints')) featureCategories.payload.push({id, feature});
-      else featureCategories.hyperlift.push({id, feature}); // Default category
+
+    const flapModifiers = {
+      basic: { lift: 0, maneuverability: 0, speed: 0, stability: 0 },
+      advanced: { lift: +1, maneuverability: 0, speed: -1, stability: 0 },
+      modern: { lift: +2, maneuverability: +1, speed: -1, stability: +1 }
+    };
+
+    const controlModifiers = {
+      standard: { lift: 0, maneuverability: 0, speed: 0, stability: 0 },
+      enhanced: { lift: 0, maneuverability: +2, speed: 0, stability: -1 },
+      'fly-by-wire': { lift: +1, maneuverability: +3, speed: 0, stability: +2 }
+    };
+
+    const base = wingTypePerformance[this.selectedWingType] || wingTypePerformance.straight;
+    const sizeMod = sizeModifiers[this.selectedWingSize] || sizeModifiers.medium;
+    const flapMod = flapModifiers[this.selectedFlaps] || flapModifiers.basic;
+    const controlMod = controlModifiers[this.selectedControls] || controlModifiers.standard;
+
+    return {
+      lift: Math.max(1, Math.min(10, base.lift + sizeMod.lift + flapMod.lift + controlMod.lift)),
+      maneuverability: Math.max(1, Math.min(10, base.maneuverability + sizeMod.maneuverability + flapMod.maneuverability + controlMod.maneuverability)),
+      speed: Math.max(1, Math.min(10, base.speed + sizeMod.speed + flapMod.speed + controlMod.speed)),
+      stability: Math.max(1, Math.min(10, base.stability + sizeMod.stability + flapMod.stability + controlMod.stability))
+    };
+  }
+
+  updateWingRecommendations() {
+    const categoryCompatibility = {
+      fighter: ['swept', 'delta', 'canard'],
+      bomber: ['straight', 'swept'],
+      transport: ['straight'],
+      helicopter: ['straight'],
+      attacker: ['straight', 'swept']
+    };
+
+    const currentCategory = window.currentAircraft?.category || 'fighter';
+    const recommended = categoryCompatibility[currentCategory] || [];
+
+    if (recommended.includes(this.selectedWingType)) {
+      document.getElementById('wing-recommendations')?.classList.add('hidden');
+    } else {
+      this.showWingRecommendations(recommended);
     }
-    
-    // Create organized sections
-    const createFeatureSection = (title, features, icon) => {
-      if (features.length === 0) return '';
-      
-      let html = `<div class="col-span-full"><h4 class="text-sm font-semibold text-slate-200 mb-2 flex items-center gap-2"><span>${icon}</span>${title}</h4></div>`;
-      
-      features.forEach(({id, feature}) => {
-        const isChecked = window.currentAircraft?.wings?.features?.includes(id);
-        html += `
-          <div class="form-check flex items-center gap-2 mb-1">
-            <input class="form-check-input h-4 w-4 rounded-md" type="checkbox" value="${id}" id="wing-feature-${id}" ${isChecked ? 'checked' : ''}>
-            <label class="form-check-label text-slate-300 text-sm" for="wing-feature-${id}">
-              ${feature.name} <span class="text-xs text-slate-500">(Tech ${feature.tech_level || 0})</span>
-            </label>
+  }
+
+  showWingRecommendations(recommendedTypes) {
+    const recommendationsDiv = document.getElementById('wing-recommendations');
+    const contentDiv = document.getElementById('recommendations-content');
+
+    if (!recommendationsDiv || !contentDiv) return;
+
+    contentDiv.innerHTML = recommendedTypes.map(type => {
+      const names = {
+        straight: 'Asa Reta',
+        swept: 'Asa Enflechada',
+        delta: 'Asa Delta',
+        variable: 'Geometria Variável',
+        'forward-swept': 'Enflechamento Inverso',
+        canard: 'Configuração Canard'
+      };
+
+      return `
+        <div class="p-3 bg-yellow-900/20 border border-yellow-600/30 rounded-lg">
+          <div class="text-yellow-400 font-medium">💡 Recomendação</div>
+          <div class="text-sm text-slate-300 mt-1">
+            ${names[type]} seria mais adequada para este tipo de aeronave.
           </div>
-        `;
-      });
-      
-      return html;
-    };
-    
-    wingFeaturesContainer.innerHTML = 
-      createFeatureSection('Dispositivos Hipersustentadores', featureCategories.hyperlift, '🛬') +
-      createFeatureSection('Sistemas de Controle', featureCategories.control, '🎛️') +
-      createFeatureSection('Sistemas Navais', featureCategories.naval, '🚢') +
-      createFeatureSection('Sistemas Avançados', featureCategories.advanced, '🔬') +
-      createFeatureSection('Tanques & Armamentos', featureCategories.payload, '⚡');
-    
-    
-    // Set initial note
-    if(window.currentAircraft?.wings?.type) {
-        noteElement.textContent = window.AIRCRAFT_COMPONENTS.wing_types[window.currentAircraft.wings.type]?.description || 'Selecione um tipo de asa.';
-    }
+        </div>
+      `;
+    }).join('');
 
-    // Add event listeners
-    wingTypeSelect.addEventListener('change', (e) => {
-      if (!window.currentAircraft.wings) window.currentAircraft.wings = {};
-      window.currentAircraft.wings.type = e.target.value;
-      noteElement.textContent = window.AIRCRAFT_COMPONENTS.wing_types[e.target.value]?.description || 'Selecione um tipo de asa.';
-      updateAircraftCalculations();
-    });
-
-    wingFeaturesContainer.addEventListener('change', (e) => {
-      if (e.target.type === 'checkbox') {
-        if (!window.currentAircraft.wings) window.currentAircraft.wings = { features: [] };
-        if (!window.currentAircraft.wings.features) window.currentAircraft.wings.features = [];
-        
-        const featureId = e.target.value;
-        if (e.target.checked) {
-          if (!window.currentAircraft.wings.features.includes(featureId)) {
-            window.currentAircraft.wings.features.push(featureId);
-          }
-        } else {
-          const index = window.currentAircraft.wings.features.indexOf(featureId);
-          if (index > -1) {
-            window.currentAircraft.wings.features.splice(index, 1);
-          }
-        }
-        updateAircraftCalculations();
-      }
-    });
+    recommendationsDiv.classList.remove('hidden');
   }
+
 
   loadPropulsionTab() {
     console.log('🔄 Loading Propulsion Tab (Engines)...');
     this.loadEngineTab();
   }
 
-  loadEngineTab() {
+  async loadEngineTab() {
     console.log('🔄 Loading Engine Tab...');
-    
+
     // Check if components are loaded
     if (!window.AIRCRAFT_COMPONENTS || !window.AIRCRAFT_COMPONENTS.aircraft_engines) {
       console.warn('⚠️ AIRCRAFT_COMPONENTS not loaded, attempting to load...');
-      // Show loading state
-      this.showLoadingState('Carregando motores de aeronaves...');
-      
-      // Try to trigger component loading
-      if (window.loadAircraftComponents) {
-        window.loadAircraftComponents().then(() => {
-          console.log('✅ Components loaded, retrying...');
-          this.loadEngineTab();
-        }).catch(error => {
-          console.error('❌ Failed to load components:', error);
-          this.showEmptyState('Erro ao carregar componentes de aeronaves.');
-        });
-      } else {
-        this.showEmptyState('Sistema de componentes não encontrado.');
+
+      try {
+        this.showLoadingState('Carregando motores de aeronaves...');
+        await this.ensureComponentsLoaded(['aircraft_engines']);
+        console.log('✅ Components loaded, retrying...');
+        this.loadEngineTab();
+      } catch (error) {
+        console.error('❌ Failed to load components:', error);
+        this.showEmptyState('Erro ao carregar componentes de aeronaves.');
       }
       return;
     }
-    
+
     // Update tech level first
     this.updateTechLevel();
-    
+
     const allData = window.AIRCRAFT_COMPONENTS?.aircraft_engines || {};
     const ids = Object.keys(allData);
     if (ids.length === 0) return this.showEmptyState('Nenhum motor disponível.');
@@ -933,49 +1891,694 @@ class TabLoaders {
 
     console.log(`📊 Found ${ids.length} engines in data`);
 
-    // Filter engines based on tech level
-    const availableData = this.filterAvailableComponents(allData);
-    console.log(`🔬 Engines: ${Object.keys(availableData).length} available out of ${ids.length} total`);
-    
-    const data = allData; // Use all data for display, but mark unavailable ones
+    // Create the new intuitive propulsion interface
+    const html = this.createModernPropulsionInterface(allData);
+    this.getTabContent().innerHTML = html;
 
-    const airframe = window.AIRCRAFT_COMPONENTS.airframes[window.currentAircraft.airframe];
+    // Initialize the interface
+    setTimeout(() => {
+      this.initializePropulsionInterface(allData);
+    }, 100);
+  }
+
+  createModernPropulsionInterface(allData) {
+    const aircraftCategory = window.currentAircraft?.category || 'fighter';
+
+    return `
+      <!-- Modern Propulsion Interface -->
+      <div id="aircraft-propulsion" class="space-y-6">
+
+        <!-- Section Header -->
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 bg-gradient-to-br from-red-500 to-orange-600 rounded-lg flex items-center justify-center">
+            <span class="text-xl">🚀</span>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold text-slate-100">Sistema de Propulsão</h2>
+            <p class="text-sm text-slate-400">Escolha o motor ideal para sua aeronave</p>
+          </div>
+        </div>
+
+        <!-- Performance Calculator -->
+        <div class="mb-8 p-6 bg-slate-800/30 rounded-lg border border-slate-600/30">
+          <h3 class="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
+            <span>📊</span>
+            <span>Calculadora de Performance</span>
+          </h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label class="block text-sm text-slate-400 mb-2">Velocidade Desejada (km/h)</label>
+              <input type="number" id="target-speed" min="100" max="3000" step="10" value="400"
+                     class="w-full bg-slate-700 border border-slate-600 rounded-lg p-2 text-white focus:ring-2 focus:ring-cyan-500">
+            </div>
+            <div>
+              <label class="block text-sm text-slate-400 mb-2">Altitude (m)</label>
+              <input type="number" id="target-altitude" min="0" max="20000" step="100" value="0"
+                     class="w-full bg-slate-700 border border-slate-600 rounded-lg p-2 text-white focus:ring-2 focus:ring-cyan-500">
+            </div>
+            <div class="flex items-end">
+              <button id="calculate-power-btn" class="w-full px-4 py-2 bg-cyan-600 text-white font-semibold rounded-lg hover:bg-cyan-700 transition-colors">
+                Calcular
+              </button>
+            </div>
+          </div>
+
+          <div id="power-calculation-result" class="p-4 bg-slate-700/50 rounded-lg text-center">
+            <span class="text-slate-400">Configure velocidade e altitude, depois clique em calcular</span>
+          </div>
+        </div>
+
+        <!-- Engine Type Categories -->
+        <div class="mb-8">
+          <h3 class="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
+            <span>⚙️</span>
+            <span>Tipos de Motor</span>
+          </h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+
+            <!-- Piston Engines -->
+            <div class="engine-type-filter cursor-pointer p-4 border-2 border-slate-700/50 rounded-lg hover:border-orange-500/50 transition-all duration-200" data-filter="piston">
+              <div class="text-center">
+                <div class="text-3xl mb-2">🛩️</div>
+                <h4 class="font-semibold text-slate-200">Motor a Pistão</h4>
+                <p class="text-xs text-slate-400 mt-2">Confiável (1945-1955)</p>
+                <div class="mt-2 text-xs text-slate-500">Potência: 500-3000 HP</div>
+              </div>
+            </div>
+
+            <!-- Early Jets -->
+            <div class="engine-type-filter cursor-pointer p-4 border-2 border-slate-700/50 rounded-lg hover:border-blue-500/50 transition-all duration-200" data-filter="early_jet">
+              <div class="text-center">
+                <div class="text-3xl mb-2">💨</div>
+                <h4 class="font-semibold text-slate-200">Primeiro Jato</h4>
+                <p class="text-xs text-slate-400 mt-2">Turbojet (1950-1965)</p>
+                <div class="mt-2 text-xs text-slate-500">Empuxo: 1000-8000 kgf</div>
+              </div>
+            </div>
+
+            <!-- Modern Jets -->
+            <div class="engine-type-filter cursor-pointer p-4 border-2 border-slate-700/50 rounded-lg hover:border-cyan-500/50 transition-all duration-200" data-filter="modern_jet">
+              <div class="text-center">
+                <div class="text-3xl mb-2">🚀</div>
+                <h4 class="font-semibold text-slate-200">Jato Moderno</h4>
+                <p class="text-xs text-slate-400 mt-2">Turbofan (1960-1990)</p>
+                <div class="mt-2 text-xs text-slate-500">Empuxo: 3000-20000 kgf</div>
+              </div>
+            </div>
+
+            <!-- Turboprop -->
+            <div class="engine-type-filter cursor-pointer p-4 border-2 border-slate-700/50 rounded-lg hover:border-green-500/50 transition-all duration-200" data-filter="turboprop">
+              <div class="text-center">
+                <div class="text-3xl mb-2">🌪️</div>
+                <h4 class="font-semibold text-slate-200">Turboprop</h4>
+                <p class="text-xs text-slate-400 mt-2">Eficiente (1955-1990)</p>
+                <div class="mt-2 text-xs text-slate-500">Potência: 1000-5000 HP</div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Filter Controls -->
+          <div class="flex flex-wrap gap-2 mb-4">
+            <button class="era-filter px-3 py-1 rounded-lg text-xs border border-slate-600 text-slate-300 hover:border-cyan-500 transition-colors" data-era="all">
+              Todas as Eras
+            </button>
+            <button class="era-filter px-3 py-1 rounded-lg text-xs border border-slate-600 text-slate-300 hover:border-cyan-500 transition-colors" data-era="1945-1955">
+              1945-1955
+            </button>
+            <button class="era-filter px-3 py-1 rounded-lg text-xs border border-slate-600 text-slate-300 hover:border-cyan-500 transition-colors" data-era="1955-1965">
+              1955-1965
+            </button>
+            <button class="era-filter px-3 py-1 rounded-lg text-xs border border-slate-600 text-slate-300 hover:border-cyan-500 transition-colors" data-era="1965-1975">
+              1965-1975
+            </button>
+            <button class="era-filter px-3 py-1 rounded-lg text-xs border border-slate-600 text-slate-300 hover:border-cyan-500 transition-colors" data-era="1975-1990">
+              1975-1990
+            </button>
+          </div>
+        </div>
+
+        <!-- Engines Grid -->
+        <div class="mb-8">
+          <h3 class="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
+            <span>🔧</span>
+            <span>Motores Disponíveis</span>
+          </h3>
+
+          <div id="engines-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Engines will be populated here -->
+          </div>
+        </div>
+
+        <!-- Recommendations -->
+        <div id="engine-recommendations" class="hidden">
+          <h3 class="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
+            <span>💡</span>
+            <span>Recomendações</span>
+          </h3>
+
+          <div id="recommendation-cards" class="space-y-3">
+            <!-- Recommendations will be populated -->
+          </div>
+        </div>
+
+        <!-- Selected Engine Info -->
+        <div id="selected-engine-info" class="hidden">
+          <h3 class="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
+            <span>⚡</span>
+            <span>Motor Selecionado</span>
+          </h3>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-slate-800/30 rounded-lg p-4 border border-slate-600/30">
+              <h4 class="font-semibold text-slate-200 mb-3">Especificações</h4>
+              <div id="engine-specs" class="space-y-2 text-sm">
+                <!-- Specs will be populated -->
+              </div>
+            </div>
+
+            <div class="bg-slate-800/30 rounded-lg p-4 border border-slate-600/30">
+              <h4 class="font-semibold text-slate-200 mb-3">Performance</h4>
+              <div id="engine-performance" class="space-y-2 text-sm">
+                <!-- Performance will be populated -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    `;
+  }
+
+  initializePropulsionInterface(allData) {
+    console.log('🚀 Initializing modern propulsion interface...');
+
+    this.selectedEngine = null;
+    this.currentFilter = 'all';
+    this.currentEraFilter = 'all';
+
+    // Populate engines initially
+    this.populateEnginesGrid(allData);
+
+    // Set up engine type filters
+    document.querySelectorAll('.engine-type-filter').forEach(filter => {
+      filter.addEventListener('click', () => {
+        this.currentFilter = filter.dataset.filter;
+        this.updateEngineTypeFilters();
+        this.filterEngines(allData);
+      });
+    });
+
+    // Set up era filters
+    document.querySelectorAll('.era-filter').forEach(filter => {
+      filter.addEventListener('click', () => {
+        this.currentEraFilter = filter.dataset.era;
+        this.updateEraFilters();
+        this.filterEngines(allData);
+      });
+    });
+
+    // Set up power calculator
+    document.getElementById('calculate-power-btn').addEventListener('click', () => {
+      this.calculateRequiredPower();
+    });
+
+    // Set default filter to 'all'
+    this.currentFilter = 'all';
+    this.currentEraFilter = 'all';
+
+    // Show recommendations based on aircraft category
+    this.updateEngineRecommendations(allData);
+
+  }
+
+  populateEnginesGrid(allData) {
+    const aircraftCategory = window.currentAircraft?.category || 'fighter';
+    const airframe = window.AIRCRAFT_COMPONENTS?.airframes?.[window.currentAircraft?.airframe];
     const allowedTypes = new Set(airframe?.compatible_engine_types || []);
 
-    // Nova interface avançada de cálculo de potência
-    const desiredSpeedSection = window.advancedPerformanceCalculator ? 
-        window.advancedPerformanceCalculator.renderPowerCalculationInterface() : 
-        `<div class="mb-6 p-6 bg-slate-900/50 border border-slate-700/50 rounded-xl">
-            <h3 class="text-lg font-semibold text-slate-100 mb-4">1. Definir Performance Desejada</h3>
-            <div class="flex items-center gap-4">
-                <div class="flex-1">
-                    <label for="target-speed" class="block text-sm font-medium text-slate-300 mb-2">Velocidade Máxima Desejada (km/h)</label>
-                    <input type="number" id="target-speed" min="100" max="1000" step="10" value="400" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 text-white focus:ring-2 focus:ring-cyan-500" placeholder="Ex: 950">
-                </div>
-                <button id="calculate-power-btn" class="self-end px-6 py-2 bg-cyan-600 text-white font-semibold rounded-lg hover:bg-cyan-700 transition-colors">Calcular</button>
-            </div>
-            <div id="power-calculation-result" class="mt-4 text-center p-4 bg-slate-800 rounded-lg min-h-[60px]">
-                <span class="text-slate-400">Insira uma velocidade e clique em calcular.</span>
-            </div>
-        </div>`;
 
-    let html = desiredSpeedSection;
-    html += `<h3 class="text-lg font-semibold text-slate-100 mb-4">2. Selecionar Motor Compatível</h3>`;
-    html += '<div id="engine-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">';
-    ids.forEach(id => {
-      const eng = data[id];
-      if (allowedTypes.size && !allowedTypes.has(eng.type)) return;
-      html += this.renderEngineCard(id, eng);
-    });
-    html += '</div>';
-    this.getTabContent().innerHTML = html;
-    
-    // Adiciona o event listener para o novo botão
-    document.getElementById('calculate-power-btn').addEventListener('click', () => {
-        if (typeof window.handleCalculateRequiredPower === 'function') {
-            window.handleCalculateRequiredPower();
+    const enginesGrid = document.getElementById('engines-grid');
+    if (!enginesGrid) {
+      console.error('❌ Engines grid element not found');
+      return;
+    }
+
+    let html = '';
+    let addedEngines = 0;
+
+    Object.entries(allData).forEach(([id, engine]) => {
+      // More relaxed filtering - show most engines for better UX
+      let shouldShow = true;
+
+      // Only filter if we have very strict airframe requirements
+      if (allowedTypes.size > 0 && airframe && airframe.strict_engine_compatibility) {
+        shouldShow = allowedTypes.has(engine.type);
+      }
+
+      if (shouldShow) {
+        try {
+          html += this.createModernEngineCard(id, engine, aircraftCategory);
+          addedEngines++;
+        } catch (error) {
+          console.error(`❌ Error creating card for engine ${id}:`, error);
         }
+      }
     });
+
+
+    if (addedEngines === 0) {
+      html = `
+        <div class="col-span-full text-center py-8">
+          <div class="text-slate-400 mb-4">🔍 Nenhum motor encontrado</div>
+          <div class="text-sm text-slate-500">
+            Verifique se uma fuselagem foi selecionada ou tente outros filtros.
+          </div>
+        </div>
+      `;
+    }
+
+    enginesGrid.innerHTML = html;
+
+    // Set up click handlers for engine selection
+    document.querySelectorAll('.modern-engine-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const engineId = card.dataset.engineId;
+        this.selectEngine(engineId, allData[engineId]);
+      });
+    });
+  }
+
+  createModernEngineCard(id, engine, aircraftCategory) {
+    const availability = this.getComponentAvailabilityInfo(engine);
+    const isSelected = window.currentAircraft?.engine === id;
+    const isPiston = engine.type && (engine.type.includes('piston') || engine.power_hp);
+    const hasAfterburner = engine.afterburner_thrust > 0;
+
+    // Determine engine era
+    const year = engine.year_introduced || engine.tech_level * 25 + 1945;
+    let era = 'unknown';
+    if (year <= 1955) era = '1945-1955';
+    else if (year <= 1965) era = '1955-1965';
+    else if (year <= 1975) era = '1965-1975';
+    else era = '1975-1990';
+
+    // Determine engine type category
+    let typeCategory = 'unknown';
+    if (isPiston) typeCategory = 'piston';
+    else if (engine.type?.includes('turbojet') || year <= 1965) typeCategory = 'early_jet';
+    else if (engine.type?.includes('turboprop')) typeCategory = 'turboprop';
+    else typeCategory = 'modern_jet';
+
+    // Power display
+    let powerDisplay;
+    if (isPiston) {
+      powerDisplay = `${Math.round(engine.power_hp || 0)} HP`;
+    } else {
+      powerDisplay = `${Math.round(engine.military_thrust || engine.thrust || 0)} kgf`;
+    }
+
+    // Icons by type
+    const typeIcons = {
+      piston: '🛩️',
+      early_jet: '💨',
+      modern_jet: '🚀',
+      turboprop: '🌪️',
+      unknown: '⚙️'
+    };
+
+    const isAvailable = availability.isAvailable;
+    const reliabilityPercent = Math.round((engine.reliability || 0) * 100);
+
+    return `
+      <div class="modern-engine-card cursor-pointer p-4 border-2 rounded-lg transition-all duration-200 ${isSelected ? 'border-cyan-400 bg-cyan-900/20 ring-1 ring-cyan-400/50' : 'border-slate-700/50 bg-slate-800/40 hover:border-slate-600'} ${!isAvailable ? 'opacity-50' : ''}"
+           data-engine-id="${id}"
+           data-type="${typeCategory}"
+           data-era="${era}"
+           ${!isAvailable ? 'data-unavailable="true"' : ''}>
+
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">${typeIcons[typeCategory]}</span>
+            <h4 class="font-semibold text-slate-200 text-sm">${engine.name}</h4>
+          </div>
+          ${hasAfterburner ? '<span class="px-2 py-0.5 text-xs bg-red-600 text-white rounded-lg">AB</span>' : ''}
+        </div>
+
+        <div class="space-y-2 text-xs">
+          <div class="grid grid-cols-2 gap-2">
+            <div class="text-slate-300">
+              <span class="text-slate-400">${isPiston ? 'Potência:' : 'Empuxo:'}</span>
+              <span class="font-semibold text-cyan-400">${powerDisplay}</span>
+            </div>
+            <div class="text-slate-300">
+              <span class="text-slate-400">Peso:</span>
+              <span class="font-semibold">${Math.round(engine.weight || 0)} kg</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div class="text-slate-300">
+              <span class="text-slate-400">Confiabilidade:</span>
+              <span class="font-semibold ${reliabilityPercent >= 85 ? 'text-green-400' : reliabilityPercent >= 75 ? 'text-yellow-400' : 'text-red-400'}">${reliabilityPercent}%</span>
+            </div>
+            <div class="text-slate-300">
+              <span class="text-slate-400">Consumo:</span>
+              <span class="font-semibold">${(engine.fuel_consumption || 0).toFixed(1)} kg/s</span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-2 border-t border-slate-600">
+            <div class="text-slate-400">
+              <span>Tech: ${availability.requiredTech}</span>
+              ${engine.year_introduced ? `<span class="text-slate-500"> • ${engine.year_introduced}</span>` : ''}
+            </div>
+            ${!isAvailable ? '<span class="text-red-400 text-xs">🔒 Indisponível</span>' : ''}
+          </div>
+        </div>
+
+        ${isSelected ? '<div class="absolute top-2 right-2 w-3 h-3 bg-cyan-400 rounded-full animate-pulse"></div>' : ''}
+      </div>
+    `;
+  }
+
+  updateEngineTypeFilters() {
+    document.querySelectorAll('.engine-type-filter').forEach(filter => {
+      const isSelected = filter.dataset.filter === this.currentFilter;
+      if (isSelected) {
+        filter.classList.add('border-cyan-400', 'bg-cyan-900/20');
+        filter.classList.remove('border-slate-700/50');
+      } else {
+        filter.classList.remove('border-cyan-400', 'bg-cyan-900/20');
+        filter.classList.add('border-slate-700/50');
+      }
+    });
+  }
+
+  updateEraFilters() {
+    document.querySelectorAll('.era-filter').forEach(filter => {
+      const isSelected = filter.dataset.era === this.currentEraFilter;
+      if (isSelected) {
+        filter.classList.add('border-cyan-500', 'bg-cyan-600', 'text-white');
+        filter.classList.remove('border-slate-600', 'text-slate-300');
+      } else {
+        filter.classList.remove('border-cyan-500', 'bg-cyan-600', 'text-white');
+        filter.classList.add('border-slate-600', 'text-slate-300');
+      }
+    });
+  }
+
+  filterEngines(allData) {
+    document.querySelectorAll('.modern-engine-card').forEach(card => {
+      const engineType = card.dataset.type;
+      const engineEra = card.dataset.era;
+
+      let showCard = true;
+
+      // Filter by engine type
+      if (this.currentFilter !== 'all' && engineType !== this.currentFilter) {
+        showCard = false;
+      }
+
+      // Filter by era
+      if (this.currentEraFilter !== 'all' && engineEra !== this.currentEraFilter) {
+        showCard = false;
+      }
+
+      // Show/hide card
+      card.style.display = showCard ? 'block' : 'none';
+    });
+  }
+
+  calculateRequiredPower() {
+    const targetSpeed = document.getElementById('target-speed').value;
+    const targetAltitude = document.getElementById('target-altitude').value;
+    const resultDiv = document.getElementById('power-calculation-result');
+
+    if (!targetSpeed || targetSpeed < 100) {
+      resultDiv.innerHTML = '<span class="text-red-400">Por favor, insira uma velocidade válida (mín. 100 km/h)</span>';
+      return;
+    }
+
+    // More realistic power calculation based on aerodynamics
+    const speedMs = targetSpeed / 3.6; // Convert to m/s
+    const aircraftWeight = window.currentAircraft?.selectedAirframe?.base_weight || 3000;
+
+    // Atmospheric density at altitude (simplified)
+    const seaLevelDensity = 1.225; // kg/m³
+    const densityAtAltitude = seaLevelDensity * Math.exp(-targetAltitude / 8400);
+
+    // Estimate wing area and drag coefficient based on aircraft type
+    const aircraftCategory = window.currentAircraft?.category || 'fighter';
+    let estimatedWingArea, dragCoeff;
+
+    switch(aircraftCategory) {
+      case 'fighter':
+        estimatedWingArea = aircraftWeight / 400; // Fighter: ~400 kg/m² wing loading
+        dragCoeff = 0.025; // Clean fighter
+        break;
+      case 'bomber':
+        estimatedWingArea = aircraftWeight / 250; // Bomber: ~250 kg/m² wing loading
+        dragCoeff = 0.035; // Larger aircraft
+        break;
+      case 'transport':
+        estimatedWingArea = aircraftWeight / 200; // Transport: ~200 kg/m² wing loading
+        dragCoeff = 0.030; // Transport aircraft
+        break;
+      default:
+        estimatedWingArea = aircraftWeight / 350; // Generic
+        dragCoeff = 0.030;
+    }
+
+    // Calculate drag force: D = 0.5 * ρ * V² * S * Cd
+    const dragForce = 0.5 * densityAtAltitude * Math.pow(speedMs, 2) * estimatedWingArea * dragCoeff;
+
+    // Add induced drag and compressibility effects for high speed
+    let compressibilityFactor = 1;
+    if (speedMs > 250) { // Above ~900 km/h, compressibility becomes significant
+      compressibilityFactor = 1 + Math.pow((speedMs - 250) / 100, 1.5);
+    }
+
+    // Required thrust = drag force + altitude penalty + speed penalty
+    const requiredThrust = dragForce * compressibilityFactor * (1 + targetAltitude / 15000);
+
+    // Convert to equivalent horsepower (rough approximation)
+    const requiredPower = (requiredThrust * speedMs) / 745.7; // Convert watts to HP
+
+    resultDiv.innerHTML = `
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+        <div>
+          <div class="text-slate-400">Empuxo Necessário:</div>
+          <div class="text-xl font-bold text-cyan-400">${Math.round(requiredThrust)} kgf</div>
+        </div>
+        <div>
+          <div class="text-slate-400">Potência Equivalente:</div>
+          <div class="text-xl font-bold text-cyan-400">${Math.round(requiredPower)} HP</div>
+        </div>
+        <div>
+          <div class="text-slate-400">Densidade do Ar:</div>
+          <div class="text-lg font-semibold text-yellow-400">${(densityAtAltitude).toFixed(3)} kg/m³</div>
+        </div>
+      </div>
+      <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+        <div>
+          <div class="text-slate-500">Parâmetros estimados:</div>
+          <div class="text-slate-400">• Área alar: ${estimatedWingArea.toFixed(1)} m²</div>
+          <div class="text-slate-400">• Coef. arrasto: ${dragCoeff}</div>
+          <div class="text-slate-400">• Fator compressibilidade: ${compressibilityFactor.toFixed(2)}</div>
+        </div>
+        <div>
+          <div class="text-slate-500">Baseado em:</div>
+          <div class="text-slate-400">• Categoria: ${aircraftCategory}</div>
+          <div class="text-slate-400">• Peso: ${aircraftWeight} kg</div>
+          <div class="text-slate-400">• Velocidade: ${speedMs.toFixed(1)} m/s</div>
+        </div>
+      </div>
+    `;
+
+    // Highlight engines that meet the requirement
+    this.highlightSuitableEngines(requiredThrust, requiredPower);
+  }
+
+  highlightSuitableEngines(requiredThrust, requiredPower) {
+    document.querySelectorAll('.modern-engine-card').forEach(card => {
+      const engineId = card.dataset.engineId;
+      const engine = window.AIRCRAFT_COMPONENTS?.aircraft_engines?.[engineId];
+
+      if (!engine) return;
+
+      const isPiston = engine.type && (engine.type.includes('piston') || engine.power_hp);
+      let isSuitable = false;
+
+      if (isPiston) {
+        isSuitable = (engine.power_hp || 0) >= requiredPower;
+      } else {
+        isSuitable = (engine.military_thrust || engine.thrust || 0) >= requiredThrust;
+      }
+
+      // Add visual indicator
+      if (isSuitable) {
+        card.classList.add('ring-2', 'ring-green-400/50');
+        // Add suitable badge if not already there
+        if (!card.querySelector('.suitable-badge')) {
+          const badge = document.createElement('div');
+          badge.className = 'suitable-badge absolute top-1 left-1 px-2 py-0.5 bg-green-600 text-white text-xs rounded-lg';
+          badge.textContent = '✓ Adequado';
+          card.style.position = 'relative';
+          card.appendChild(badge);
+        }
+      } else {
+        card.classList.remove('ring-2', 'ring-green-400/50');
+        // Remove suitable badge
+        const badge = card.querySelector('.suitable-badge');
+        if (badge) badge.remove();
+      }
+    });
+  }
+
+  selectEngine(engineId, engineData) {
+    this.selectedEngine = engineId;
+
+    // Update visual selection
+    document.querySelectorAll('.modern-engine-card').forEach(card => {
+      const isSelected = card.dataset.engineId === engineId;
+      if (isSelected) {
+        card.classList.add('border-cyan-400', 'bg-cyan-900/20', 'ring-1', 'ring-cyan-400/50');
+        card.classList.remove('border-slate-700/50');
+      } else {
+        card.classList.remove('border-cyan-400', 'bg-cyan-900/20', 'ring-1', 'ring-cyan-400/50');
+        card.classList.add('border-slate-700/50');
+      }
+    });
+
+    // Update aircraft configuration
+    if (!window.currentAircraft) window.currentAircraft = {};
+    window.currentAircraft.engine = engineId;
+
+    // Show selected engine info
+    this.showSelectedEngineInfo(engineData);
+
+    // Trigger global calculations
+    if (typeof window.updateAircraftCalculations === 'function') {
+      window.updateAircraftCalculations();
+    }
+
+    console.log(`⚡ Engine selected: ${engineData.name}`);
+  }
+
+  showSelectedEngineInfo(engineData) {
+    const infoDiv = document.getElementById('selected-engine-info');
+    const specsDiv = document.getElementById('engine-specs');
+    const performanceDiv = document.getElementById('engine-performance');
+
+    if (!infoDiv || !specsDiv || !performanceDiv) return;
+
+    const isPiston = engineData.type && (engineData.type.includes('piston') || engineData.power_hp);
+    const hasAfterburner = engineData.afterburner_thrust > 0;
+
+    // Populate specs
+    specsDiv.innerHTML = `
+      <div class="flex justify-between">
+        <span class="text-slate-400">Nome:</span>
+        <span class="text-slate-200">${engineData.name}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-slate-400">Tipo:</span>
+        <span class="text-slate-200">${engineData.type || 'Desconhecido'}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-slate-400">${isPiston ? 'Potência:' : 'Empuxo Militar:'}</span>
+        <span class="text-cyan-400 font-semibold">${isPiston ? Math.round(engineData.power_hp || 0) + ' HP' : Math.round(engineData.military_thrust || engineData.thrust || 0) + ' kgf'}</span>
+      </div>
+      ${hasAfterburner ? `
+        <div class="flex justify-between">
+          <span class="text-slate-400">Empuxo c/ Pós-queimador:</span>
+          <span class="text-red-400 font-semibold">${Math.round(engineData.afterburner_thrust)} kgf</span>
+        </div>
+      ` : ''}
+      <div class="flex justify-between">
+        <span class="text-slate-400">Peso:</span>
+        <span class="text-slate-200">${Math.round(engineData.weight || 0)} kg</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-slate-400">Tech Level:</span>
+        <span class="text-slate-200">${engineData.tech_level || 0}</span>
+      </div>
+    `;
+
+    // Populate performance
+    const reliabilityPercent = Math.round((engineData.reliability || 0) * 100);
+    const thrustToWeight = isPiston
+      ? ((engineData.power_hp || 0) * 0.75 / (engineData.weight || 1)).toFixed(1)
+      : ((engineData.military_thrust || engineData.thrust || 0) / (engineData.weight || 1)).toFixed(1);
+
+    performanceDiv.innerHTML = `
+      <div class="flex justify-between">
+        <span class="text-slate-400">Confiabilidade:</span>
+        <span class="${reliabilityPercent >= 85 ? 'text-green-400' : reliabilityPercent >= 75 ? 'text-yellow-400' : 'text-red-400'} font-semibold">${reliabilityPercent}%</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-slate-400">Relação Empuxo/Peso:</span>
+        <span class="text-slate-200">${thrustToWeight}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-slate-400">Consumo:</span>
+        <span class="text-slate-200">${(engineData.fuel_consumption || 0).toFixed(2)} kg/s</span>
+      </div>
+      ${hasAfterburner ? `
+        <div class="flex justify-between">
+          <span class="text-slate-400">Consumo c/ Pós-queimador:</span>
+          <span class="text-red-400">${(engineData.afterburner_fuel_consumption || 0).toFixed(1)} kg/s</span>
+        </div>
+      ` : ''}
+      ${engineData.year_introduced ? `
+        <div class="flex justify-between">
+          <span class="text-slate-400">Ano de Introdução:</span>
+          <span class="text-slate-200">${engineData.year_introduced}</span>
+        </div>
+      ` : ''}
+    `;
+
+    infoDiv.classList.remove('hidden');
+  }
+
+  updateEngineRecommendations(allData) {
+    const aircraftCategory = window.currentAircraft?.category || 'fighter';
+
+    const recommendations = {
+      fighter: ['early_jet', 'modern_jet'],
+      bomber: ['piston', 'turboprop', 'early_jet'],
+      transport: ['piston', 'turboprop'],
+      helicopter: ['piston', 'turboprop'],
+      attacker: ['piston', 'early_jet']
+    };
+
+    const recommendedTypes = recommendations[aircraftCategory] || ['early_jet'];
+
+    const recommendationsDiv = document.getElementById('engine-recommendations');
+    const cardsDiv = document.getElementById('recommendation-cards');
+
+    if (!recommendationsDiv || !cardsDiv) return;
+
+    const typeNames = {
+      piston: 'Motores a Pistão',
+      early_jet: 'Primeiros Jatos',
+      modern_jet: 'Jatos Modernos',
+      turboprop: 'Turboprops'
+    };
+
+    cardsDiv.innerHTML = recommendedTypes.map(type => `
+      <div class="p-3 bg-green-900/20 border border-green-600/30 rounded-lg">
+        <div class="text-green-400 font-medium">💡 Recomendado</div>
+        <div class="text-sm text-slate-300 mt-1">
+          ${typeNames[type]} são ideais para aeronaves do tipo ${aircraftCategory}.
+        </div>
+      </div>
+    `).join('');
+
+    recommendationsDiv.classList.remove('hidden');
   }
 
   renderEngineCountSelector(airframe) {
@@ -1471,26 +3074,21 @@ class TabLoaders {
       </button>`;
   }
 
-  loadWeaponsTab() {
+  async loadWeaponsTab() {
     console.log('🔄 Loading Weapons Tab...');
-    
+
     // Check if components are loaded
     if (!window.AIRCRAFT_COMPONENTS || !window.AIRCRAFT_COMPONENTS.aircraft_weapons) {
       console.warn('⚠️ AIRCRAFT_COMPONENTS not loaded, attempting to load...');
-      // Show loading state
-      this.showLoadingState('Carregando armamentos de aeronaves...');
-      
-      // Try to trigger component loading
-      if (window.loadAircraftComponents) {
-        window.loadAircraftComponents().then(() => {
-          console.log('✅ Components loaded, retrying...');
-          this.loadWeaponsTab();
-        }).catch(error => {
-          console.error('❌ Failed to load components:', error);
-          this.showEmptyState('Erro ao carregar componentes de aeronaves.');
-        });
-      } else {
-        this.showEmptyState('Sistema de componentes não encontrado.');
+
+      try {
+        this.showLoadingState('Carregando armamentos de aeronaves...');
+        await this.ensureComponentsLoaded(['aircraft_weapons']);
+        console.log('✅ Components loaded, retrying...');
+        this.loadWeaponsTab();
+      } catch (error) {
+        console.error('❌ Failed to load components:', error);
+        this.showEmptyState('Erro ao carregar componentes de aeronaves.');
       }
       return;
     }
@@ -1521,31 +3119,36 @@ class TabLoaders {
     this.getTabContent().innerHTML = html;
   }
 
-  loadAvionicsTab() {
+  async loadAvionicsTab() {
     console.log('🔄 Loading Avionics Tab...');
-    
+
     if (!window.AIRCRAFT_COMPONENTS?.avionics) {
-      this.showLoadingState('Carregando sistemas aviônicos...');
-      if (window.loadAircraftComponents) {
-        window.loadAircraftComponents().then(() => this.loadAvionicsTab());
-      } else {
+      try {
+        this.showLoadingState('Carregando sistemas aviônicos...');
+        await this.ensureComponentsLoaded(['avionics']);
+        this.loadAvionicsTab(); // Retry after loading
+      } catch (error) {
+        console.error('❌ Failed to load avionics components:', error);
         this.showEmptyState('Sistema de componentes não encontrado.');
       }
       return;
     }
-    
+
     this.updateTechLevel();
-    
-    fetch('templates/aircraft-creator/avionics-tab.html')
-      .then(response => response.text())
-      .then(html => {
-        this.getTabContent().innerHTML = html;
-        this.populateAvionicsTab();
-      })
-      .catch(error => {
-        console.error('❌ Failed to load avionics tab template:', error);
-        this.showEmptyState('Erro ao carregar a aba de Aviônicos.');
-      });
+
+    try {
+      // Load template with optimization
+      const template = await this.loadOptimizedTemplate('templates/aircraft-creator/avionics-tab.html');
+
+      // Inject with smooth transition
+      optimizedTemplateLoader.injectWithTransition(this.getTabContent(), template);
+
+      // Populate tab content with debouncing
+      this.debouncedUIUpdate('avionics-populate', () => this.populateAvionicsTab(), 50);
+    } catch (error) {
+      console.error('❌ Failed to load avionics tab template:', error);
+      this.showEmptyState('Erro ao carregar a aba de Aviônicos.');
+    }
   }
 
   populateAvionicsTab() {
@@ -1869,6 +3472,65 @@ class TabLoaders {
     }
   }
 
+  // ===== Optimized Loading Methods =====
+
+  /**
+   * Ensure components are loaded with optimization and caching
+   */
+  async ensureComponentsLoaded(componentTypes = []) {
+    // If components already loaded, return immediately
+    if (window.AIRCRAFT_COMPONENTS && componentTypes.every(type => window.AIRCRAFT_COMPONENTS[type])) {
+      console.log('📋 All required components already loaded');
+      return;
+    }
+
+    // Reuse existing loading promise if in progress
+    if (!this.componentLoadPromise) {
+      this.componentLoadPromise = this.performComponentLoading();
+    }
+
+    try {
+      await this.componentLoadPromise;
+      console.log('✅ Component loading completed');
+    } finally {
+      this.componentLoadPromise = null;
+    }
+  }
+
+  /**
+   * Perform actual component loading with optimization
+   */
+  async performComponentLoading() {
+    if (window.loadAircraftComponents) {
+      console.log('🔄 Loading aircraft components with optimization...');
+      return window.loadAircraftComponents();
+    } else {
+      throw new Error('Component loading system not available');
+    }
+  }
+
+  /**
+   * Optimized template loading with caching
+   */
+  async loadOptimizedTemplate(templatePath) {
+    try {
+      return await optimizedTemplateLoader.loadTemplate(templatePath, {
+        priority: 'high',
+        cache: true
+      });
+    } catch (error) {
+      console.error(`❌ Failed to load template: ${templatePath}`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Debounced UI update to prevent excessive renders
+   */
+  debouncedUIUpdate(key, updateFunction, delay = 150) {
+    optimizedTemplateLoader.debouncedUpdate(key, updateFunction, delay);
+  }
+
   // ===== Helpers =====
   isAvailable(component) {
     try {
@@ -1883,6 +3545,223 @@ class TabLoaders {
       }
       return true;
     } catch { return true; }
+  }
+
+  getCategoryDisplayName(category) {
+    const names = {
+      fighter: 'Caça',
+      bomber: 'Bombardeiro',
+      transport: 'Transporte',
+      attack: 'Ataque ao Solo',
+      helicopter: 'Helicóptero',
+      experimental: 'Experimental'
+    };
+    return names[category] || 'Desconhecida';
+  }
+
+  generateAirframeOptions(category) {
+    const airframesByCategory = {
+      fighter: [
+        {
+          id: 'light_fighter',
+          icon: '🛩️',
+          name: 'Caça Leve',
+          description: 'Fuselagem ágil e econômica para caças leves (1954-1960)',
+          weight: 1600,
+          gLimit: 9,
+          hardpoints: 2,
+          fuel: 400
+        },
+        {
+          id: 'early_jet_fighter',
+          icon: '🚀',
+          name: 'Caça a Jato Inicial',
+          description: 'Primeiro caça a jato subsônico básico (1954-1958)',
+          weight: 2200,
+          gLimit: 8,
+          hardpoints: 4,
+          fuel: 600
+        },
+        {
+          id: 'supersonic_fighter',
+          icon: '⚡',
+          name: 'Caça Supersônico',
+          description: 'Caça supersônico de 2ª geração (1958-1965)',
+          weight: 2800,
+          gLimit: 7.5,
+          hardpoints: 4,
+          fuel: 900
+        },
+        {
+          id: 'interceptor_fighter',
+          icon: '🎯',
+          name: 'Interceptador',
+          description: 'Especializado em interceptação de alta altitude (1960-1970)',
+          weight: 3200,
+          gLimit: 6,
+          hardpoints: 6,
+          fuel: 1400
+        },
+        {
+          id: 'multirole_fighter',
+          icon: '⚔️',
+          name: 'Caça Multifunção',
+          description: 'Caça versátil de 3ª geração (1965-1975)',
+          weight: 3000,
+          gLimit: 8,
+          hardpoints: 8,
+          fuel: 1100
+        },
+        {
+          id: 'air_superiority_fighter',
+          icon: '🦅',
+          name: 'Superioridade Aérea',
+          description: 'Caça pesado de domínio aéreo (1970-1980)',
+          weight: 4200,
+          gLimit: 9,
+          hardpoints: 8,
+          fuel: 2200
+        },
+        {
+          id: 'modern_multirole',
+          icon: '🌟',
+          name: 'Caça Moderno',
+          description: 'Caça de 4ª geração com aviônicos avançados (1975-1985)',
+          weight: 2600,
+          gLimit: 9,
+          hardpoints: 9,
+          fuel: 1000
+        },
+        {
+          id: 'naval_fighter',
+          icon: '⚓',
+          name: 'Caça Naval',
+          description: 'Caça reforçado para operações em porta-aviões (1960-1980)',
+          weight: 3400,
+          gLimit: 7,
+          hardpoints: 6,
+          fuel: 1300
+        },
+        {
+          id: 'stealth_prototype',
+          icon: '👻',
+          name: 'Protótipo Furtivo',
+          description: 'Caça experimental com tecnologia stealth (1980-1990)',
+          weight: 3800,
+          gLimit: 6.5,
+          hardpoints: 4,
+          fuel: 1600
+        }
+      ],
+      bomber: [
+        {
+          id: 'light_bomber',
+          icon: '💣',
+          name: 'Bombardeiro Leve',
+          description: 'Fuselagem para bombardeio tático',
+          weight: 4200,
+          gLimit: 5,
+          hardpoints: 12,
+          fuel: 1800
+        },
+        {
+          id: 'medium_bomber',
+          icon: '✈️',
+          name: 'Bombardeiro Médio',
+          description: 'Bombardeiro de médio alcance para missões estratégicas',
+          weight: 6800,
+          gLimit: 4,
+          hardpoints: 16,
+          fuel: 3200
+        }
+      ],
+      transport: [
+        {
+          id: 'light_transport',
+          icon: '📦',
+          name: 'Transporte Leve',
+          description: 'Transporte para pequenas cargas e pessoal',
+          weight: 3800,
+          gLimit: 4,
+          hardpoints: 2,
+          fuel: 1500
+        },
+        {
+          id: 'heavy_transport',
+          icon: '✈️',
+          name: 'Transporte Pesado',
+          description: 'Grande capacidade para tropas e equipamentos',
+          weight: 8500,
+          gLimit: 3,
+          hardpoints: 4,
+          fuel: 4500
+        }
+      ],
+      attack: [
+        {
+          id: 'ground_attack',
+          icon: '⚔️',
+          name: 'Ataque ao Solo',
+          description: 'Especializado em apoio aéreo aproximado',
+          weight: 3200,
+          gLimit: 6,
+          hardpoints: 10,
+          fuel: 900
+        }
+      ],
+      helicopter: [
+        {
+          id: 'light_helicopter',
+          icon: '🚁',
+          name: 'Helicóptero Leve',
+          description: 'Helicóptero de observação e transporte leve',
+          weight: 1800,
+          gLimit: 4,
+          hardpoints: 4,
+          fuel: 600
+        },
+        {
+          id: 'medium_helicopter',
+          icon: '🚁',
+          name: 'Helicóptero Médio',
+          description: 'Helicóptero multifunção para combate e transporte',
+          weight: 3200,
+          gLimit: 3,
+          hardpoints: 6,
+          fuel: 1200
+        }
+      ],
+      experimental: [
+        {
+          id: 'prototype_x1',
+          icon: '🧪',
+          name: 'Protótipo X-1',
+          description: 'Projeto experimental avançado',
+          weight: 2100,
+          gLimit: 12,
+          hardpoints: 4,
+          fuel: 500
+        }
+      ]
+    };
+
+    const airframes = airframesByCategory[category] || [];
+
+    return airframes.map(airframe => `
+      <div class="airframe-option p-4 border border-slate-600 rounded-lg cursor-pointer hover:border-slate-500 transition-colors" data-airframe="${airframe.id}">
+        <div class="flex items-center gap-3 mb-2">
+          <span class="text-2xl">${airframe.icon}</span>
+          <h4 class="font-semibold text-slate-200">${airframe.name}</h4>
+        </div>
+        <p class="text-sm text-slate-400 mb-3">${airframe.description}</p>
+        <div class="text-xs text-slate-300 space-y-1">
+          <div>Peso: <span class="text-yellow-400">${airframe.weight.toLocaleString()} kg</span></div>
+          <div>Limite G: <span class="text-green-400">${airframe.gLimit}G</span></div>
+          <div>Hardpoints: <span class="text-blue-400">${airframe.hardpoints}</span></div>
+          <div>Combustível: <span class="text-cyan-400">${airframe.fuel}L</span></div>
+        </div>
+      </div>
+    `).join('');
   }
 }
 

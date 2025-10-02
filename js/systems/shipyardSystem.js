@@ -3,36 +3,79 @@
 import { db, auth } from '../services/firebase.js';
 import { checkPlayerCountry } from '../services/firebase.js';
 
+/**
+ * Fetches all countries and calculates the average GDP.
+ * @returns {Promise<number>} The average GDP of all countries.
+ */
+async function getGlobalAverageGDP() {
+    try {
+        const snapshot = await db.collection('paises').get();
+        if (snapshot.empty) {
+            return 0;
+        }
+        let totalGDP = 0;
+        let countryCount = 0;
+        snapshot.forEach(doc => {
+            const pib = parseFloat(doc.data().PIB);
+            if (!isNaN(pib)) {
+                totalGDP += pib;
+                countryCount++;
+            }
+        });
+        return countryCount > 0 ? totalGDP / countryCount : 0;
+    } catch (error) {
+        console.error("Error calculating global average GDP:", error);
+        return 0; // Return 0 or a fallback value on error
+    }
+}
+
 export class ShipyardSystem {
     constructor() {
         this.maxLevel = 10;
-        this.baseCost = 200000000; // $200M base para nível 1 (reduzido 60%)
         this.baseMaintenancePercent = 0.005; // 0.5% do orçamento para nível 1
     }
 
     /**
-     * Calcular custo de upgrade para próximo nível
-     * Fórmula exponencial suavizada: baseCost * (level^2) * 1.6^level
+     * Calcular custo de upgrade para próximo nível de forma dinâmica.
      */
-    calculateUpgradeCost(currentLevel, targetLevel = null) {
+    calculateUpgradeCost(currentLevel, countryData, globalAverageGDP, targetLevel = null) {
         if (currentLevel >= this.maxLevel) return 0;
 
         const nextLevel = targetLevel || (currentLevel + 1);
         if (nextLevel > this.maxLevel) return 0;
 
-        // Custo exponencial mais suave (reduzido significativamente)
-        const cost = this.baseCost * Math.pow(nextLevel, 2) * Math.pow(1.6, nextLevel);
-        return Math.round(cost);
+        // --- Dynamic Base Cost Calculation ---
+        const navalTech = countryData.Marinha || 1;
+        const industrialEfficiency = countryData.IndustrialEfficiency || 30;
+        const countryGDP = countryData.PIB || 0;
+
+        // Fatores de Balanceamento
+        const GDP_FACTOR = 0.0000015; 
+        const NAVAL_TECH_DAMPENER = 100;
+        const EFFICIENCY_DAMPENER = 200;
+        const GLOBAL_GDP_WEIGHT = 0.5; // 50%
+        const COUNTRY_GDP_WEIGHT = 0.5; // 50%
+
+        // Modificadores de desconto
+        const navalTechModifier = 1 + (navalTech / NAVAL_TECH_DAMPENER);
+        const efficiencyModifier = 1 + (industrialEfficiency / EFFICIENCY_DAMPENER);
+
+        // PIB Híbrido: 50% da média global + 50% do PIB do país
+        const blendedGDP = (globalAverageGDP * GLOBAL_GDP_WEIGHT) + (countryGDP * COUNTRY_GDP_WEIGHT);
+
+        const dynamicBaseCost = (blendedGDP * GDP_FACTOR) / (navalTechModifier * efficiencyModifier);
+        // --- End of Dynamic Calculation ---
+
+        const cost = dynamicBaseCost * Math.pow(nextLevel, 2) * Math.pow(1.6, nextLevel);
+        return Math.round(cost * 1000);
     }
 
     /**
      * Calcular custo de manutenção mensal
-     * Fórmula exponencial: basePercent * (level^2) * 1.5^level
      */
     calculateMaintenanceCost(level, countryBudget) {
         if (level === 0) return 0;
 
-        // Percentual exponencial do orçamento
         const maintenancePercent = this.baseMaintenancePercent * Math.pow(level, 2) * Math.pow(1.5, level);
         return Math.round(countryBudget * maintenancePercent);
     }
@@ -49,7 +92,6 @@ export class ShipyardSystem {
             };
         }
 
-        // Bônus progressivo
         const parallelMultiplier = 1 + (level * 0.3); // +30% por nível
         const timeReduction = Math.min(0.5, level * 0.05); // Até 50% redução no tempo
         const maxSimultaneous = Math.min(15, 1 + level); // +1 projeto por nível (máximo 15)
@@ -64,14 +106,16 @@ export class ShipyardSystem {
     /**
      * Obter informações do nível do estaleiro
      */
-    getLevelInfo(level) {
+    getLevelInfo(level, countryData = null, globalAverageGDP = null) {
         const bonus = this.calculateProductionBonus(level);
-        const upgradeCost = this.calculateUpgradeCost(level);
+        const upgradeCost = (countryData && globalAverageGDP != null) 
+            ? this.calculateUpgradeCost(level, countryData, globalAverageGDP) 
+            : 0;
 
         return {
             level,
             description: this.getLevelDescription(level),
-            upgradeCost,
+            upgradeCost, // Será 0 se os dados estiverem faltando
             parallelBonus: Math.round((bonus.parallelMultiplier - 1) * 100),
             timeReduction: Math.round(bonus.timeReduction * 100),
             maxProjects: bonus.maxSimultaneous,
@@ -102,14 +146,14 @@ export class ShipyardSystem {
     /**
      * Verificar se pode fazer upgrade
      */
-    canUpgrade(currentLevel, countryBudget) {
+    canUpgrade(currentLevel, countryData, globalAverageGDP, countryBudget) {
         if (currentLevel >= this.maxLevel) return { canUpgrade: false, reason: "Nível máximo atingido" };
 
-        const upgradeCost = this.calculateUpgradeCost(currentLevel);
+        const upgradeCost = this.calculateUpgradeCost(currentLevel, countryData, globalAverageGDP);
         if (countryBudget < upgradeCost) {
             return {
                 canUpgrade: false,
-                reason: `Orçamento insuficiente. Necessário: $${upgradeCost.toLocaleString()}`
+                reason: `Orçamento insuficiente. Necessário: ${upgradeCost.toLocaleString()}`
             };
         }
 
@@ -119,15 +163,18 @@ export class ShipyardSystem {
     /**
      * Aplicar bônus aos dados de produção naval
      */
-    applyShipyardBonusToProduction(baseProductionData, shipyardLevel) {
+    applyShipyardBonusToProduction(baseProductionData, shipyardLevel, productionLineBonus = 0) {
         const bonus = this.calculateProductionBonus(shipyardLevel);
+        
+        const finalBuildTime = baseProductionData.build_time_months * (1 - bonus.timeReduction) * (1 - productionLineBonus);
 
         return {
             ...baseProductionData,
-            build_time_months: Math.ceil(baseProductionData.build_time_months * (1 - bonus.timeReduction)),
+            build_time_months: Math.ceil(finalBuildTime),
             max_parallel: Math.ceil((baseProductionData.max_parallel || 1) * bonus.parallelMultiplier),
             shipyard_efficiency: bonus.parallelMultiplier,
-            time_reduction_percent: Math.round(bonus.timeReduction * 100)
+            time_reduction_percent: Math.round(bonus.timeReduction * 100),
+            production_line_bonus_percent: Math.round(productionLineBonus * 100)
         };
     }
 
@@ -152,17 +199,21 @@ export class ShipyardSystem {
      */
     async upgradeShipyard(countryId) {
         try {
-            const currentLevel = await this.getCurrentShipyardLevel(countryId);
             const countryDoc = await db.collection('paises').doc(countryId).get();
+            if (!countryDoc.exists) throw new Error("País não encontrado.");
             const countryData = countryDoc.data();
+            const currentLevel = countryData.shipyardLevel || 0;
 
-            // Calcular orçamento atual (usar a mesma fórmula do dashboard)
+            // Calcular orçamento atual
             const pibBruto = parseFloat(countryData.PIB) || 0;
             const burocracia = (parseFloat(countryData.Burocracia) || 0) / 100;
             const estabilidade = (parseFloat(countryData.Estabilidade) || 0) / 100;
             const budget = pibBruto * 0.25 * burocracia * (estabilidade * 1.5);
 
-            const canUpgradeResult = this.canUpgrade(currentLevel, budget);
+            // Buscar PIB médio global para cálculo de custo dinâmico
+            const globalAverageGDP = await getGlobalAverageGDP();
+
+            const canUpgradeResult = this.canUpgrade(currentLevel, countryData, globalAverageGDP, budget);
             if (!canUpgradeResult.canUpgrade) {
                 throw new Error(canUpgradeResult.reason);
             }
@@ -190,7 +241,7 @@ export class ShipyardSystem {
                 success: true,
                 newLevel,
                 cost: upgradeCost,
-                levelInfo: this.getLevelInfo(newLevel)
+                levelInfo: this.getLevelInfo(newLevel, countryData, globalAverageGDP)
             };
 
         } catch (error) {

@@ -1,12 +1,15 @@
 {
   "name": "war1954-main",
   "version": "1.0.0",
+  "type": "module",
   "description": "",
   "main": "check-data-consistency.js",
   "directories": {
     "test": "tests"
   },
   "scripts": {
+    "dev": "vite",
+    "build": "vite build",
     "test": "vitest"
   },
   "repository": {
@@ -21,6 +24,10 @@
   },
   "homepage": "https://github.com/Tokochev23/portal-da-war#readme",
   "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.18",
+    "vite": "^7.1.7",
     "vitest": "^3.2.4"
   },
   "dependencies": {
