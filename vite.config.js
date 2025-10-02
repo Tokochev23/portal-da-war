@@ -7,7 +7,6 @@ const entryPoints = [
   'index.html',
   'criador-aeronaves.html',
   'criador-navios.html',
-  'criador-veiculos-refatorado.html',
   'dashboard.html',
   'narrador.html'
 ];
