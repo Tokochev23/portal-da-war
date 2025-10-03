@@ -12,11 +12,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <!-- Main CSS with Tailwind -->
-  <script type="module" crossorigin src="/portal-da-war/assets/index-B1ADOU5e.js"></script>
+  <script type="module" crossorigin src="/portal-da-war/assets/index-cMNsUebT.js"></script>
   <link rel="modulepreload" crossorigin href="/portal-da-war/assets/preload-helper-f85Crcwt.js">
   <link rel="modulepreload" crossorigin href="/portal-da-war/assets/firebase-COmVF2I9.js">
-  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/renderer-BtQJoiIH.js">
-  <link rel="stylesheet" crossorigin href="/portal-da-war/assets/main-CYeYkLja.css">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/resourceConsumptionCalculator-m-978Loo.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/resourceProductionCalculator-DqTGEJNK.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/consumerGoodsCalculator-Cxcetyr8.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/renderer-DLfkB2Rz.js">
+  <link rel="stylesheet" crossorigin href="/portal-da-war/assets/main-BL9ts4BL.css">
 </head>
 <body class="bg-bg text-slate-200">
 
@@ -61,33 +64,34 @@
 
   <!-- HERO SECTION -->
   <section class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-    <div class="main-grid">
+    <div class="main-grid items-start">
       <!-- Coluna principal -->
-      <div class="space-y-6">
-        <div>
-          <h1 class="text-4xl sm:text-5xl font-extrabold leading-tight mb-4">
-            Seu país. Suas estratégias.
-            <span class="block text-brand-400">Um mundo dinâmico.</span>
-          </h1>
-          <p class="text-lg text-slate-300/90 max-w-2xl mb-6">
-            Portal integrado para o RPG de países da Guerra Fria. Acompanhe status do seu país, histórico por turno, tratados e painéis públicos.
-          </p>
-          <p class="text-base text-slate-400 max-w-2xl">
-            A narração e as imagens continuam no Facebook — aqui você controla seus números.
-          </p>
+      <div>
+        <!-- Conteúdo de Boas-vindas (visível quando deslogado) -->
+        <div id="welcome-content" class="space-y-6">
+          <div>
+            <h1 class="text-4xl sm:text-5xl font-extrabold leading-tight mb-4">
+              Seu país. Suas estratégias.
+              <span class="block text-brand-400">Um mundo dinâmico.</span>
+            </h1>
+            <p class="text-lg text-slate-300/90 max-w-2xl mb-6">
+              Portal integrado para o RPG de países da Guerra Fria. Acompanhe status do seu país, histórico por turno, tratados e painéis públicos.
+            </p>
+            <p class="text-base text-slate-400 max-w-2xl">
+              A narração e as imagens continuam no Facebook — aqui você controla seus números.
+            </p>
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-4">
+            <button id="main-login-btn" class="inline-flex items-center gap-2 rounded-xl px-5 py-3 bg-brand-500 text-slate-950 font-semibold hover:bg-brand-400 transition-all duration-200">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 3a1 1 0 01.894.553l8 16A1 1 0 0120 21H4a1 1 0 01-.894-1.447l8-16A1 1 0 0112 3z"/>
+              </svg>
+              Entrar e acessar
+            </button>
+          </div>
         </div>
 
-        <div class="flex flex-col sm:flex-row gap-4">
-          <button id="main-login-btn" class="inline-flex items-center gap-2 rounded-xl px-5 py-3 bg-brand-500 text-slate-950 font-semibold hover:bg-brand-400 transition-all duration-200">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 3a1 1 0 01.894.553l8 16A1 1 0 0120 21H4a1 1 0 01-.894-1.447l8-16A1 1 0 0112 3z"/>
-            </svg>
-            Entrar e acessar
-          </button>
-
-          
-        </div>
-        
 
         <!-- Painel do Jogador Redesenhado -->
         <div id="player-panel" class="rounded-2xl border border-slate-800/70 bg-slate-900/60 p-6 shadow-[0_1px_0_0_rgba(255,255,255,0.03)_inset,0_6px_20px_-12px_rgba(0,0,0,0.6)]" style="display: none;">
@@ -130,7 +134,7 @@
                 </div>
                 <div id="player-pib-delta" class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 shrink-0">Sem histórico</div>
               </div>
-              <div id="player-pib" class="text-lg lg:text-xl xl:text-2xl font-extrabold text-emerald-400 break-all">US$ 265.525.354.490</div>
+              <div id="player-pib" class="text-lg lg:text-xl xl:text-2xl font-extrabold text-emerald-400 break-words">US$ 265.525.354.490</div>
             </div>
 
             <!-- Estabilidade -->
