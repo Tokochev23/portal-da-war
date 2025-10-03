@@ -1,4 +1,7 @@
 import { formatCurrency, formatCurrencyCompact, formatDelta, animateCounter } from "../utils.js";
+import ResourceConsumptionCalculator from "../systems/resourceConsumptionCalculator.js";
+import ResourceProductionCalculator from "../systems/resourceProductionCalculator.js";
+import ConsumerGoodsCalculator from "../systems/consumerGoodsCalculator.js";
 
 // Cache de elementos do DOM
 const DOM = {
@@ -661,10 +664,229 @@ export function renderDetailedCountryPanel(country) {
         * Prod. Navios = PIB × TecnologiaCivil × Urbanização × Naval × 0,18
       </div>
       <div class="mt-4 grid grid-cols-2 gap-2">
-        <button class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10 transition">Ver Exército</button>
-        <button class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10 transition">Diplomacia</button>
-        <button class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10 transition">Indústria</button>
-        <button class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10 transition">Relatórios</button>
+        <button id="btn-ver-recursos" class="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300 hover:bg-emerald-500/20 transition">
+          ⛏️ Ver Recursos
+        </button>
+        <button id="btn-ver-inventario" class="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300 hover:bg-red-500/20 transition">
+          🎖️ Ver Inventário
+        </button>
+      </div>
+    </div>`;
+
+  // Calcular recursos dinamicamente (como o dashboard faz)
+  const resourceConsumption = ResourceConsumptionCalculator.calculateCountryConsumption(country);
+  const resourceProduction = ResourceProductionCalculator.calculateCountryProduction(country);
+  const consumerGoodsData = ConsumerGoodsCalculator.calculateConsumerGoods(country);
+
+  const carvaoProducao = Math.round(resourceProduction.Carvao || 0);
+  const carvaoConsumo = Math.round(resourceConsumption.Carvao || 0);
+  const carvaoSaldo = carvaoProducao - carvaoConsumo;
+
+  const combustivelProducao = Math.round(resourceProduction.Combustivel || 0);
+  const combustivelConsumo = Math.round(resourceConsumption.Combustivel || 0);
+  const combustivelSaldo = combustivelProducao - combustivelConsumo;
+
+  const metaisProducao = Math.round(resourceProduction.Metais || 0);
+  const metaisConsumo = Math.round(resourceConsumption.Metais || 0);
+  const metaisSaldo = metaisProducao - metaisConsumo;
+
+  const graosProducao = Math.round(resourceProduction.Graos || 0);
+  const graosConsumo = Math.round(resourceConsumption.Graos || 0);
+  const graosSaldo = graosProducao - graosConsumo;
+
+  const energiaProducao = Math.round(resourceProduction.Energia || 0);
+  const energiaConsumo = Math.round(resourceConsumption.Energia || 0);
+  const energiaSaldo = energiaProducao - energiaConsumo;
+
+  const bensConsumo = Math.round(consumerGoodsData.percentage || 0);
+
+  // Modal de Recursos
+  const modalRecursos = `
+    <div id="modal-recursos" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto m-4 p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-bold text-slate-100">⛏️ Recursos - ${country.Pais || 'País'}</h3>
+          <button id="close-modal-recursos" class="text-slate-400 hover:text-slate-200 text-2xl">×</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Combustível -->
+          <div class="border border-orange-500/30 bg-orange-500/10 rounded-xl p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-2xl">⛽</span>
+              <span class="text-sm font-medium text-slate-300">Combustível</span>
+            </div>
+            <div class="text-3xl font-bold ${combustivelSaldo >= 0 ? 'text-green-400' : 'text-red-400'}">${combustivelSaldo >= 0 ? '+' : ''}${formatNumber(combustivelSaldo)}</div>
+            <div class="text-xs text-slate-400 mt-1">saldo/turno</div>
+            <div class="flex justify-between text-xs mt-2 pt-2 border-t border-orange-500/30">
+              <span class="text-green-400">Prod: ${formatNumber(combustivelProducao)}</span>
+              <span class="text-red-400">Cons: ${formatNumber(combustivelConsumo)}</span>
+            </div>
+          </div>
+
+          <!-- Carvão -->
+          <div class="border border-slate-500/30 bg-slate-500/10 rounded-xl p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-2xl">🪨</span>
+              <span class="text-sm font-medium text-slate-300">Carvão</span>
+            </div>
+            <div class="text-3xl font-bold ${carvaoSaldo >= 0 ? 'text-green-400' : 'text-red-400'}">${carvaoSaldo >= 0 ? '+' : ''}${formatNumber(carvaoSaldo)}</div>
+            <div class="text-xs text-slate-400 mt-1">saldo/turno</div>
+            <div class="flex justify-between text-xs mt-2 pt-2 border-t border-slate-500/30">
+              <span class="text-green-400">Prod: ${formatNumber(carvaoProducao)}</span>
+              <span class="text-red-400">Cons: ${formatNumber(carvaoConsumo)}</span>
+            </div>
+          </div>
+
+          <!-- Metais -->
+          <div class="border border-gray-500/30 bg-gray-500/10 rounded-xl p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-2xl">🔩</span>
+              <span class="text-sm font-medium text-slate-300">Metais</span>
+            </div>
+            <div class="text-3xl font-bold ${metaisSaldo >= 0 ? 'text-green-400' : 'text-red-400'}">${metaisSaldo >= 0 ? '+' : ''}${formatNumber(metaisSaldo)}</div>
+            <div class="text-xs text-slate-400 mt-1">saldo/turno</div>
+            <div class="flex justify-between text-xs mt-2 pt-2 border-t border-gray-500/30">
+              <span class="text-green-400">Prod: ${formatNumber(metaisProducao)}</span>
+              <span class="text-red-400">Cons: ${formatNumber(metaisConsumo)}</span>
+            </div>
+          </div>
+
+          <!-- Grãos -->
+          <div class="border border-amber-500/30 bg-amber-500/10 rounded-xl p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-2xl">🌾</span>
+              <span class="text-sm font-medium text-slate-300">Grãos</span>
+            </div>
+            <div class="text-3xl font-bold ${graosSaldo >= 0 ? 'text-green-400' : 'text-red-400'}">${graosSaldo >= 0 ? '+' : ''}${formatNumber(graosSaldo)}</div>
+            <div class="text-xs text-slate-400 mt-1">saldo/turno</div>
+            <div class="flex justify-between text-xs mt-2 pt-2 border-t border-amber-500/30">
+              <span class="text-green-400">Prod: ${formatNumber(graosProducao)}</span>
+              <span class="text-red-400">Cons: ${formatNumber(graosConsumo)}</span>
+            </div>
+          </div>
+
+          <!-- Energia -->
+          <div class="border border-yellow-500/30 bg-yellow-500/10 rounded-xl p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-2xl">⚡</span>
+              <span class="text-sm font-medium text-slate-300">Energia</span>
+            </div>
+            <div class="text-3xl font-bold ${energiaSaldo >= 0 ? 'text-green-400' : 'text-red-400'}">${energiaSaldo >= 0 ? '+' : ''}${formatNumber(energiaSaldo)} MW</div>
+            <div class="text-xs text-slate-400 mt-1">saldo/turno</div>
+            <div class="flex justify-between text-xs mt-2 pt-2 border-t border-yellow-500/30">
+              <span class="text-green-400">Prod: ${formatNumber(energiaProducao)} MW</span>
+              <span class="text-red-400">Cons: ${formatNumber(energiaConsumo)} MW</span>
+            </div>
+          </div>
+
+          <!-- Bens de Consumo -->
+          <div class="border border-blue-500/30 bg-blue-500/10 rounded-xl p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-2xl">📦</span>
+              <span class="text-sm font-medium text-slate-300">Bens de Consumo</span>
+            </div>
+            <div class="text-3xl font-bold text-blue-400">${bensConsumo}%</div>
+            <div class="text-xs text-slate-400 mt-1">disponibilidade</div>
+            <div class="text-xs mt-2 pt-2 border-t border-blue-500/30 text-slate-400">
+              Necessário: 100% | Atual: ${bensConsumo}%
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  // Modal de Inventário
+  const modalInventario = `
+    <div id="modal-inventario" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto m-4 p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-bold text-slate-100">🎖️ Inventário de Guerra - ${country.Pais || 'País'}</h3>
+          <button id="close-modal-inventario" class="text-slate-400 hover:text-slate-200 text-2xl">×</button>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Veículos -->
+          <div class="border border-green-500/30 bg-green-500/10 rounded-xl p-4">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">🚗</span>
+                <span class="text-lg font-semibold text-slate-100">Veículos Terrestres</span>
+              </div>
+              <div class="text-2xl font-bold text-green-400">${country.VeiculosEstoque || 0}</div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-sm">
+              <div class="flex justify-between text-slate-300">
+                <span>Capacidade de Produção:</span>
+                <span class="font-medium">${country.VeiculosPorTurno || 0}/turno</span>
+              </div>
+              <div class="flex justify-between text-slate-300">
+                <span>Tecnologia:</span>
+                <span class="font-medium">${country.Veiculos || 0}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Aeronaves -->
+          <div class="border border-blue-500/30 bg-blue-500/10 rounded-xl p-4">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">✈️</span>
+                <span class="text-lg font-semibold text-slate-100">Aeronaves</span>
+              </div>
+              <div class="text-2xl font-bold text-blue-400">${country.AeronavesEstoque || 0}</div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-sm">
+              <div class="flex justify-between text-slate-300">
+                <span>Capacidade de Produção:</span>
+                <span class="font-medium">${country.AeronavesPorTurno || 0}/turno</span>
+              </div>
+              <div class="flex justify-between text-slate-300">
+                <span>Tecnologia:</span>
+                <span class="font-medium">${country.Aeronautica || 0}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Navios -->
+          <div class="border border-cyan-500/30 bg-cyan-500/10 rounded-xl p-4">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">🚢</span>
+                <span class="text-lg font-semibold text-slate-100">Navios</span>
+              </div>
+              <div class="text-2xl font-bold text-cyan-400">${country.NaviosEstoque || 0}</div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-sm">
+              <div class="flex justify-between text-slate-300">
+                <span>Capacidade de Produção:</span>
+                <span class="font-medium">${country.NaviosPorTurno || 0}/turno</span>
+              </div>
+              <div class="flex justify-between text-slate-300">
+                <span>Tecnologia:</span>
+                <span class="font-medium">${country.Marinha || 0}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Resumo Militar -->
+          <div class="border border-red-500/30 bg-red-500/10 rounded-xl p-4">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-2xl">💪</span>
+              <span class="text-lg font-semibold text-slate-100">Capacidade Militar</span>
+            </div>
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <div class="text-slate-400 text-xs mb-1">War Power Index</div>
+                <div class="text-2xl font-bold text-red-400">${country.WarPower || 0}/100</div>
+              </div>
+              <div>
+                <div class="text-slate-400 text-xs mb-1">Orçamento Militar</div>
+                <div class="text-lg font-bold text-slate-100">${formatCurrency((country.PIB || 0) * ((country.MilitaryBudgetPercent || 0) / 100))}</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>`;
 
@@ -672,9 +894,50 @@ export function renderDetailedCountryPanel(country) {
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
       ${leftColumn}
       ${rightColumn}
-    </div>`;
+    </div>
+    ${modalRecursos}
+    ${modalInventario}
+  `;
 
   DOM.countryPanelContent.innerHTML = html;
+
+  // Event listeners para os botões
+  const btnRecursos = document.getElementById('btn-ver-recursos');
+  const btnInventario = document.getElementById('btn-ver-inventario');
+  const modalRec = document.getElementById('modal-recursos');
+  const modalInv = document.getElementById('modal-inventario');
+  const closeRecursos = document.getElementById('close-modal-recursos');
+  const closeInventario = document.getElementById('close-modal-inventario');
+
+  if (btnRecursos && modalRec) {
+    btnRecursos.addEventListener('click', () => {
+      modalRec.classList.remove('hidden');
+    });
+  }
+
+  if (btnInventario && modalInv) {
+    btnInventario.addEventListener('click', () => {
+      modalInv.classList.remove('hidden');
+    });
+  }
+
+  if (closeRecursos && modalRec) {
+    closeRecursos.addEventListener('click', () => {
+      modalRec.classList.add('hidden');
+    });
+    modalRec.addEventListener('click', (e) => {
+      if (e.target === modalRec) modalRec.classList.add('hidden');
+    });
+  }
+
+  if (closeInventario && modalInv) {
+    closeInventario.addEventListener('click', () => {
+      modalInv.classList.add('hidden');
+    });
+    modalInv.addEventListener('click', (e) => {
+      if (e.target === modalInv) modalInv.classList.add('hidden');
+    });
+  }
 
   // show with transition
   const modal = DOM.countryPanelModal;
@@ -822,9 +1085,22 @@ export function fillPlayerPanel(playerData, currentTurn) {
       }
     }
     
-    // Atualizar combustível
-    if (DOM.playerCombustivel) DOM.playerCombustivel.textContent = playerData.Combustivel || '50';
-    
+    // Atualizar combustível (calcular saldo de produção - consumo)
+    if (DOM.playerCombustivel) {
+      const resourceConsumption = ResourceConsumptionCalculator.calculateCountryConsumption(playerData);
+      const resourceProduction = ResourceProductionCalculator.calculateCountryProduction(playerData);
+      const combustivelSaldo = Math.round((resourceProduction.Combustivel || 0) - (resourceConsumption.Combustivel || 0));
+      DOM.playerCombustivel.textContent = combustivelSaldo;
+    }
+
+    // Atualizar delta de combustível
+    if (DOM.playerCombustivelDelta) {
+      const resourceConsumption = ResourceConsumptionCalculator.calculateCountryConsumption(playerData);
+      const resourceProduction = ResourceProductionCalculator.calculateCountryProduction(playerData);
+      const combustivelSaldo = Math.round((resourceProduction.Combustivel || 0) - (resourceConsumption.Combustivel || 0));
+      DOM.playerCombustivelDelta.textContent = combustivelSaldo >= 0 ? `+${combustivelSaldo}` : `${combustivelSaldo}`;
+    }
+
     // Atualizar deltas (se não houver histórico)
     if (DOM.playerPibDelta) DOM.playerPibDelta.textContent = 'Sem histórico';
     if (DOM.playerEstabilidadeDelta) DOM.playerEstabilidadeDelta.textContent = 'Sem histórico';
@@ -843,14 +1119,19 @@ export function fillPlayerPanel(playerData, currentTurn) {
     if (DOM.playerNotifications) {
       isTurnLate ? DOM.playerNotifications.classList.remove('hidden') : DOM.playerNotifications.classList.add('hidden');
     }
-    
+
+    // Mostrar painel do jogador e esconder conteúdo de boas-vindas
     DOM.playerPanel.style.display = 'block';
+    const welcomeContent = document.getElementById('welcome-content');
+    if (welcomeContent) welcomeContent.style.display = 'none';
   } else {
-    // Estado de carregamento/erro
+    // Estado de carregamento/erro - mostrar conteúdo de boas-vindas e esconder painel
     if (DOM.playerCountryName) DOM.playerCountryName.textContent = 'Carregando...';
     if (DOM.playerHistorico) {
       DOM.playerHistorico.innerHTML = '<div class="text-sm text-slate-400 italic">Nenhum histórico disponível</div>';
     }
     if (DOM.playerPanel) DOM.playerPanel.style.display = 'none';
+    const welcomeContent = document.getElementById('welcome-content');
+    if (welcomeContent) welcomeContent.style.display = 'block';
   }
 }

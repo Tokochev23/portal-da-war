@@ -52,9 +52,9 @@ const ECONOMIC_CONFIG = {
     exploration: {
       id: 'exploration',
       name: '⛏️ Exploração de Recursos',
-      multiplier: 1.0,
-      description: 'Exploração mineral e de recursos primários (petróleo, carvão, metais).',
-      examples: ['Exploração de jazidas', 'Perfuração de poços']
+      multiplier: 0.8, // Menor retorno de PIB, mas adiciona recursos físicos
+      description: 'Exploração mineral e de recursos primários. Gera menos crescimento econômico que outras ações, mas adiciona recursos ao estoque do país.',
+      examples: ['Exploração de jazidas', 'Perfuração de poços', 'Mineração']
     },
 
     social: {
@@ -92,7 +92,7 @@ const ECONOMIC_CONFIG = {
   }
 };
 
-// Classe principal do Sistema Econômico
+// Classe principal do Sistema Econômico (expandida para Turn Management Panel)
 class EconomicSimulator {
   constructor() {
     this.countries = [];
@@ -103,6 +103,12 @@ class EconomicSimulator {
       external: []
     };
     this.economicHistory = new Map(); // Histórico por país
+
+    // Novos campos para gestão de turno completa
+    this.changes = {
+      technology: {}, // { Tecnologia: delta, Aeronautica: delta, ... }
+      indicators: {}  // { Estabilidade: delta, Burocracia: delta, ... }
+    };
   }
 
   // Inicializar o sistema
@@ -228,8 +234,8 @@ class EconomicSimulator {
         <div class="flex items-center gap-4">
           <div class="text-2xl">💰</div>
           <div>
-            <h2 class="text-xl font-bold text-slate-100">Simulador Econômico</h2>
-            <p class="text-sm text-slate-400">Gestão estratégica de investimentos nacionais</p>
+            <h2 class="text-xl font-bold text-slate-100">Painel de Gestão de Turno</h2>
+            <p class="text-sm text-slate-400">Controle completo de economia, tecnologia, recursos e indicadores</p>
           </div>
         </div>
         
@@ -269,15 +275,18 @@ class EconomicSimulator {
   // Abas do modal
   createModalTabs() {
     return `
-      <div class="flex border-b border-slate-600/50">
-        <button class="economic-tab px-6 py-3 text-sm font-medium border-b-2 border-purple-500 text-purple-400 bg-slate-700/30" data-tab="internal">
-          🏠 Ações Internas (0/${ECONOMIC_CONFIG.maxInternalActions})
+      <div class="flex border-b border-slate-600/50 overflow-x-auto">
+        <button class="economic-tab px-6 py-3 text-sm font-medium border-b-2 border-purple-500 text-purple-400 bg-slate-700/30 whitespace-nowrap" data-tab="internal">
+          💰 Economia
         </button>
-        <button class="economic-tab px-6 py-3 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200" data-tab="external">
-          🌍 Ações Externas (0/${ECONOMIC_CONFIG.maxExternalActions})
+        <button class="economic-tab px-6 py-3 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap" data-tab="technology">
+          🔬 Tecnologia
         </button>
-        <button class="economic-tab px-6 py-3 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200" data-tab="summary">
-          📊 Resumo & Aplicar
+        <button class="economic-tab px-6 py-3 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap" data-tab="indicators">
+          📊 Indicadores
+        </button>
+        <button class="economic-tab px-6 py-3 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap" data-tab="summary">
+          ✅ Resumo
         </button>
       </div>
     `;
@@ -287,67 +296,185 @@ class EconomicSimulator {
   createModalContent(country) {
     return `
       <div class="flex-1 overflow-y-auto">
-        <!-- Ações Internas -->
+        <!-- Tab Economia (Ações Internas/Externas) -->
         <div id="economic-tab-internal" class="economic-tab-content p-6">
-          <div class="mb-4">
-            <h3 class="text-lg font-semibold text-slate-200 mb-2">Investimentos Internos</h3>
-            <p class="text-sm text-slate-400">Desenvolva a economia nacional através de investimentos estratégicos</p>
+          <div class="mb-6">
+            <h3 class="text-lg font-semibold text-slate-200 mb-2">💰 Sistema Econômico</h3>
+            <p class="text-sm text-slate-400">Gestão de investimentos internos e externos</p>
           </div>
-          
-          <div id="internal-actions-container" class="space-y-4">
-            ${this.createActionSlots('internal')}
-          </div>
-          
-          <div class="mt-6">
-            <button id="add-internal-action" class="w-full border-2 border-dashed border-slate-600 rounded-lg py-8 text-slate-400 hover:border-slate-500 hover:text-slate-300 transition-colors">
-              + Adicionar Ação Interna
+
+          <!-- Sub-tabs para Internal/External -->
+          <div class="flex gap-2 mb-4">
+            <button class="economy-subtab px-4 py-2 rounded-lg bg-purple-600 text-white text-sm" data-subtab="internal">
+              🏠 Investimentos Internos (0/${ECONOMIC_CONFIG.maxInternalActions})
+            </button>
+            <button class="economy-subtab px-4 py-2 rounded-lg bg-slate-700 text-slate-300 text-sm hover:bg-slate-600" data-subtab="external">
+              🌍 Investimentos Externos (0/${ECONOMIC_CONFIG.maxExternalActions})
             </button>
           </div>
-        </div>
 
-        <!-- Ações Externas -->
-        <div id="economic-tab-external" class="economic-tab-content hidden p-6">
-          <div class="mb-4">
-            <h3 class="text-lg font-semibold text-slate-200 mb-2">Investimentos Externos</h3>
-            <p class="text-sm text-slate-400">Influencie outros países através de investimentos estratégicos</p>
+          <!-- Ações Internas -->
+          <div id="economy-subtab-internal" class="economy-subtab-content">
+            <div id="internal-actions-container" class="space-y-4">
+              ${this.createActionSlots('internal')}
+            </div>
+
+            <div class="mt-6">
+              <button id="add-internal-action" class="w-full border-2 border-dashed border-slate-600 rounded-lg py-8 text-slate-400 hover:border-slate-500 hover:text-slate-300 transition-colors">
+                + Adicionar Ação Interna
+              </button>
+            </div>
           </div>
-          
-          <div class="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mb-6">
-            <div class="flex items-start gap-3">
-              <div class="text-yellow-400">⚠️</div>
-              <div>
-                <div class="text-yellow-200 font-medium mb-1">Atenção: Investimentos Externos</div>
-                <div class="text-yellow-100 text-sm">
-                  • Grandes investimentos podem criar dependência econômica<br>
-                  • Países instáveis podem rejeitar ajuda externa<br>
-                  • Benefícios são divididos 50/50 entre os países
+
+          <!-- Ações Externas -->
+          <div id="economy-subtab-external" class="economy-subtab-content hidden">
+            <div class="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mb-6">
+              <div class="flex items-start gap-3">
+                <div class="text-yellow-400">⚠️</div>
+                <div>
+                  <div class="text-yellow-200 font-medium mb-1">Atenção: Investimentos Externos</div>
+                  <div class="text-yellow-100 text-sm">
+                    • Grandes investimentos podem criar dependência econômica<br>
+                    • Países instáveis podem rejeitar ajuda externa<br>
+                    • Benefícios são divididos 50/50 entre os países
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-          
-          <div id="external-actions-container" class="space-y-4">
-            ${this.createActionSlots('external')}
-          </div>
-          
-          <div class="mt-6">
-            <button id="add-external-action" class="w-full border-2 border-dashed border-slate-600 rounded-lg py-8 text-slate-400 hover:border-slate-500 hover:text-slate-300 transition-colors">
-              + Adicionar Ação Externa
-            </button>
+
+            <div id="external-actions-container" class="space-y-4">
+              ${this.createActionSlots('external')}
+            </div>
+
+            <div class="mt-6">
+              <button id="add-external-action" class="w-full border-2 border-dashed border-slate-600 rounded-lg py-8 text-slate-400 hover:border-slate-500 hover:text-slate-300 transition-colors">
+                + Adicionar Ação Externa
+              </button>
+            </div>
           </div>
         </div>
 
-        <!-- Resumo -->
+        <!-- Tab Tecnologia -->
+        <div id="economic-tab-technology" class="economic-tab-content hidden p-6">
+          ${this.createTechnologyTab(country)}
+        </div>
+
+        <!-- Tab Indicadores -->
+        <div id="economic-tab-indicators" class="economic-tab-content hidden p-6">
+          ${this.createIndicatorsTab(country)}
+        </div>
+
+        <!-- Tab Resumo -->
         <div id="economic-tab-summary" class="economic-tab-content hidden p-6">
           <div class="mb-6">
-            <h3 class="text-lg font-semibold text-slate-200 mb-2">Resumo do Turno</h3>
+            <h3 class="text-lg font-semibold text-slate-200 mb-2">✅ Resumo do Turno</h3>
             <p class="text-sm text-slate-400">Análise final antes de aplicar as mudanças</p>
           </div>
-          
+
           <div id="economic-summary-content">
             <!-- Será preenchido dinamicamente -->
           </div>
         </div>
+      </div>
+    `;
+  }
+
+  // Tab de Tecnologia
+  createTechnologyTab(country) {
+    const techs = {
+      Tecnologia: { label: 'Tecnologia Civil', current: parseFloat(country.Tecnologia) || 0 },
+      Aeronautica: { label: 'Aeronáutica', current: parseFloat(country.Aeronautica) || 0 },
+      Marinha: { label: 'Marinha', current: parseFloat(country.Marinha) || 0 },
+      Veiculos: { label: 'Veículos', current: parseFloat(country.Veiculos) || 0 },
+      Exercito: { label: 'Exército', current: parseFloat(country.Exercito) || 0 }
+    };
+
+    return `
+      <div class="mb-4">
+        <h3 class="text-lg font-semibold text-slate-200 mb-2">🔬 Ajustes de Tecnologia</h3>
+        <p class="text-sm text-slate-400">Adicionar ou subtrair pontos de tecnologia (sem limite superior)</p>
+      </div>
+
+      <div class="space-y-4">
+        ${Object.entries(techs).map(([key, tech]) => `
+          <div class="border border-slate-600/50 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-3">
+              <label class="text-sm font-medium text-slate-200">${tech.label}</label>
+              <div class="text-sm text-slate-400">Atual: <span class="text-slate-200 font-semibold">${tech.current}</span></div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <button class="tech-decrement px-3 py-1 rounded bg-red-600 hover:bg-red-500 text-white text-lg" data-field="${key}">−</button>
+              <input type="number"
+                     class="tech-input flex-1 bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-slate-200 text-center"
+                     data-field="${key}"
+                     placeholder="0"
+                     value="${this.changes.technology[key] || 0}">
+              <button class="tech-increment px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-lg" data-field="${key}">+</button>
+              <div class="text-sm text-slate-300 min-w-[80px] text-right">
+                → <span class="font-semibold tech-preview" data-field="${key}">${tech.current + (this.changes.technology[key] || 0)}</span>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  // Tab de Indicadores
+  createIndicatorsTab(country) {
+    const indicators = {
+      Estabilidade: { label: 'Estabilidade', current: parseFloat(country.Estabilidade) || 0, min: 0, max: 100 },
+      Burocracia: { label: 'Burocracia', current: parseFloat(country.Burocracia) || 0, min: 0, max: 100 },
+      Urbanizacao: { label: 'Urbanização', current: parseFloat(country.Urbanizacao) || 0, min: 0, max: 100 },
+      IndustrialEfficiency: { label: 'Eficiência Industrial', current: parseFloat(country.IndustrialEfficiency) || 0, min: 0, max: 100 }
+    };
+
+    return `
+      <div class="mb-4">
+        <h3 class="text-lg font-semibold text-slate-200 mb-2">📊 Indicadores Nacionais</h3>
+        <p class="text-sm text-slate-400">Ajustar indicadores percentuais (0-100%)</p>
+      </div>
+
+      <div class="mb-4 bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+        <div class="text-blue-200 text-sm">
+          <strong>População:</strong> ${(parseFloat(country.Populacao) || 0).toLocaleString('pt-BR')} habitantes (somente leitura)
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        ${Object.entries(indicators).map(([key, ind]) => `
+          <div class="border border-slate-600/50 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-3">
+              <label class="text-sm font-medium text-slate-200">${ind.label}</label>
+              <div class="text-sm text-slate-400">Atual: <span class="text-slate-200 font-semibold">${ind.current}%</span></div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <button class="indicator-decrement px-3 py-1 rounded bg-red-600 hover:bg-red-500 text-white text-lg" data-field="${key}">−</button>
+              <input type="number"
+                     class="indicator-input flex-1 bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-slate-200 text-center"
+                     data-field="${key}"
+                     placeholder="0"
+                     min="${ind.min - ind.current}"
+                     max="${ind.max - ind.current}"
+                     value="${this.changes.indicators[key] || 0}">
+              <button class="indicator-increment px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-lg" data-field="${key}">+</button>
+              <div class="text-sm text-slate-300 min-w-[80px] text-right">
+                → <span class="font-semibold indicator-preview" data-field="${key}">
+                  ${Math.min(ind.max, Math.max(ind.min, ind.current + (this.changes.indicators[key] || 0)))}%
+                </span>
+              </div>
+            </div>
+
+            <!-- Barra de progresso -->
+            <div class="mt-2 w-full bg-slate-700 rounded-full h-2">
+              <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all"
+                   style="width: ${Math.min(ind.max, Math.max(ind.min, ind.current + (this.changes.indicators[key] || 0)))}%">
+              </div>
+            </div>
+          </div>
+        `).join('')}
       </div>
     `;
   }
@@ -402,12 +529,13 @@ class EconomicSimulator {
   // Criar um slot individual de ação
   createActionSlot(type, index, action = null) {
     const isExternal = type === 'external';
+    const isExploration = action?.type === 'exploration';
     const actionTypes = ECONOMIC_CONFIG.actionTypes;
-    
+
     return `
       <div class="action-slot border border-slate-600/50 rounded-lg p-4" data-type="${type}" data-index="${index}">
         <div class="grid grid-cols-1 md:grid-cols-${isExternal ? '6' : '5'} gap-4 items-end">
-          
+
           <!-- Tipo de Ação -->
           <div>
             <label class="block text-xs text-slate-400 mb-1">Tipo de Ação</label>
@@ -436,17 +564,28 @@ class EconomicSimulator {
           </div>
           ` : ''}
 
+          <!-- Tipo de Recurso (apenas para exploration) -->
+          <div class="resource-type-selector ${isExploration ? '' : 'hidden'}">
+            <label class="block text-xs text-slate-400 mb-1">Tipo de Recurso</label>
+            <select class="resource-type w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200">
+              <option value="">Selecione...</option>
+              <option value="Combustivel" ${action?.resourceType === 'Combustivel' ? 'selected' : ''}>🛢️ Combustível (Petróleo)</option>
+              <option value="Carvao" ${action?.resourceType === 'Carvao' ? 'selected' : ''}>⚫ Carvão</option>
+              <option value="Metais" ${action?.resourceType === 'Metais' ? 'selected' : ''}>⛏️ Metais</option>
+            </select>
+          </div>
+
           <!-- Valor Investido -->
           <div>
             <label class="block text-xs text-slate-400 mb-1">Valor (milhões)</label>
-            <input type="number" class="action-value w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200" 
+            <input type="number" class="action-value w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200"
                    placeholder="0" min="0" step="10" value="${action?.value || ''}">
           </div>
 
           <!-- Resultado do Dado -->
           <div>
             <label class="block text-xs text-slate-400 mb-1">Dado D12</label>
-            <input type="number" class="action-dice w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200" 
+            <input type="number" class="action-dice w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200"
                    placeholder="1-12" min="1" max="12" value="${action?.dice || ''}">
           </div>
 
@@ -472,6 +611,13 @@ class EconomicSimulator {
         <!-- Descrição do Tipo -->
         <div class="action-description mt-3 p-3 bg-slate-700/30 rounded-lg hidden">
           <div class="text-sm text-slate-300"></div>
+        </div>
+
+        <!-- Preview de Extração (apenas para exploration) -->
+        <div class="extraction-preview mt-3 p-3 bg-emerald-900/20 border border-emerald-500/30 rounded-lg ${isExploration ? '' : 'hidden'}">
+          <div class="text-xs text-emerald-300">
+            <strong>Extração Estimada:</strong> <span class="extraction-amount">Aguardando dados...</span>
+          </div>
         </div>
       </div>
     `;
@@ -556,11 +702,11 @@ class EconomicSimulator {
 
     // Delegate events para campos dinâmicos
     modal.addEventListener('input', (e) => {
-      if (e.target.matches('.action-type, .target-country, .action-value, .action-dice, .action-buff')) {
+      if (e.target.matches('.action-type, .target-country, .action-value, .action-dice, .action-buff, .resource-type')) {
         const slot = e.target.closest('.action-slot');
         const type = slot.dataset.type;
         const index = parseInt(slot.dataset.index);
-        
+
         this.updateActionFromSlot(type, index, slot);
         this.updatePreview(slot);
         this.updateBudgetBar();
@@ -574,15 +720,71 @@ class EconomicSimulator {
         const slot = e.target.closest('.action-slot');
         const type = slot.dataset.type;
         const index = parseInt(slot.dataset.index);
-        
+
         this.removeAction(type, index);
       }
     });
 
-    // Mostrar/esconder descrições
+    // Mostrar/esconder descrições e seletor de recurso
     modal.addEventListener('change', (e) => {
       if (e.target.matches('.action-type')) {
         this.toggleActionDescription(e.target);
+        this.toggleResourceSelector(e.target);
+      }
+    });
+
+    // === NOVOS EVENT LISTENERS PARA TABS DE GESTÃO ===
+
+    // Sub-tabs da economia (internal/external)
+    modal.querySelectorAll('.economy-subtab').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const subtab = e.target.dataset.subtab;
+        this.switchEconomySubtab(subtab);
+      });
+    });
+
+    // Tecnologia: botões de incremento/decremento
+    modal.addEventListener('click', (e) => {
+      if (e.target.matches('.tech-increment')) {
+        const field = e.target.dataset.field;
+        this.adjustTechnology(field, 1);
+      } else if (e.target.matches('.tech-decrement')) {
+        const field = e.target.dataset.field;
+        this.adjustTechnology(field, -1);
+      }
+    });
+
+    // Tecnologia: input manual
+    modal.addEventListener('input', (e) => {
+      if (e.target.matches('.tech-input')) {
+        const field = e.target.dataset.field;
+        const value = parseInt(e.target.value) || 0;
+        this.changes.technology[field] = value;
+        this.updateTechPreview(field);
+        this.updateSummary();
+      }
+    });
+
+
+    // Indicadores: botões de incremento/decremento
+    modal.addEventListener('click', (e) => {
+      if (e.target.matches('.indicator-increment')) {
+        const field = e.target.dataset.field;
+        this.adjustIndicator(field, 1);
+      } else if (e.target.matches('.indicator-decrement')) {
+        const field = e.target.dataset.field;
+        this.adjustIndicator(field, -1);
+      }
+    });
+
+    // Indicadores: input manual
+    modal.addEventListener('input', (e) => {
+      if (e.target.matches('.indicator-input')) {
+        const field = e.target.dataset.field;
+        const value = parseFloat(e.target.value) || 0;
+        this.changes.indicators[field] = value;
+        this.updateIndicatorPreview(field);
+        this.updateSummary();
       }
     });
   }
@@ -676,16 +878,21 @@ class EconomicSimulator {
     }
 
     const action = this.actions[type][index];
-    
+
     // Atualizar dados da ação
     action.type = slot.querySelector('.action-type')?.value || '';
     action.value = parseFloat(slot.querySelector('.action-value')?.value) || 0;
     action.dice = parseInt(slot.querySelector('.action-dice')?.value) || 0;
     action.buff = parseFloat(slot.querySelector('.action-buff')?.value) || 0;
     action.isExternal = type === 'external';
-    
+
     if (type === 'external') {
       action.targetCountry = slot.querySelector('.target-country')?.value || '';
+    }
+
+    // Se for exploration, adicionar tipo de recurso
+    if (action.type === 'exploration') {
+      action.resourceType = slot.querySelector('.resource-type')?.value || '';
     }
 
     // Atualizar display do buff
@@ -693,13 +900,18 @@ class EconomicSimulator {
     if (buffDisplay) {
       buffDisplay.textContent = action.buff;
     }
+
+    // Atualizar preview de extração se for exploration
+    if (action.type === 'exploration') {
+      this.updateExtractionPreview(slot, action);
+    }
   }
 
   updatePreview(slot) {
     const type = slot.dataset.type;
     const index = parseInt(slot.dataset.index);
     const action = this.actions[type][index];
-    
+
     if (!action || !action.type || !action.value || !action.dice) {
       slot.querySelector('.growth-preview').textContent = '+0.0%';
       return;
@@ -709,17 +921,38 @@ class EconomicSimulator {
     if (!country) return;
 
     try {
-      const result = EconomicCalculations.calculateBaseGrowth(action, country);
-      const currentPIBPerCapita = parseFloat(country.PIBPerCapita) || 0;
-      const actionGrowthPercent = (result.preInflationGrowth * 100).toFixed(2);
-      
+      let actionGrowthPercent;
+
+      // Lógica especial para exploration: calcular baseado no estoque de recursos
+      if (action.type === 'exploration' && action.resourceType) {
+        const resourceProductionMap = {
+          'Combustivel': 'CombustivelProducao',
+          'Carvao': 'CarvaoProducao',
+          'Metais': 'MetaisProducao'
+        };
+
+        const resourceField = resourceProductionMap[action.resourceType];
+        const currentResourceStock = parseFloat(country[resourceField]) || 1; // Mínimo 1 para evitar divisão por zero
+
+        // Fórmula: (Investimento em milhões / Estoque do Recurso) * Multiplicador da ação
+        const actionConfig = ECONOMIC_CONFIG.actionTypes[action.type];
+        const multiplier = actionConfig?.multiplier || 0.8;
+        const growthRelativeToResource = (action.value / currentResourceStock) * multiplier;
+
+        actionGrowthPercent = (growthRelativeToResource * 100).toFixed(2);
+      } else {
+        // Lógica padrão para outras ações (baseado no PIB)
+        const result = EconomicCalculations.calculateBaseGrowth(action, country);
+        actionGrowthPercent = (result.preInflationGrowth * 100).toFixed(2);
+      }
+
       const preview = slot.querySelector('.growth-preview');
       preview.textContent = `+${actionGrowthPercent}%`;
-      
+
       // Colorir baseado no resultado
       preview.className = 'growth-preview text-xs text-center px-2 py-1 rounded';
       const growthValue = parseFloat(actionGrowthPercent);
-      
+
       if (growthValue > 1.0) {
         preview.classList.add('bg-emerald-700', 'text-emerald-200');
       } else if (growthValue > 0) {
@@ -803,30 +1036,36 @@ class EconomicSimulator {
     const allActions = [...this.actions.internal, ...this.actions.external]
       .filter(a => a.type && a.value > 0);
 
-    if (allActions.length === 0) {
+    // Verificar se há alguma mudança (econômica, tecnologia ou indicadores)
+    const hasTechChanges = Object.values(this.changes.technology).some(v => v !== 0);
+    const hasIndicatorChanges = Object.values(this.changes.indicators).some(v => v !== 0);
+    const hasAnyChanges = allActions.length > 0 || hasTechChanges || hasIndicatorChanges;
+
+    if (!hasAnyChanges) {
       summaryContainer.innerHTML = `
         <div class="text-center py-12 text-slate-400">
           <div class="text-4xl mb-4">📊</div>
-          <div class="text-lg mb-2">Nenhuma ação configurada</div>
-          <div class="text-sm">Configure suas ações internas e externas para ver o resumo</div>
+          <div class="text-lg mb-2">Nenhuma mudança configurada</div>
+          <div class="text-sm">Configure ações econômicas, tecnologia, recursos ou indicadores para ver o resumo</div>
         </div>
       `;
       return;
     }
 
     try {
-      // Obter países de destino para ações externas
-      const targetCountries = {};
-      allActions.filter(a => a.isExternal).forEach(action => {
-        if (action.targetCountry) {
-          targetCountries[action.targetCountry] = this.getCountryById(action.targetCountry);
-        }
-      });
+      // Calcular resultados econômicos se houver ações
+      let economicResults = null;
+      if (allActions.length > 0) {
+        const targetCountries = {};
+        allActions.filter(a => a.isExternal).forEach(action => {
+          if (action.targetCountry) {
+            targetCountries[action.targetCountry] = this.getCountryById(action.targetCountry);
+          }
+        });
+        economicResults = EconomicCalculations.processAllActions(allActions, country, targetCountries);
+      }
 
-      // Calcular resultados
-      const results = EconomicCalculations.processAllActions(allActions, country, targetCountries);
-      
-      summaryContainer.innerHTML = this.createSummaryHTML(results, country);
+      summaryContainer.innerHTML = this.createSummaryHTML(economicResults, country);
     } catch (error) {
       Logger.error('Erro ao atualizar resumo:', error);
       summaryContainer.innerHTML = `
@@ -840,14 +1079,16 @@ class EconomicSimulator {
   }
 
   createSummaryHTML(results, country) {
-    const currentPIB = parseFloat(country.PIB) || 0;
-    const growthPercentage = (results.finalGrowth * 100).toFixed(2);
-    const potentialGrowthPercentage = (results.totalGrowth * 100).toFixed(2);
-    const inflationPercentage = (results.totalInflation * 100).toFixed(1);
-    const pibGain = results.newPIB - currentPIB;
+    let html = '<div class="space-y-6">';
 
-    return `
-      <div class="space-y-6">
+    // === SEÇÃO ECONÔMICA (se houver ações econômicas) ===
+    if (results) {
+      const currentPIB = parseFloat(country.PIB) || 0;
+      const growthPercentage = (results.finalGrowth * 100).toFixed(2);
+      const potentialGrowthPercentage = (results.totalGrowth * 100).toFixed(2);
+      const inflationPercentage = (results.totalInflation * 100).toFixed(1);
+
+      html += `
         <!-- Resultado Principal -->
         <div class="bg-gradient-to-r from-purple-900/30 to-blue-900/30 border border-purple-500/30 rounded-xl p-6">
           <h4 class="text-lg font-semibold text-slate-200 mb-4">💰 Impacto Econômico</h4>
@@ -960,24 +1201,191 @@ class EconomicSimulator {
           </div>
         ` : ''}
 
-        <!-- Aviso Final -->
-        <div class="bg-slate-700/30 border border-slate-600/50 rounded-xl p-6">
-          <h4 class="text-lg font-semibold text-slate-200 mb-3">⚠️ Confirmação Final</h4>
-          <div class="text-sm text-slate-300 space-y-2">
-            <div>• Esta simulação será aplicada permanentemente ao país</div>
-            <div>• Os valores de PIB, Tecnologia e Estabilidade serão atualizados</div>
-            <div>• A ação será registrada no histórico econômico</div>
-            ${results.actions.some(a => a.isExternal) ? '<div>• Ações externas afetarão os países de destino</div>' : ''}
+      `;
+    }
+
+    // === SEÇÃO DE TECNOLOGIA ===
+    const hasTechChanges = Object.values(this.changes.technology).some(v => v !== 0);
+    if (hasTechChanges) {
+      html += `
+        <div class="border border-slate-600/50 rounded-xl p-6">
+          <h4 class="text-lg font-semibold text-slate-200 mb-4">🔬 Mudanças em Tecnologia</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            ${Object.entries(this.changes.technology)
+              .filter(([_, delta]) => delta !== 0)
+              .map(([field, delta]) => {
+                const current = parseFloat(country[field]) || 0;
+                const newValue = Math.max(0, current + delta);
+                const labels = {
+                  Tecnologia: 'Tecnologia Civil',
+                  Aeronautica: 'Aeronáutica',
+                  Marinha: 'Marinha',
+                  Veiculos: 'Veículos',
+                  Exercito: 'Exército'
+                };
+                return `
+                  <div class="flex items-center justify-between p-3 rounded-lg ${delta > 0 ? 'bg-emerald-900/20 border border-emerald-500/30' : 'bg-red-900/20 border border-red-500/30'}">
+                    <div class="text-slate-200">${labels[field] || field}</div>
+                    <div class="text-right">
+                      <div class="text-sm text-slate-400">${current} → ${newValue}</div>
+                      <div class="font-semibold ${delta > 0 ? 'text-emerald-400' : 'text-red-400'}">${delta > 0 ? '+' : ''}${delta}</div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
           </div>
         </div>
+      `;
+    }
+
+    // === SEÇÃO DE INDICADORES ===
+    const hasIndicatorChanges = Object.values(this.changes.indicators).some(v => v !== 0);
+    if (hasIndicatorChanges) {
+      html += `
+        <div class="border border-slate-600/50 rounded-xl p-6">
+          <h4 class="text-lg font-semibold text-slate-200 mb-4">📊 Mudanças em Indicadores</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            ${Object.entries(this.changes.indicators)
+              .filter(([_, delta]) => delta !== 0)
+              .map(([field, delta]) => {
+                const current = parseFloat(country[field]) || 0;
+                const newValue = Math.min(100, Math.max(0, current + delta));
+                const labels = {
+                  Estabilidade: 'Estabilidade',
+                  Burocracia: 'Burocracia',
+                  Urbanizacao: 'Urbanização',
+                  IndustrialEfficiency: 'Eficiência Industrial'
+                };
+                return `
+                  <div class="flex items-center justify-between p-3 rounded-lg ${delta > 0 ? 'bg-emerald-900/20 border border-emerald-500/30' : 'bg-red-900/20 border border-red-500/30'}">
+                    <div class="text-slate-200">${labels[field] || field}</div>
+                    <div class="text-right">
+                      <div class="text-sm text-slate-400">${current}% → ${newValue}%</div>
+                      <div class="font-semibold ${delta > 0 ? 'text-emerald-400' : 'text-red-400'}">${delta > 0 ? '+' : ''}${delta}%</div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // === AVISO FINAL ===
+    html += `
+      <div class="bg-slate-700/30 border border-slate-600/50 rounded-xl p-6">
+        <h4 class="text-lg font-semibold text-slate-200 mb-3">⚠️ Confirmação Final</h4>
+        <div class="text-sm text-slate-300 space-y-2">
+          <div>• Todas as mudanças serão aplicadas permanentemente ao país</div>
+          ${results ? '<div>• Ações econômicas serão registradas no histórico</div>' : ''}
+          ${results?.actions.some(a => a.isExternal) ? '<div>• Ações externas afetarão os países de destino</div>' : ''}
+          ${hasTechChanges ? '<div>• Valores de tecnologia serão atualizados</div>' : ''}
+          ${hasResourceChanges ? '<div>• Recursos serão modificados</div>' : ''}
+          ${hasIndicatorChanges ? '<div>• Indicadores nacionais serão alterados</div>' : ''}
+        </div>
       </div>
+    </div>
     `;
+
+    return html;
+  }
+
+  // === MÉTODOS PARA GESTÃO DAS NOVAS TABS ===
+
+  switchEconomySubtab(subtab) {
+    const modal = document.getElementById('economic-simulator-modal');
+    if (!modal) return;
+
+    // Atualizar botões
+    modal.querySelectorAll('.economy-subtab').forEach(btn => {
+      if (btn.dataset.subtab === subtab) {
+        btn.classList.remove('bg-slate-700', 'text-slate-300');
+        btn.classList.add('bg-purple-600', 'text-white');
+      } else {
+        btn.classList.remove('bg-purple-600', 'text-white');
+        btn.classList.add('bg-slate-700', 'text-slate-300');
+      }
+    });
+
+    // Mostrar/esconder conteúdo
+    modal.querySelectorAll('.economy-subtab-content').forEach(content => {
+      content.classList.add('hidden');
+    });
+    modal.querySelector(`#economy-subtab-${subtab}`)?.classList.remove('hidden');
+  }
+
+  adjustTechnology(field, delta) {
+    this.changes.technology[field] = (this.changes.technology[field] || 0) + delta;
+
+    // Atualizar input
+    const input = document.querySelector(`.tech-input[data-field="${field}"]`);
+    if (input) input.value = this.changes.technology[field];
+
+    this.updateTechPreview(field);
+    this.updateSummary();
+  }
+
+  updateTechPreview(field) {
+    const country = this.getCountryById(this.selectedCountry);
+    if (!country) return;
+
+    const current = parseFloat(country[field]) || 0;
+    const delta = this.changes.technology[field] || 0;
+    const newValue = Math.max(0, current + delta);
+
+    const preview = document.querySelector(`.tech-preview[data-field="${field}"]`);
+    if (preview) preview.textContent = newValue;
+  }
+
+  adjustIndicator(field, delta) {
+    const country = this.getCountryById(this.selectedCountry);
+    if (!country) return;
+
+    const current = parseFloat(country[field]) || 0;
+    const currentDelta = this.changes.indicators[field] || 0;
+    const newDelta = currentDelta + delta;
+    const newValue = current + newDelta;
+
+    // Validar limites 0-100
+    if (newValue < 0 || newValue > 100) {
+      showNotification('warning', `${field} deve estar entre 0% e 100%`);
+      return;
+    }
+
+    this.changes.indicators[field] = newDelta;
+
+    // Atualizar input
+    const input = document.querySelector(`.indicator-input[data-field="${field}"]`);
+    if (input) input.value = this.changes.indicators[field];
+
+    this.updateIndicatorPreview(field);
+    this.updateSummary();
+  }
+
+  updateIndicatorPreview(field) {
+    const country = this.getCountryById(this.selectedCountry);
+    if (!country) return;
+
+    const current = parseFloat(country[field]) || 0;
+    const delta = this.changes.indicators[field] || 0;
+    const newValue = Math.min(100, Math.max(0, current + delta));
+
+    const preview = document.querySelector(`.indicator-preview[data-field="${field}"]`);
+    if (preview) preview.textContent = `${newValue}%`;
+
+    // Atualizar barra de progresso
+    const bar = preview?.closest('.border')?.querySelector('.bg-gradient-to-r');
+    if (bar) bar.style.width = `${newValue}%`;
   }
 
   resetActions() {
     this.actions.internal = [];
     this.actions.external = [];
-    
+    this.changes = {
+      technology: {},
+      indicators: {}
+    };
+
     // Recriar interface
     this.recreateActionSlots('internal');
     this.recreateActionSlots('external');
@@ -990,7 +1398,7 @@ class EconomicSimulator {
     const slot = selectElement.closest('.action-slot');
     const description = slot.querySelector('.action-description');
     const descriptionText = description.querySelector('div');
-    
+
     if (selectElement.value) {
       const typeConfig = ECONOMIC_CONFIG.actionTypes[selectElement.value];
       if (typeConfig) {
@@ -1000,6 +1408,58 @@ class EconomicSimulator {
     } else {
       description.classList.add('hidden');
     }
+  }
+
+  toggleResourceSelector(selectElement) {
+    const slot = selectElement.closest('.action-slot');
+    const resourceSelector = slot.querySelector('.resource-type-selector');
+    const extractionPreview = slot.querySelector('.extraction-preview');
+
+    if (selectElement.value === 'exploration') {
+      // Mostrar seletor de recurso e preview de extração
+      resourceSelector?.classList.remove('hidden');
+      extractionPreview?.classList.remove('hidden');
+    } else {
+      // Esconder seletor de recurso e preview de extração
+      resourceSelector?.classList.add('hidden');
+      extractionPreview?.classList.add('hidden');
+    }
+  }
+
+  updateExtractionPreview(slot, action) {
+    const extractionAmount = slot.querySelector('.extraction-amount');
+    if (!extractionAmount) return;
+
+    if (!action.resourceType || !action.value || !action.dice) {
+      extractionAmount.textContent = 'Aguardando dados...';
+      return;
+    }
+
+    const country = this.getCountryById(this.selectedCountry);
+    if (!country) return;
+
+    // Pegar potencial do recurso
+    const potentialMap = {
+      'Combustivel': 'PotencialCombustivel',
+      'Carvao': 'PotencialCarvao',
+      'Metais': 'PotencialMetais'
+    };
+
+    const potentialField = potentialMap[action.resourceType];
+    const potential = parseFloat(country[potentialField]) || 0;
+
+    // Fórmula de extração: (Investimento / 10) * (Dado / 12) * (Potencial / 10)
+    // Exemplo: 100M investimento, dado 12, potencial 10 = (100/10) * (12/12) * (10/10) = 10 * 1 * 1 = 10 unidades
+    const baseExtraction = (action.value / 10) * (action.dice / 12) * (potential / 10);
+    const finalExtraction = Math.round(baseExtraction * 100) / 100; // arredondar para 2 casas
+
+    const resourceLabels = {
+      'Combustivel': 'Combustível',
+      'Carvao': 'Carvão',
+      'Metais': 'Metais'
+    };
+
+    extractionAmount.innerHTML = `<strong>${finalExtraction.toFixed(2)}</strong> unidades de ${resourceLabels[action.resourceType]} (Potencial: ${potential}/10)`;
   }
 
   async applyEconomicActions() {
@@ -1017,9 +1477,14 @@ class EconomicSimulator {
       
       const allActions = [...this.actions.internal, ...this.actions.external]
         .filter(a => a.type && a.value > 0);
-      
-      if (allActions.length === 0) {
-        throw new Error('Nenhuma ação válida configurada');
+
+      // Verificar se há QUALQUER mudança (econômica, tecnologia ou indicadores)
+      const hasTechChanges = Object.values(this.changes.technology).some(v => v !== 0);
+      const hasIndicatorChanges = Object.values(this.changes.indicators).some(v => v !== 0);
+      const hasAnyChanges = allActions.length > 0 || hasTechChanges || hasIndicatorChanges;
+
+      if (!hasAnyChanges) {
+        throw new Error('Nenhuma mudança configurada');
       }
       
       // Obter países de destino
@@ -1030,9 +1495,11 @@ class EconomicSimulator {
         }
       }
       
-      // Calcular resultados finais
-      const results = EconomicCalculations.processAllActions(allActions, country, targetCountries);
-      
+      // Calcular resultados finais (apenas se houver ações econômicas)
+      const results = allActions.length > 0
+        ? EconomicCalculations.processAllActions(allActions, country, targetCountries)
+        : null;
+
       // Aplicar mudanças no Firebase
       await this.saveEconomicResults(results, allActions, targetCountries);
       
@@ -1045,7 +1512,18 @@ class EconomicSimulator {
         // Não bloquear o processo por erro no feedback
       }
       
-      showNotification('success', `Investimentos aplicados! PIB cresceu ${(results.finalGrowth * 100).toFixed(2)}%`);
+      // Mensagem de sucesso customizada
+      let successMsg = 'Mudanças aplicadas com sucesso!';
+      if (results) {
+        successMsg = `Investimentos aplicados! PIB cresceu ${(results.finalGrowth * 100).toFixed(2)}%`;
+      } else if (hasTechChanges || hasResourceChanges || hasIndicatorChanges) {
+        const changes = [];
+        if (hasTechChanges) changes.push('tecnologia');
+        if (hasResourceChanges) changes.push('recursos');
+        if (hasIndicatorChanges) changes.push('indicadores');
+        successMsg = `Mudanças em ${changes.join(', ')} aplicadas!`;
+      }
+      showNotification('success', successMsg);
       
       // Fechar modal
       modal.remove();
@@ -1082,15 +1560,71 @@ class EconomicSimulator {
       const countryRef = db.collection('paises').doc(this.selectedCountry);
       const country = this.getCountryById(this.selectedCountry) || {};
 
-      // Inicializar updates com PIB
+      // Inicializar updates
       const countryUpdates = {
-        PIB: results.newPIB,
-        PIBPerCapita: results.newPIBPerCapita,
-        TurnoUltimaAtualizacao: currentTurn,
-        // Sincronizar também na seção geral
-        'geral.PIB': results.newPIB,
-        'geral.PIBPerCapita': results.newPIBPerCapita
+        TurnoUltimaAtualizacao: currentTurn
       };
+
+      // === APLICAR MUDANÇAS ECONÔMICAS (se houver) ===
+      if (results) {
+        countryUpdates.PIB = results.newPIB;
+        countryUpdates.PIBPerCapita = results.newPIBPerCapita;
+        countryUpdates['geral.PIB'] = results.newPIB;
+        countryUpdates['geral.PIBPerCapita'] = results.newPIBPerCapita;
+      }
+
+      // === APLICAR MUDANÇAS DE TECNOLOGIA ===
+      for (const [field, delta] of Object.entries(this.changes.technology)) {
+        if (delta !== 0) {
+          const current = parseFloat(country[field]) || 0;
+          const newValue = Math.max(0, current + delta);
+          countryUpdates[field] = newValue;
+          countryUpdates[`geral.${field}`] = newValue;
+        }
+      }
+
+      // === APLICAR MUDANÇAS DE INDICADORES ===
+      for (const [field, delta] of Object.entries(this.changes.indicators)) {
+        if (delta !== 0) {
+          const current = parseFloat(country[field]) || 0;
+          const newValue = Math.min(100, Math.max(0, current + delta));
+          countryUpdates[field] = newValue;
+          countryUpdates[`geral.${field}`] = newValue;
+        }
+      }
+
+      // === APLICAR EXTRAÇÃO DE RECURSOS (ações de exploration) ===
+      const explorationActions = actions.filter(a => a.type === 'exploration' && a.resourceType && a.value && a.dice);
+      for (const action of explorationActions) {
+        const potentialMap = {
+          'Combustivel': 'PotencialCombustivel',
+          'Carvao': 'PotencialCarvao',
+          'Metais': 'PotencialMetais'
+        };
+
+        const potentialField = potentialMap[action.resourceType];
+        const potential = parseFloat(country[potentialField]) || 0;
+
+        // Fórmula: (Investimento / 10) * (Dado / 12) * (Potencial / 10)
+        const extraction = (action.value / 10) * (action.dice / 12) * (potential / 10);
+
+        // Arredondar para não ter valores quebrados demais
+        const roundedExtraction = Math.round(extraction * 100) / 100;
+
+        // Adicionar ao estoque do recurso
+        // Usar nomes de campos de produção por turno (que são acumulados)
+        const resourceFieldMap = {
+          'Combustivel': 'CombustivelProducao',
+          'Carvao': 'CarvaoProducao',
+          'Metais': 'MetaisProducao'
+        };
+
+        const resourceField = resourceFieldMap[action.resourceType];
+        const currentProduction = parseFloat(country[resourceField]) || 0;
+        countryUpdates[resourceField] = currentProduction + roundedExtraction;
+
+        Logger.log(`[Exploration] ${country.Pais}: Extraiu ${roundedExtraction} unidades de ${action.resourceType} (Potencial: ${potential}/10, Dado: ${action.dice}/12)`);
+      }
 
       // --- Recursos e Energia: calcular consumo/produção e índices ---
       // Agregar consumo de recursos por ações industriais
