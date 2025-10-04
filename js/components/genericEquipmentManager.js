@@ -35,24 +35,31 @@ export class GenericEquipmentManager {
   }
 
   render() {
-    const anchor = document.getElementById('generic-equipment-anchor');
-    if (!anchor) {
-      console.warn('⚠️ Âncora generic-equipment-anchor não encontrada');
-      return;
-    }
+    // Tentar encontrar a âncora, se não existir, tentar novamente após um delay
+    const tryRender = () => {
+      const anchor = document.getElementById('generic-equipment-anchor');
+      if (!anchor) {
+        console.warn('⚠️ Âncora generic-equipment-anchor não encontrada, tentando novamente...');
+        setTimeout(tryRender, 500); // Tentar novamente em 500ms
+        return;
+      }
 
-    const existing = document.getElementById('generic-equipment-section');
-    if (existing) {
-      existing.remove();
-    }
+      const existing = document.getElementById('generic-equipment-section');
+      if (existing) {
+        existing.remove();
+      }
 
-    const section = document.createElement('div');
-    section.id = 'generic-equipment-section';
-    section.innerHTML = this.getHTML();
+      const section = document.createElement('div');
+      section.id = 'generic-equipment-section';
+      section.innerHTML = this.getHTML();
 
-    anchor.parentNode.insertBefore(section, anchor.nextSibling);
+      anchor.parentNode.insertBefore(section, anchor.nextSibling);
 
-    this.setupEventListeners();
+      this.setupEventListeners();
+      console.log('✅ Gerenciador de Equipamentos Genéricos renderizado com sucesso');
+    };
+
+    tryRender();
   }
 
   getHTML() {
