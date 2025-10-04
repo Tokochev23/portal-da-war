@@ -138,16 +138,7 @@ export class GenericEquipmentManager {
       <div class="space-y-6">
         <!-- Header do País -->
         <div class="p-4 rounded-xl bg-slate-800/50 border border-slate-700">
-          <div class="flex items-center justify-between">
-            <div>
-              <h4 class="text-xl font-bold text-slate-100">${country?.Pais || 'País'}</h4>
-              <p class="text-sm text-slate-400">Gerenciando equipamentos genéricos</p>
-            </div>
-            <div class="text-right">
-              <p class="text-xs text-slate-500">Orçamento</p>
-              <p class="text-lg font-bold text-emerald-400">${formatCurrency(country?.PIB * 0.25 || 0)}</p>
-            </div>
-          </div>
+          <h4 class="text-xl font-bold text-slate-100 text-center">${country?.Pais || 'País'}</h4>
         </div>
 
         <!-- Tabs de Tipo -->
@@ -192,26 +183,14 @@ export class GenericEquipmentManager {
 
     return categories.map(category => {
       const item = equipment[category];
-      const stats = item.stats;
 
       return `
         <div class="p-4 rounded-xl border border-slate-700 bg-slate-800/50 hover:border-purple-500/50 transition">
-          <div class="flex items-start gap-3 mb-3">
+          <div class="flex items-center gap-3 mb-3">
             <span class="text-3xl">${item.icon}</span>
             <div class="flex-1">
               <h6 class="font-semibold text-slate-100">${item.name}</h6>
-              <p class="text-xs text-slate-400">${item.description}</p>
             </div>
-          </div>
-
-          <!-- Stats -->
-          <div class="grid grid-cols-2 gap-2 mb-3 text-xs">
-            ${Object.entries(stats).slice(0, 4).map(([key, value]) => `
-              <div class="flex justify-between">
-                <span class="text-slate-500 capitalize">${key}:</span>
-                <span class="text-slate-300 font-semibold">${key === 'cost' ? formatCurrency(value) : value}</span>
-              </div>
-            `).join('')}
           </div>
 
           <!-- Form para adicionar -->
@@ -221,11 +200,11 @@ export class GenericEquipmentManager {
               min="1"
               value="10"
               placeholder="Qtd"
-              class="flex-1 px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-slate-100 text-sm"
+              class="w-24 px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-slate-100 text-sm"
               id="qty-${category}"
             >
             <button
-              class="add-generic-equipment px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-400 text-slate-950 font-semibold text-sm transition"
+              class="add-generic-equipment flex-1 px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-400 text-slate-950 font-semibold text-sm transition"
               data-category="${category}"
               data-type="${this.selectedType}"
             >
@@ -255,24 +234,18 @@ export class GenericEquipmentManager {
           <div class="flex items-center justify-between p-3 rounded-lg bg-slate-800/50 border border-slate-700">
             <div class="flex items-center gap-3">
               <span class="text-2xl">${item.icon}</span>
-              <div>
-                <p class="font-semibold text-slate-100">${item.name}</p>
-                <p class="text-xs text-slate-400">${item.category}</p>
-              </div>
+              <p class="font-semibold text-slate-100">${item.name}</p>
             </div>
             <div class="flex items-center gap-3">
-              <div class="text-right">
-                <p class="text-sm font-bold text-purple-400">${item.quantity} unidades</p>
-                <p class="text-xs text-slate-500">Total: ${formatCurrency(item.stats.cost * item.quantity)}</p>
-              </div>
+              <p class="text-lg font-bold text-purple-400">${item.quantity}x</p>
               <button
-                class="edit-generic-qty px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm transition"
+                class="edit-generic-qty px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm transition"
                 data-item-id="${key}"
               >
                 ✏️
               </button>
               <button
-                class="remove-generic-equipment px-3 py-1 rounded bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm transition"
+                class="remove-generic-equipment px-3 py-1.5 rounded bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm transition"
                 data-item-id="${key}"
               >
                 🗑️
