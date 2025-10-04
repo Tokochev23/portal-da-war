@@ -5,6 +5,7 @@ import { playerManager } from "../services/playerManager.js";
 import { VehicleApprovalSystem } from "../components/vehicleApproval.js";
 import { NavalProductionSystem } from "../components/navalProduction.js";
 import { InventorySystem } from "../components/inventorySystem.js";
+import { GenericEquipmentManager } from "../components/genericEquipmentManager.js";
 import { showNotification, Logger, showConfirmBox } from "../utils.js";
 import { initEconomicSimulator } from "../systems/economicSimulator.js";
 import { calculatePIBTotal, formatCurrency, formatPIBPerCapita } from "../utils/pibCalculations.js";
@@ -675,6 +676,16 @@ async function initInventorySystem() {
   }
 }
 
+async function initGenericEquipmentManager() {
+  try {
+    const genericEquipmentManager = new GenericEquipmentManager();
+    await genericEquipmentManager.initialize();
+    Logger.info('Gerenciador de equipamentos genéricos inicializado');
+  } catch (error) {
+    Logger.error('Erro ao inicializar gerenciador de equipamentos genéricos:', error);
+  }
+}
+
 async function initEconomicSystem() {
   try {
     economicSimulator = await initEconomicSimulator();
@@ -710,7 +721,8 @@ async function initNarratorSystems() {
       initVehicleApprovalSystem(),
       initNavalProductionSystem(),
       initInventorySystem(),
-  initEconomicSystem()
+      initGenericEquipmentManager(),
+      initEconomicSystem()
     ]);
     
     window.playerManager = playerManager;
