@@ -4,7 +4,6 @@
  */
 
 import { db } from '../services/firebase.js';
-import { collection, addDoc, query, where, getDocs, updateDoc, doc, deleteDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
 // Níveis de espionagem e seus custos base
 const ESPIONAGE_LEVELS = {
@@ -45,14 +44,11 @@ class EspionageSystem {
    */
   async hasActiveSpying(spyCountryId, targetCountryId, currentTurn) {
     try {
-      const q = query(
-        collection(db, 'espionageOperations'),
-        where('spyCountryId', '==', spyCountryId),
-        where('targetCountryId', '==', targetCountryId),
-        where('active', '==', true)
-      );
-
-      const snapshot = await getDocs(q);
+      const snapshot = await db.collection('espionageOperations')
+        .where('spyCountryId', '==', spyCountryId)
+        .where('targetCountryId', '==', targetCountryId)
+        .where('active', '==', true)
+        .get();
 
       if (snapshot.empty) return null;
 
@@ -168,7 +164,7 @@ class EspionageSystem {
         createdAt: new Date().toISOString()
       };
 
-      const docRef = await addDoc(collection(db, 'espionageOperations'), operation);
+      const docRef = await db.collection('espionageOperations').add(operation);
 
       // Se foi detectada, criar notificação para o alvo
       if (detected) {
@@ -198,8 +194,7 @@ class EspionageSystem {
    */
   async deactivateOperation(operationId) {
     try {
-      const operationRef = doc(db, 'espionageOperations', operationId);
-      await updateDoc(operationRef, {
+      await db.collection('espionageOperations').doc(operationId).update({
         active: false,
         deactivatedAt: new Date().toISOString()
       });
@@ -215,13 +210,11 @@ class EspionageSystem {
    */
   async getActiveOperations(spyCountryId, currentTurn) {
     try {
-      const q = query(
-        collection(db, 'espionageOperations'),
-        where('spyCountryId', '==', spyCountryId),
-        where('active', '==', true)
-      );
+      const snapshot = await db.collection('espionageOperations')
+        .where('spyCountryId', '==', spyCountryId)
+        .where('active', '==', true)
+        .get();
 
-      const snapshot = await getDocs(q);
       const operations = [];
 
       for (const doc of snapshot.docs) {
@@ -249,13 +242,11 @@ class EspionageSystem {
    */
   async getSpyingAttempts(targetCountryId) {
     try {
-      const q = query(
-        collection(db, 'espionageOperations'),
-        where('targetCountryId', '==', targetCountryId),
-        where('detected', '==', true)
-      );
+      const snapshot = await db.collection('espionageOperations')
+        .where('targetCountryId', '==', targetCountryId)
+        .where('detected', '==', true)
+        .get();
 
-      const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -283,7 +274,7 @@ class EspionageSystem {
         createdAt: new Date().toISOString()
       };
 
-      await addDoc(collection(db, 'notifications'), notification);
+      await db.collection('notifications').add(notification);
     } catch (error) {
       console.error('Erro ao criar notificação:', error);
     }
@@ -297,8 +288,7 @@ class EspionageSystem {
       // Validar percentual (0-10%)
       const validPercent = Math.max(0, Math.min(10, parseFloat(percentage) || 0));
 
-      const countryRef = doc(db, 'paises', countryId);
-      await updateDoc(countryRef, {
+      await db.collection('paises').doc(countryId).update({
         CounterIntelligence: validPercent
       });
 
@@ -330,12 +320,10 @@ class EspionageSystem {
    */
   async cleanExpiredOperations(currentTurn) {
     try {
-      const q = query(
-        collection(db, 'espionageOperations'),
-        where('active', '==', true)
-      );
+      const snapshot = await db.collection('espionageOperations')
+        .where('active', '==', true)
+        .get();
 
-      const snapshot = await getDocs(q);
       let cleaned = 0;
 
       for (const doc of snapshot.docs) {
