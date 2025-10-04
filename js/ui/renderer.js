@@ -482,10 +482,74 @@ export function renderPublicCountries(countries) {
 
 }
 
+// Determina nível de acesso às informações de um país
+async function determineAccessLevel(country) {
+  const playerCountry = window.appState?.playerCountry;
+  const currentTurn = window.appState?.currentTurn || 0;
+  const userPermissions = window.appState?.userPermissions || {};
+
+  // Se for o próprio país do jogador, acesso total
+  if (playerCountry && country.id === playerCountry.id) {
+    return { level: 'owner', bypass: true };
+  }
+
+  // Admins e narradores têm acesso total (mas indicar que é bypass)
+  // IMPORTANTE: Você pode querer desabilitar isso para testar como jogador normal
+  const bypassEspionage = userPermissions.isAdmin || userPermissions.isNarrator;
+  if (bypassEspionage) {
+    return { level: 'total', bypass: true, reason: 'admin' };
+  }
+
+  // Verificar se tem espionagem ativa
+  if (playerCountry) {
+    const activeSpying = await espionageSystem.hasActiveSpying(playerCountry.id, country.id, currentTurn);
+    if (activeSpying) {
+      return { level: activeSpying.level, bypass: false, espionage: activeSpying };
+    }
+  }
+
+  // Sem espionagem = sem acesso a informações sensíveis
+  return { level: 'none', bypass: false };
+}
+
+// Determina se um campo específico deve ser exibido baseado no nível de acesso
+function canShowField(fieldName, accessLevel) {
+  const level = accessLevel.level;
+
+  // Owner e total (incluindo admin bypass) veem tudo
+  if (level === 'owner' || level === 'total') {
+    return true;
+  }
+
+  // Campos sempre visíveis (informação pública)
+  const publicFields = ['nome', 'bandeira', 'populacao', 'pib', 'pibPerCapita', 'modeloPolitico', 'wpi'];
+  if (publicFields.includes(fieldName)) {
+    return true;
+  }
+
+  // Nível básico: orçamento e recursos gerais
+  if (level === 'basic') {
+    const basicFields = ['orcamento', 'recursos', 'bensConsumo'];
+    return basicFields.includes(fieldName);
+  }
+
+  // Nível intermediário: recursos + tecnologias e capacidades
+  if (level === 'intermediate') {
+    const intermediateFields = ['orcamento', 'recursos', 'bensConsumo', 'tecnologia', 'estabilidade', 'urbanizacao', 'capacidadesProducao'];
+    return intermediateFields.includes(fieldName);
+  }
+
+  // Sem acesso = nada além dos públicos
+  return false;
+}
+
 // Painel detalhado (compacto)
-export function renderDetailedCountryPanel(country) {
+export async function renderDetailedCountryPanel(country) {
   if (!DOM.countryPanelContent || !DOM.countryPanelModal) return;
-  
+
+  // Verificar nível de acesso (espionagem ou permissões)
+  const accessLevel = await determineAccessLevel(country);
+
   // Priorizar dados da seção 'geral' se existir
   const pib = country.PIB ?? country.geral?.PIB ?? 0;
   const populacao = country.geral?.Populacao ?? country.Populacao ?? 0;
@@ -506,8 +570,48 @@ export function renderDetailedCountryPanel(country) {
   const urban = Math.max(0, Math.min(100, parseFloat(urbanizacao)));
   const flagContainer = `<span class=\"inline-grid h-8 w-12 place-items-center rounded-md ring-1 ring-white/10 bg-slate-800 overflow-hidden\">${getFlagHTML(country.Pais)}</span>`;
 
+  // Banner de status de acesso
+  let accessBanner = '';
+  if (accessLevel.bypass && accessLevel.reason === 'admin') {
+    accessBanner = `
+      <div class="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-3 mb-4">
+        <div class="flex items-center gap-2 text-yellow-300 text-sm">
+          <span class="text-xl">⚠️</span>
+          <div>
+            <div class="font-semibold">Modo Admin/Narrador Ativo</div>
+            <div class="text-xs text-yellow-400">Você está vendo todas as informações. Jogadores normais precisariam de espionagem.</div>
+          </div>
+        </div>
+      </div>`;
+  } else if (accessLevel.level === 'none') {
+    accessBanner = `
+      <div class="rounded-xl border border-red-500/30 bg-red-500/10 p-3 mb-4">
+        <div class="flex items-center gap-2 text-red-300 text-sm">
+          <span class="text-xl">🔒</span>
+          <div>
+            <div class="font-semibold">Acesso Restrito</div>
+            <div class="text-xs text-red-400">Você não tem espionagem ativa neste país. Apenas informações públicas são visíveis.</div>
+          </div>
+        </div>
+      </div>`;
+  } else if (accessLevel.espionage) {
+    const levelNames = { basic: 'Básica', intermediate: 'Intermediária', total: 'Total' };
+    const levelIcons = { basic: '🔍', intermediate: '🔬', total: '🎯' };
+    accessBanner = `
+      <div class="rounded-xl border border-purple-500/30 bg-purple-500/10 p-3 mb-4">
+        <div class="flex items-center gap-2 text-purple-300 text-sm">
+          <span class="text-xl">${levelIcons[accessLevel.level]}</span>
+          <div>
+            <div class="font-semibold">Espionagem Ativa - Nível ${levelNames[accessLevel.level]}</div>
+            <div class="text-xs text-purple-400">Válida até turno #${accessLevel.espionage.validUntilTurn}</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
   const leftColumn = `
     <div class="space-y-4">
+      ${accessBanner}
       <div class="flex items-start justify-between gap-3">
         <div>
           <h2 class="text-2xl font-extrabold tracking-tight flex items-center gap-2">${flagContainer} ${country.Pais}</h2>
@@ -551,6 +655,7 @@ export function renderDetailedCountryPanel(country) {
         </div>
       </div>
 
+      ${canShowField('inventario', accessLevel) ? `
       <div class="mt-4">
         <h4 class="text-sm font-medium text-slate-200 mb-2">Força Militar</h4>
         <div class="grid grid-cols-1 gap-2">
@@ -561,7 +666,9 @@ export function renderDetailedCountryPanel(country) {
           </div>
         </div>
       </div>
+      ` : ''}
 
+      ${canShowField('capacidadesProducao', accessLevel) ? `
       <div class="mt-4 grid grid-cols-2 gap-2">
         <div class="rounded-lg border border-white/5 bg-slate-900/50 p-2">
           <div class="text-[10px] text-slate-400">Burocracia</div>
@@ -589,7 +696,7 @@ export function renderDetailedCountryPanel(country) {
             <div class="text-sm font-semibold text-indigo-400">${formatCurrency(shipProductionCapacity)}</div>
           </div>
         </div>
-        
+
         <h5 class="text-xs font-medium text-slate-300 mt-3 mb-1">Tecnologias Militares</h5>
         <div class="grid grid-cols-3 gap-1">
           <div class="rounded border border-white/5 bg-slate-900/30 p-1.5">
@@ -606,6 +713,7 @@ export function renderDetailedCountryPanel(country) {
           </div>
         </div>
       </div>
+      ` : ''}
 
       <div class="flex items-center gap-2 mt-2">
         <span class="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] border ${stabilityInfo.tone}">

@@ -357,14 +357,14 @@ countryPanelModal.addEventListener('click', (e) => {
 
 // Abrir painel detalhado ao clicar em qualquer card (delegação)
 if (countryListContainer) {
-  countryListContainer.addEventListener('click', (e) => {
+  countryListContainer.addEventListener('click', async (e) => {
     const button = e.target.closest('.country-card-button');
     if (!button) return;
     e.preventDefault();
     const countryId = button.dataset.countryId;
     const countryData = appState.allCountries.find(c => c.id === countryId);
     if (countryData) {
-      renderDetailedCountryPanel(countryData);
+      await renderDetailedCountryPanel(countryData);
     }
   });
 }
@@ -686,14 +686,14 @@ countryPanelModal.addEventListener('click', (e) => {
 
 // Abrir painel detalhado ao clicar em qualquer card (delegação)
 if (countryListContainer) {
-  countryListContainer.addEventListener('click', (e) => {
+  countryListContainer.addEventListener('click', async (e) => {
     const button = e.target.closest('.country-card-button');
     if (!button) return;
     e.preventDefault();
     const countryId = button.dataset.countryId;
     const countryData = appState.allCountries.find(c => c.id === countryId);
     if (countryData) {
-      renderDetailedCountryPanel(countryData);
+      await renderDetailedCountryPanel(countryData);
     }
   });
 }
