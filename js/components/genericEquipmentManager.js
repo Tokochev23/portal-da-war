@@ -18,7 +18,7 @@ export class GenericEquipmentManager {
   async initialize() {
     console.log('⚙️ Inicializando Gerenciador de Equipamentos Genéricos...');
     await this.loadCountries();
-    this.render();
+    this.attachButtonListener();
   }
 
   async loadCountries() {
@@ -34,50 +34,71 @@ export class GenericEquipmentManager {
     }
   }
 
-  render() {
-    // Tentar encontrar a âncora, se não existir, tentar novamente após um delay
-    const tryRender = () => {
-      const anchor = document.getElementById('generic-equipment-anchor');
-      if (!anchor) {
-        console.warn('⚠️ Âncora generic-equipment-anchor não encontrada, tentando novamente...');
-        setTimeout(tryRender, 500); // Tentar novamente em 500ms
-        return;
-      }
-
-      const existing = document.getElementById('generic-equipment-section');
-      if (existing) {
-        existing.remove();
-      }
-
-      const section = document.createElement('div');
-      section.id = 'generic-equipment-section';
-      section.innerHTML = this.getHTML();
-
-      anchor.parentNode.insertBefore(section, anchor.nextSibling);
-
-      this.setupEventListeners();
-      console.log('✅ Gerenciador de Equipamentos Genéricos renderizado com sucesso');
-    };
-
-    tryRender();
+  attachButtonListener() {
+    const button = document.getElementById('open-generic-equipment-manager');
+    if (button) {
+      button.addEventListener('click', () => {
+        this.openModal();
+      });
+      console.log('✅ Gerenciador de Equipamentos Genéricos pronto (botão conectado)');
+    } else {
+      console.warn('⚠️ Botão open-generic-equipment-manager não encontrado, tentando novamente...');
+      setTimeout(() => this.attachButtonListener(), 500);
+    }
   }
 
-  getHTML() {
+  openModal() {
+    this.renderModal();
+  }
+
+  renderModal() {
+    // Remover modal existente se houver
+    const existing = document.getElementById('generic-equipment-modal');
+    if (existing) {
+      existing.remove();
+    }
+
+    // Criar modal
+    const modal = document.createElement('div');
+    modal.id = 'generic-equipment-modal';
+    modal.innerHTML = this.getModalHTML();
+
+    document.body.appendChild(modal);
+
+    this.setupEventListeners();
+  }
+
+  closeModal() {
+    const modal = document.getElementById('generic-equipment-modal');
+    if (modal) {
+      modal.remove();
+    }
+  }
+
+  getModalHTML() {
     return `
-      <div class="rounded-2xl border border-purple-500/30 bg-gradient-to-r from-purple-500/5 to-purple-600/5 p-6 mt-6">
-        <div class="flex items-center justify-between mb-6">
-          <div>
-            <h3 class="text-2xl font-bold text-purple-100 flex items-center gap-2">
-              ⚙️ Equipamentos Genéricos
-            </h3>
-            <p class="text-sm text-slate-400 mt-1">
-              Adicione equipamentos padrão ao inventário dos países sem usar os criadores
-            </p>
+      <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm" id="generic-equipment-backdrop">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden m-4 flex flex-col">
+          <!-- Header -->
+          <div class="flex items-center justify-between p-6 border-b border-slate-700">
+            <div>
+              <h3 class="text-2xl font-bold text-purple-100 flex items-center gap-2">
+                ⚙️ Equipamentos Genéricos
+              </h3>
+              <p class="text-sm text-slate-400 mt-1">
+                Adicione equipamentos padrão ao inventário dos países sem usar os criadores
+              </p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="refresh-generic-equipment" class="px-4 py-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 font-semibold transition">
+                🔄 Atualizar
+              </button>
+              <button id="close-generic-equipment-modal" class="text-slate-400 hover:text-slate-200 text-2xl px-2">×</button>
+            </div>
           </div>
-          <button id="refresh-generic-equipment" class="px-4 py-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 font-semibold transition">
-            🔄 Atualizar
-          </button>
-        </div>
+
+          <!-- Content -->
+          <div class="flex-1 overflow-y-auto p-6">
 
         <!-- Seletor de País -->
         <div class="mb-6">
@@ -92,8 +113,10 @@ export class GenericEquipmentManager {
           </select>
         </div>
 
-        <div id="generic-equipment-content">
-          ${this.getContentHTML()}
+            <div id="generic-equipment-content">
+              ${this.getContentHTML()}
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -262,6 +285,22 @@ export class GenericEquipmentManager {
   }
 
   setupEventListeners() {
+    // Fechar modal
+    const closeBtn = document.getElementById('close-generic-equipment-modal');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => this.closeModal());
+    }
+
+    // Fechar ao clicar no backdrop
+    const backdrop = document.getElementById('generic-equipment-backdrop');
+    if (backdrop) {
+      backdrop.addEventListener('click', (e) => {
+        if (e.target === backdrop) {
+          this.closeModal();
+        }
+      });
+    }
+
     // Seletor de país
     const countrySelect = document.getElementById('generic-country-select');
     if (countrySelect) {
