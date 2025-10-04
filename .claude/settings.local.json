@@ -103,7 +103,8 @@
       "Bash(npm run build:*)",
       "Bash(xargs sed:*)",
       "Bash(timeout:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(npx http-server:*)"
     ],
     "deny": [],
     "ask": []

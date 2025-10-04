@@ -87,6 +87,10 @@ const googleProvider = new firebase.auth.GoogleAuthProvider();
 googleProvider.addScope('profile');
 googleProvider.addScope('email');
 
+// Tornar db acessível globalmente para scripts de console
+window.db = db;
+window.auth = auth;
+
 export { app, auth, db, storage, googleProvider };
 
 export async function signInWithGoogle() {

@@ -7,6 +7,7 @@ import ResourceConsumptionCalculator from '../systems/resourceConsumptionCalcula
 import ResourceProductionCalculator from '../systems/resourceProductionCalculator.js';
 import { ShipyardSystem } from '../systems/shipyardSystem.js';
 import MarketplaceSystem from '../systems/marketplaceSystem.js';
+import { OfferModalManager } from '../components/offerModalManager.js';
 import { getFlagHTML } from '../ui/renderer.js';
 
 function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
@@ -78,7 +79,13 @@ function calculateBudget(country) {
   const pibBruto = parseFloat(country.PIB) || 0;
   const burocracia = (parseFloat(country.Burocracia) || 0) / 100; // Converter para decimal
   const estabilidade = (parseFloat(country.Estabilidade) || 0) / 100; // Converter para decimal
-  return pibBruto * 0.25 * burocracia * (estabilidade * 1.5); // Novo cálculo de orçamento
+  const orcamentoTotal = pibBruto * 0.25 * burocracia * (estabilidade * 1.5);
+
+  // Descontar orçamento já gasto (agência + pesquisas + outros gastos)
+  const orcamentoGasto = parseFloat(country.OrcamentoGasto || 0);
+  const agencyBudget = parseFloat(country.AgencyBudgetSpent || 0);
+
+  return Math.max(0, orcamentoTotal - orcamentoGasto - agencyBudget); // Nunca negativo
 }
 
 function calculateMilitaryBudget(country) {
@@ -257,6 +264,9 @@ function renderDashboard(country) {
             </button>
             <button class="dashboard-tab border-b-2 border-transparent py-4 px-1 text-sm font-medium text-slate-400 hover:text-slate-300" data-tab="market">
               🌍 Mercado Internacional
+            </button>
+            <button class="dashboard-tab border-b-2 border-transparent py-4 px-1 text-sm font-medium text-slate-400 hover:text-slate-300" data-tab="intelligence">
+              🕵️ Inteligência
             </button>
           </nav>
         </div>
@@ -665,6 +675,16 @@ function renderDashboard(country) {
           </div>
         </div>
 
+        <!-- Intelligence Tab -->
+        <div id="tab-intelligence" class="dashboard-tab-content hidden">
+          <div id="intelligence-dashboard-container">
+            <div class="text-center py-12">
+              <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500 mx-auto mb-4"></div>
+              <p class="text-slate-400">Carregando agência de inteligência...</p>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   `;
@@ -704,6 +724,11 @@ function setupDashboardTabs() {
       // Load marketplace when market tab is selected
       if (tabId === 'market') {
         loadMarketplace();
+      }
+
+      // Load intelligence agency when intelligence tab is selected
+      if (tabId === 'intelligence') {
+        loadIntelligenceAgency();
       }
     }
 
@@ -1566,6 +1591,33 @@ window.upgradeShipyard = async function(countryId) {
 // Make functions globally available
 window.showEquipmentDetails = showEquipmentDetails;
 
+// Função para recarregar dados do país atual
+async function reloadCurrentCountry() {
+  try {
+    const user = auth.currentUser;
+    if (!user) return null;
+
+    const paisId = await checkPlayerCountry(user.uid);
+    if (!paisId) return null;
+
+    // Buscar dados atualizados do Firebase
+    const countryDoc = await db.collection('paises').doc(paisId).get();
+    if (countryDoc.exists) {
+      const updatedCountry = { id: countryDoc.id, ...countryDoc.data() };
+      window.currentCountry = updatedCountry;
+      return updatedCountry;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Erro ao recarregar país:', error);
+    return null;
+  }
+}
+
+// Tornar função global para ser usada pelos sistemas
+window.reloadCurrentCountry = reloadCurrentCountry;
+
 async function initDashboard() {
   try {
     // Aguardar autenticação e obter usuário
@@ -1621,6 +1673,10 @@ async function initDashboard() {
     `;
   }
 }
+
+// Expor calculadores de recursos globalmente para o OfferModalManager
+window.ResourceProductionCalculator = ResourceProductionCalculator;
+window.ResourceConsumptionCalculator = ResourceConsumptionCalculator;
 
 // Funções para controlar orçamento militar
 window.updateBudgetDisplay = function(value) {
@@ -1790,6 +1846,7 @@ window.saveMilitaryDistribution = async function(event) {
 
 // Marketplace functionality
 let marketplaceSystem = null;
+let offerModalManager = null;
 
 async function loadMarketplace() {
   const container = document.getElementById('marketplace-container');
@@ -1811,6 +1868,11 @@ async function loadMarketplace() {
     // Inicializar sistema de marketplace
     if (!marketplaceSystem) {
       marketplaceSystem = new MarketplaceSystem();
+    }
+
+    // Inicializar gerenciador de modais de oferta
+    if (!offerModalManager) {
+      offerModalManager = new OfferModalManager(marketplaceSystem);
     }
 
     // Renderizar interface do marketplace
@@ -2213,6 +2275,38 @@ function setupMarketplaceListeners() {
   setupAdvancedFilters();
 }
 
+// Intelligence Agency functionality
+async function loadIntelligenceAgency() {
+  const container = document.getElementById('intelligence-dashboard-container');
+  if (!container) return;
+
+  try {
+    const country = window.currentCountry;
+    if (!country) {
+      container.innerHTML = `
+        <div class="text-center py-12">
+          <span class="text-4xl text-red-400 mb-4 block">❌</span>
+          <p class="text-red-300">País não encontrado</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Importar e renderizar dashboard da agência
+    const { renderAgencyDashboard } = await import('../components/agencyDashboard.js');
+    renderAgencyDashboard(country, container);
+  } catch (error) {
+    console.error('Erro ao carregar agência:', error);
+    container.innerHTML = `
+      <div class="text-center py-12">
+        <span class="text-4xl text-red-400 mb-4 block">❌</span>
+        <p class="text-red-300">Erro ao carregar agência de inteligência</p>
+        <p class="text-sm text-slate-400 mt-2">${error.message}</p>
+      </div>
+    `;
+  }
+}
+
 async function loadMarketplaceOffers(category, currentCountryId) {
   const contentContainer = document.getElementById('marketplace-content');
   if (!contentContainer) return;
@@ -2347,7 +2441,7 @@ async function loadMarketplaceOffers(category, currentCountryId) {
 
     content += `
       <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" id="offers-grid">
-        ${offers.map(offer => renderOfferCard(offer)).join('')}
+        ${offers.map(offer => renderOfferCard(offer, currentCountryId)).join('')}
       </div>
 
       <!-- Pagination Controls -->
@@ -2401,6 +2495,9 @@ async function loadMarketplaceOffers(category, currentCountryId) {
     `;
   }
 }
+
+// Expor para uso global
+window.loadMarketplaceOffers = loadMarketplaceOffers;
 
 // Helper functions for Firebase ordering
 function getFirebaseOrderBy(sortBy) {
@@ -2488,7 +2585,10 @@ async function checkActiveEmbargoes(countryId) {
 
 // Remove the generateMockOffers function - now using real Firebase data
 
-function renderOfferCard(offer) {
+function renderOfferCard(offer, currentCountryId) {
+  const user = auth.currentUser;
+  const isOwnOffer = user && (offer.player_id === user.uid || offer.country_id === currentCountryId);
+
   // Handle both Firebase timestamp and Date objects
   const expiresAt = offer.expires_at?.toDate ? offer.expires_at.toDate() : new Date(offer.expires_at);
   const totalValue = offer.quantity * offer.price_per_unit;
@@ -2505,7 +2605,7 @@ function renderOfferCard(offer) {
   };
 
   return `
-    <div class="bg-bg-soft border border-bg-ring/70 rounded-xl p-4 hover:border-brand-400/30 transition-colors cursor-pointer" onclick="openOfferDetails('${offer.id}')">
+    <div id="offer-card-${offer.id}" class="bg-bg-soft border border-bg-ring/70 rounded-xl p-4 hover:border-brand-400/30 transition-colors cursor-pointer" onclick="openOfferDetails('${offer.id}')">
       <!-- Header -->
       <div class="flex items-start justify-between mb-3">
         <div class="flex items-center gap-2">
@@ -2550,14 +2650,64 @@ function renderOfferCard(offer) {
           <button id="favorite-btn-${offer.id}" class="text-xs px-2 py-1 bg-slate-600/20 text-slate-400 rounded hover:bg-yellow-500/20 hover:text-yellow-400 transition-colors" onclick="event.stopPropagation(); toggleFavorite('${offer.id}')" title="Adicionar aos favoritos">
             <span id="favorite-icon-${offer.id}">⭐</span>
           </button>
+          ${isOwnOffer && offer.type === 'sell' ? `
+          <button id="cancel-offer-btn-${offer.id}" class="text-xs px-3 py-1 bg-red-600/20 text-red-400 rounded-lg hover:bg-red-600/30 transition-colors" onclick="event.stopPropagation(); cancelOffer('${offer.id}')">
+            Cancelar
+          </button>
+          ` : `
           <button class="text-xs px-3 py-1 bg-brand-500/20 text-brand-400 rounded-lg hover:bg-brand-500/30 transition-colors" onclick="event.stopPropagation(); openOfferDetails('${offer.id}')">
             Ver detalhes
           </button>
+          `}
         </div>
       </div>
     </div>
   `;
 }
+
+async function cancelOffer(offerId) {
+  if (!offerId) return;
+
+  // Confirmation
+  if (!confirm('Tem certeza que deseja cancelar esta oferta de venda? Os itens serão restituídos ao seu inventário.')) {
+    return;
+  }
+
+  const cancelButton = document.getElementById(`cancel-offer-btn-${offerId}`);
+  if (cancelButton) {
+    cancelButton.disabled = true;
+    cancelButton.textContent = 'Cancelando...';
+  }
+
+  try {
+    if (!marketplaceSystem) {
+      marketplaceSystem = new MarketplaceSystem();
+    }
+
+    const result = await marketplaceSystem.cancelOffer(offerId);
+
+    if (result.success) {
+      // Visual feedback for success
+      const offerCard = document.getElementById(`offer-card-${offerId}`);
+      if (offerCard) {
+        offerCard.style.transition = 'opacity 0.5s ease';
+        offerCard.style.opacity = '0';
+        setTimeout(() => offerCard.remove(), 500);
+      }
+      alert('Oferta cancelada com sucesso!');
+    } else {
+      throw new Error(result.error || 'Erro desconhecido ao cancelar a oferta.');
+    }
+  } catch (error) {
+    console.error('Erro ao cancelar oferta:', error);
+    alert(`Não foi possível cancelar a oferta: ${error.message}`);
+    if (cancelButton) {
+      cancelButton.disabled = false;
+      cancelButton.textContent = 'Cancelar';
+    }
+  }
+}
+window.cancelOffer = cancelOffer;
 
 async function openOfferDetails(offerId) {
   try {
@@ -3307,6 +3457,42 @@ async function openCreateOfferModal() {
       return;
     }
 
+    // Garantir que window.paisId está disponível
+    window.paisId = paisId;
+
+    // Garantir que offerModalManager está inicializado
+    if (!offerModalManager) {
+      if (!marketplaceSystem) {
+        marketplaceSystem = new MarketplaceSystem();
+      }
+      offerModalManager = new OfferModalManager(marketplaceSystem);
+    }
+
+    // Abrir modal inteligente de venda de recursos
+    await offerModalManager.openResourceSellModal();
+
+  } catch (error) {
+    console.error('Erro ao abrir modal de criação:', error);
+    alert('Erro ao abrir formulário de criação de ofertas');
+  }
+}
+
+// ==================== CÓDIGO ANTIGO COMENTADO - SERÁ REMOVIDO APÓS TESTES ====================
+/*
+async function openCreateOfferModalOLD() {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      alert('Você precisa estar logado para criar ofertas');
+      return;
+    }
+
+    const paisId = await checkPlayerCountry(user.uid);
+    if (!paisId) {
+      alert('Você precisa estar associado a um país');
+      return;
+    }
+
     // Get country data for budget validation
     const allCountries = await getAllCountries();
     const country = allCountries.find(c => c.id === paisId);
@@ -3496,14 +3682,18 @@ async function openCreateOfferModal() {
     alert('Erro ao abrir formulário de criação de ofertas');
   }
 }
+*/
+// ==================== FIM DO CÓDIGO ANTIGO ====================
 
 function closeCreateOfferModal() {
   const modal = document.getElementById('create-offer-modal');
-  if (modal) {
-    modal.remove();
-  }
+  const resourceModal = document.getElementById('resource-sell-modal');
+  if (modal) modal.remove();
+  if (resourceModal) resourceModal.remove();
 }
 
+/*
+// CÓDIGO ANTIGO - setupCreateOfferModal não é mais usado
 function setupCreateOfferModal(country, paisId) {
   const modal = document.getElementById('create-offer-modal');
   if (!modal) return;
@@ -3920,6 +4110,8 @@ function setupCreateOfferModal(country, paisId) {
   console.log('🚀 Carregando itens iniciais para modo VENDA');
   loadAvailableItems();
 }
+*/
+// ==================== FIM DO setupCreateOfferModal ANTIGO ====================
 
 // Make functions globally available
 window.closeCreateOfferModal = closeCreateOfferModal;

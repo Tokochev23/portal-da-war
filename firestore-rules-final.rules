@@ -131,6 +131,23 @@ service cloud.firestore {
       allow write: if isStaff();
     }
 
+    // ===== MARKETPLACE =====
+    match /marketplace_offers/{offerId} {
+      allow read: if isLoggedIn();
+      
+      // Players can create offers for themselves
+      allow create: if isLoggedIn() && request.resource.data.player_id == request.auth.uid;
+
+      // Players can cancel their own offers (update status to 'cancelled')
+      // Staff can modify any offer
+      allow update: if (isLoggedIn() && resource.data.player_id == request.auth.uid &&
+                       request.resource.data.status == 'cancelled' &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updated_at'])) || isStaff();
+                       
+      // Deletion should only be done by staff for cleanup
+      allow delete: if isStaff();
+    }
+
     // ===== FALLBACK - Qualquer outra coleção =====
     match /{document=**} {
       allow read: if isLoggedIn();

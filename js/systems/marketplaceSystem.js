@@ -2,6 +2,7 @@
 
 import { db, auth } from '../services/firebase.js';
 import { checkPlayerCountry } from '../services/firebase.js';
+import { getMarketTypeConfig, getGameResourceKey, RESOURCE_MAPPING } from '../data/resourceMapping.js';
 
 export class MarketplaceSystem {
     constructor() {
@@ -994,37 +995,62 @@ export class MarketplaceSystem {
 
     /**
      * Validar disponibilidade de recursos
+     * Usa o sistema de mapeamento unificado para validar corretamente
      */
     validateResourceAvailability(offerData, countryData) {
-        const availableResources = this.calculateAvailableResources(countryData);
+        console.log('🔍 Validando disponibilidade de recurso:', offerData.item_id);
 
-        const resourceMap = {
-            'steel_high_grade': 'Metais',
-            'steel_standard': 'Metais',
-            'oil_crude': 'Combustivel',
-            'oil_aviation': 'Combustivel',
-            'aluminum': 'Metais',
-            'copper': 'Metais',
-            'rare_metals': 'Metais',
-            'coal': 'Carvao',
-            'food': 'Graos'
-            // 'energy': 'Energia' - removido, energia não é comerciável
-        };
+        // Obter configuração do tipo de mercado usando o novo sistema de mapeamento
+        const marketConfig = getMarketTypeConfig(offerData.item_id);
 
-        const resourceType = resourceMap[offerData.item_id];
-        if (!resourceType) {
-            throw new Error('Tipo de recurso não reconhecido');
+        if (!marketConfig) {
+            console.error('❌ Tipo de recurso não reconhecido:', offerData.item_id);
+            throw new Error(`Tipo de recurso não reconhecido: ${offerData.item_id}`);
         }
 
-        const available = availableResources[resourceType] || 0;
+        console.log('✅ Configuração de mercado encontrada:', marketConfig);
+
+        // Obter a chave do recurso no jogo (ex: 'Metais', 'Carvao')
+        const gameResourceKey = getGameResourceKey(offerData.item_id);
+
+        if (!gameResourceKey) {
+            throw new Error(`Não foi possível mapear ${offerData.item_id} para recurso do jogo`);
+        }
+
+        console.log('📊 Recurso do jogo mapeado:', gameResourceKey);
+
+        // Calcular excedente usando os calculadores do sistema
+        // Verificar se os calculadores estão disponíveis
+        if (!window.ResourceProductionCalculator || !window.ResourceConsumptionCalculator) {
+            console.error('❌ Calculadores de recursos não encontrados');
+            throw new Error('Sistema de cálculo de recursos não está disponível');
+        }
+
+        const resourceProduction = window.ResourceProductionCalculator.calculateCountryProduction(countryData);
+        const resourceConsumption = window.ResourceConsumptionCalculator.calculateCountryConsumption(countryData);
+
+        const production = resourceProduction[gameResourceKey] || 0;
+        const consumption = resourceConsumption[gameResourceKey] || 0;
+        const available = Math.max(0, Math.round(production - consumption));
+
+        console.log(`📈 Produção de ${gameResourceKey}:`, production);
+        console.log(`📉 Consumo de ${gameResourceKey}:`, consumption);
+        console.log(`💰 Disponível para venda:`, available);
+
         if (offerData.quantity > available) {
-            throw new Error(`Quantidade insuficiente. Disponível para venda: ${available.toLocaleString()} unidades de ${resourceType}`);
+            throw new Error(
+                `Quantidade insuficiente. Disponível: ${available.toLocaleString()} ${marketConfig.defaultUnit} de ${marketConfig.displayName}`
+            );
         }
+
+        console.log('✅ Validação de recurso passou!');
 
         return {
             valid: true,
             available: available,
-            resourceType: resourceType
+            resourceType: gameResourceKey,
+            marketType: offerData.item_id,
+            unit: marketConfig.defaultUnit
         };
     }
 
@@ -1224,6 +1250,103 @@ export class MarketplaceSystem {
 
         } catch (error) {
             console.error('❌ Erro ao remover ofertas de teste:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Cancela uma oferta de venda, restituindo os itens ao vendedor.
+     * @param {string} offerId - O ID da oferta a ser cancelada.
+     * @returns {Promise<{success: boolean, error?: string}>}
+     */
+    async cancelOffer(offerId) {
+        const user = auth.currentUser;
+        if (!user) {
+            return { success: false, error: "Usuário não autenticado." };
+        }
+
+        const offerRef = db.collection(this.collections.offers).doc(offerId);
+
+        try {
+            await db.runTransaction(async (transaction) => {
+                const offerDoc = await transaction.get(offerRef);
+
+                if (!offerDoc.exists) {
+                    throw new Error("Oferta não encontrada.");
+                }
+
+                const offerData = offerDoc.data();
+
+                // Security check: only the owner can cancel
+                if (offerData.player_id !== user.uid) {
+                    throw new Error("Você não tem permissão para cancelar esta oferta.");
+                }
+
+                if (offerData.type !== 'sell') {
+                    throw new Error("Apenas ofertas de venda podem ser canceladas.");
+                }
+                
+                if (offerData.status !== 'active') {
+                    throw new Error(`A oferta não está mais ativa (status: ${offerData.status}).`);
+                }
+
+                // Restore items/resources to the seller
+                if (offerData.category === 'resources') {
+                    const countryRef = db.collection('paises').doc(offerData.country_id);
+                    const gameResourceKey = getGameResourceKey(offerData.item_id);
+                    if (!gameResourceKey) {
+                        throw new Error(`Mapeamento de recurso inválido para item: ${offerData.item_id}`);
+                    }
+                    
+                    const countryDoc = await transaction.get(countryRef);
+                    if(!countryDoc.exists) {
+                        throw new Error("País do vendedor não encontrado.");
+                    }
+                    const countryData = countryDoc.data();
+                    const currentAmount = countryData[gameResourceKey] || 0;
+
+                    const updateData = {};
+                    updateData[gameResourceKey] = currentAmount + offerData.quantity;
+                    transaction.update(countryRef, updateData);
+
+                } else if (offerData.category === 'vehicles' || offerData.category === 'naval') {
+                    const inventoryRef = db.collection('inventory').doc(offerData.country_id);
+                    const inventoryDoc = await transaction.get(inventoryRef);
+                    
+                    const itemCategory = offerData.category;
+                    const itemName = offerData.item_name;
+
+                    if (!inventoryDoc.exists) {
+                        // If inventory doesn't exist, we can't increment, so we create it.
+                        const newInventory = {
+                            [itemCategory]: {
+                                [itemName]: {
+                                    quantity: offerData.quantity
+                                }
+                            }
+                        };
+                        transaction.set(inventoryRef, newInventory);
+                    } else {
+                        const inventoryData = inventoryDoc.data();
+                        const currentQuantity = inventoryData[itemCategory]?.[itemName]?.quantity || 0;
+                        const newQuantity = currentQuantity + offerData.quantity;
+
+                        const inventoryPath = `${itemCategory}.${itemName}.quantity`;
+                        transaction.update(inventoryRef, { [inventoryPath]: newQuantity });
+                    }
+                }
+
+                // Update the offer status to 'cancelled'
+                transaction.update(offerRef, {
+                    status: 'cancelled',
+                    updated_at: new Date()
+                });
+            });
+
+            return { success: true };
+
+        } catch (error) {
+            console.error("Erro ao cancelar oferta:", error);
             return { success: false, error: error.message };
         }
     }

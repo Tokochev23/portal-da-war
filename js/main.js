@@ -23,6 +23,7 @@ import {
 } from "./ui/renderer.js";
 import { showNotification } from "./utils.js";
 import { initializeMobileMenu } from './mobile/mobile-optimizations.js';
+import turnEventsSystem from './systems/turnEventsSystem.js';
 
 // Elementos do DOM
 const authButton = document.getElementById('auth-button');
@@ -56,7 +57,12 @@ let appState = {
   allCountries: [],
   gameConfig: {},
   isDataLoaded: false,
+  playerCountry: null,
+  currentTurn: 0,
 };
+
+// Tornar appState global para acesso pelos módulos
+window.appState = appState;
 
 let currentAuthMode = 'login'; // 'login' ou 'register'
 
@@ -136,6 +142,10 @@ async function loadSiteData() {
 
     appState.allCountries = await getAllCountries();
     appState.gameConfig = await getGameConfig();
+    appState.currentTurn = appState.gameConfig?.turnoAtual || 0;
+
+    // Inicializar sistema de eventos de turno
+    turnEventsSystem.init(appState.currentTurn);
 
     console.log("Países carregados:", appState.allCountries.length);
     console.log("Config do jogo:", appState.gameConfig);
@@ -434,7 +444,12 @@ async function handleUserLogin(user) {
           // Store country in localStorage for vehicle creator
           localStorage.setItem('loggedCountry', playerData.id);
           console.log('País salvo no localStorage (main):', playerData.id);
-          
+
+          // Atualizar appState com dados do jogador
+          appState.playerCountry = playerData;
+          console.log('DEBUG: appState.playerCountry definido como:', playerData); // Adicionado para depuração
+          appState.currentTurn = appState.gameConfig.turnoAtual || 0;
+
           fillPlayerPanel(playerData, appState.gameConfig.turnoAtual);
         }
       } else {
@@ -832,6 +847,64 @@ function teardownRealTimeSync() {
 // Limpeza ao fechar a página
 window.addEventListener('beforeunload', () => {
   teardownRealTimeSync();
+});
+
+// Event listener para botão da agência de inteligência
+document.addEventListener('DOMContentLoaded', () => {
+  const agencyBtn = document.getElementById('btn-main-agency');
+  if (agencyBtn) {
+    agencyBtn.addEventListener('click', () => {
+      if (appState.playerCountry) {
+        // Importar e mostrar o modal da agência
+        import('./ui/renderer.js').then(module => {
+          // Criar modal
+          const modal = document.createElement('div');
+          modal.id = 'agency-modal';
+          modal.className = 'fixed inset-0 z-[70] flex items-center justify-center bg-black/70 backdrop-blur-sm';
+
+          modal.innerHTML = `
+            <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto m-4 p-6">
+              <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                  <span class="text-4xl">🕵️</span>
+                  <div>
+                    <h3 class="text-2xl font-bold text-slate-100">Agência de Inteligência</h3>
+                    <p class="text-sm text-slate-400">${appState.playerCountry.Pais}</p>
+                  </div>
+                </div>
+                <button id="close-agency-modal" class="text-slate-400 hover:text-slate-200 text-2xl transition">×</button>
+              </div>
+              <div id="agency-dashboard-content">
+                <div class="text-center py-12">
+                  <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500 mx-auto mb-4"></div>
+                  <p class="text-slate-400">Carregando...</p>
+                </div>
+              </div>
+            </div>
+          `;
+
+          document.body.appendChild(modal);
+
+          // Event listeners de fechamento
+          const closeBtn = document.getElementById('close-agency-modal');
+          if (closeBtn) {
+            closeBtn.addEventListener('click', () => modal.remove());
+          }
+          modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+          });
+
+          // Carregar dashboard
+          import('./components/agencyDashboard.js').then(dashModule => {
+            const container = document.getElementById('agency-dashboard-content');
+            if (container) {
+              dashModule.renderAgencyDashboard(appState.playerCountry, container);
+            }
+          });
+        });
+      }
+    });
+  }
 });
 
 // Carregamento inicial

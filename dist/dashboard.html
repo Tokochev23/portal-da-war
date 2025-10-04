@@ -13,16 +13,18 @@
 
   <!-- Main CSS with Tailwind -->
 
-  <script type="module" crossorigin src="/portal-da-war/assets/dashboard-yNMTNlGe.js"></script>
+  <script type="module" crossorigin src="/portal-da-war/assets/dashboard-BONo9cqa.js"></script>
   <link rel="modulepreload" crossorigin href="/portal-da-war/assets/preload-helper-f85Crcwt.js">
-  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/firebase-COmVF2I9.js">
-  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/economicCalculations-B3VHt63F.js">
-  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/consumerGoodsCalculator-Cxcetyr8.js">
-  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/resourceConsumptionCalculator-m-978Loo.js">
-  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/resourceProductionCalculator-DqTGEJNK.js">
-  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/shipyardSystem-D1VpDWbG.js">
-  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/renderer-DLfkB2Rz.js">
-  <link rel="stylesheet" crossorigin href="/portal-da-war/assets/main-BL9ts4BL.css">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/firebase-CFOznPL1.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/economicCalculations-DTfY5IEK.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/consumerGoodsCalculator-DhUsjQdL.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/resourceConsumptionCalculator-GQgKGRPk.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/resourceProductionCalculator-DVNFCgNl.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/shipyardSystem-BK-COZgn.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/resourceMapping-CNM62YsJ.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/espionageOperationsSystem-C3ZeGfiF.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/renderer-CEkNc-yv.js">
+  <link rel="stylesheet" crossorigin href="/portal-da-war/assets/main-CbNHX-v_.css">
 </head>
 <body class="bg-bg text-slate-200">
   <header class="border-b border-bg-ring/70 sticky top-0 z-40 bg-bg/90 backdrop-blur">
@@ -68,8 +70,11 @@
               <li class="mr-2" role="presentation">
                   <button class="inline-block p-4 border-b-2 rounded-t-lg" id="market-tab" data-tabs-target="#market" type="button" role="tab" aria-controls="market" aria-selected="false">Mercado</button>
               </li>
-              <li role="presentation">
+              <li class="mr-2" role="presentation">
                   <button class="inline-block p-4 border-b-2 rounded-t-lg" id="fleets-tab" data-tabs-target="#fleets" type="button" role="tab" aria-controls="fleets" aria-selected="false">Frotas</button>
+              </li>
+              <li role="presentation">
+                  <button class="inline-block p-4 border-b-2 rounded-t-lg" id="intelligence-tab" data-tabs-target="#intelligence" type="button" role="tab" aria-controls="intelligence" aria-selected="false">🕵️ Inteligência</button>
               </li>
           </ul>
       </div>
@@ -88,6 +93,14 @@
           </div>
           <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="fleets" role="tabpanel" aria-labelledby="fleets-tab">
               <p class="text-sm text-gray-500 dark:text-gray-400">WIP: Gestão de Frotas.</p>
+          </div>
+          <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="intelligence" role="tabpanel" aria-labelledby="intelligence-tab">
+              <div id="intelligence-content">
+                  <div class="text-center py-12">
+                      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500 mx-auto mb-4"></div>
+                      <p class="text-slate-400">Carregando agência de inteligência...</p>
+                  </div>
+              </div>
           </div>
       </div>
     </div>

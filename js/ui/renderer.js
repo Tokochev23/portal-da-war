@@ -2,6 +2,10 @@ import { formatCurrency, formatCurrencyCompact, formatDelta, animateCounter } fr
 import ResourceConsumptionCalculator from "../systems/resourceConsumptionCalculator.js";
 import ResourceProductionCalculator from "../systems/resourceProductionCalculator.js";
 import ConsumerGoodsCalculator from "../systems/consumerGoodsCalculator.js";
+import espionageSystem from "../systems/espionageSystem.js";
+import espionageModal from "../components/espionageModal.js";
+import { renderCounterIntelligencePanel } from "../components/counterIntelligencePanel.js";
+import { renderAgencyDashboard } from "../components/agencyDashboard.js";
 
 // Cache de elementos do DOM
 const DOM = {
@@ -671,6 +675,15 @@ export function renderDetailedCountryPanel(country) {
           🎖️ Ver Inventário
         </button>
       </div>
+      <div id="agency-button-container" class="mt-2">
+        <!-- Botão de agência será adicionado dinamicamente -->
+      </div>
+      <div id="espionage-button-container" class="mt-2">
+        <!-- Botão de espionagem será adicionado dinamicamente -->
+      </div>
+      <div id="counter-intel-container" class="mt-2">
+        <!-- Painel de contra-espionagem será adicionado dinamicamente -->
+      </div>
     </div>`;
 
   // Calcular recursos dinamicamente (como o dashboard faz)
@@ -947,6 +960,152 @@ export function renderDetailedCountryPanel(country) {
     const panel = modal.querySelector('.transform');
     if (panel) panel.classList.remove('-translate-y-2');
   });
+
+  // Sistema de Espionagem
+  setupEspionageSystem(country);
+}
+
+// Função auxiliar para configurar sistema de espionagem e agência
+async function setupEspionageSystem(country) {
+  // Obter dados do jogador e turno atual do appState global
+  const playerCountry = window.appState?.playerCountry;
+  const currentTurn = window.appState?.currentTurn || 0;
+
+  // DEBUG: Log para verificar os dados
+  console.log('DEBUG: [setupEspionageSystem] País renderizado:', country);
+  console.log('DEBUG: [setupEspionageSystem] País do jogador (appState):', playerCountry);
+
+  const espionageContainer = document.getElementById('espionage-button-container');
+  const counterIntelContainer = document.getElementById('counter-intel-container');
+  const agencyContainer = document.getElementById('agency-button-container');
+
+  if (!espionageContainer || !counterIntelContainer) return;
+
+  // Se for o próprio país do jogador, mostrar painel de contra-espionagem e botão da agência
+  if (playerCountry && country.id === playerCountry.id) {
+    renderCounterIntelligencePanel(country, counterIntelContainer);
+    espionageContainer.innerHTML = ''; // Não pode espionar a si mesmo
+
+    // Adicionar botão da agência de inteligência
+    if (agencyContainer) {
+      agencyContainer.innerHTML = `
+        <button id="btn-open-agency" class="w-full rounded-xl border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-sm text-blue-300 hover:bg-blue-500/20 transition">
+          🕵️ Agência de Inteligência
+        </button>
+      `;
+
+      const agencyBtn = document.getElementById('btn-open-agency');
+      if (agencyBtn) {
+        agencyBtn.addEventListener('click', () => {
+          openAgencyModal(country);
+        });
+      }
+    }
+
+    return;
+  }
+
+  // Se for outro país e o jogador está logado, mostrar botão de espionagem
+  if (playerCountry && country.id !== playerCountry.id) {
+    // Verificar se já tem espionagem ativa
+    const activeSpying = await espionageSystem.hasActiveSpying(playerCountry.id, country.id, currentTurn);
+
+    if (activeSpying) {
+      // Já tem espionagem ativa
+      const remainingTurns = activeSpying.validUntilTurn - currentTurn;
+      espionageContainer.innerHTML = `
+        <div class="rounded-xl border border-brand-500/30 bg-brand-500/10 p-3">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-xl">🕵️</span>
+            <span class="text-sm font-semibold text-brand-300">Espionagem Ativa</span>
+          </div>
+          <p class="text-xs text-brand-400">
+            Nível: ${espionageSystem.getLevels()[activeSpying.level]?.name || activeSpying.level}
+          </p>
+          <p class="text-xs text-brand-400">
+            Válido por mais ${remainingTurns} turno${remainingTurns !== 1 ? 's' : ''}
+          </p>
+        </div>
+      `;
+    } else {
+      // Sem espionagem ativa - mostrar botão
+      espionageContainer.innerHTML = `
+        <button id="btn-spy-country" class="w-full rounded-xl border border-purple-500/30 bg-purple-500/10 px-3 py-2 text-sm text-purple-300 hover:bg-purple-500/20 transition">
+          🕵️ ESPIONAR ESTE PAÍS
+        </button>
+      `;
+
+      const spyBtn = document.getElementById('btn-spy-country');
+      if (spyBtn) {
+        spyBtn.addEventListener('click', () => {
+          espionageModal.show(country, playerCountry, currentTurn);
+        });
+      }
+    }
+
+    // Limpar painel de contra-espionagem (não é o país do jogador)
+    counterIntelContainer.innerHTML = '';
+  } else {
+    // Jogador não logado ou sem país - limpar tudo
+    espionageContainer.innerHTML = '';
+    counterIntelContainer.innerHTML = '';
+    if (agencyContainer) agencyContainer.innerHTML = '';
+  }
+}
+
+// Função para abrir modal da agência de inteligência
+function openAgencyModal(country) {
+  // Criar modal overlay
+  const modal = document.createElement('div');
+  modal.id = 'agency-modal';
+  modal.className = 'fixed inset-0 z-[70] flex items-center justify-center bg-black/70 backdrop-blur-sm';
+
+  modal.innerHTML = `
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto m-4 p-6">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-3">
+          <span class="text-4xl">🕵️</span>
+          <div>
+            <h3 class="text-2xl font-bold text-slate-100">Agência de Inteligência</h3>
+            <p class="text-sm text-slate-400">${country.Pais}</p>
+          </div>
+        </div>
+        <button id="close-agency-modal" class="text-slate-400 hover:text-slate-200 text-2xl transition">×</button>
+      </div>
+
+      <!-- Conteúdo do Dashboard -->
+      <div id="agency-dashboard-content">
+        <div class="text-center py-12">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500 mx-auto mb-4"></div>
+          <p class="text-slate-400">Carregando...</p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Event listener para fechar
+  const closeBtn = document.getElementById('close-agency-modal');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      modal.remove();
+    });
+  }
+
+  // Fechar ao clicar fora
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.remove();
+    }
+  });
+
+  // Carregar dashboard
+  const dashboardContainer = document.getElementById('agency-dashboard-content');
+  if (dashboardContainer) {
+    renderAgencyDashboard(country, dashboardContainer);
+  }
 }
 
 // Bloco de bandeiras duplicado removido — as definições originais estão no topo do arquivo

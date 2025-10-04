@@ -60,8 +60,11 @@
               <li class="mr-2" role="presentation">
                   <button class="inline-block p-4 border-b-2 rounded-t-lg" id="market-tab" data-tabs-target="#market" type="button" role="tab" aria-controls="market" aria-selected="false">Mercado</button>
               </li>
-              <li role="presentation">
+              <li class="mr-2" role="presentation">
                   <button class="inline-block p-4 border-b-2 rounded-t-lg" id="fleets-tab" data-tabs-target="#fleets" type="button" role="tab" aria-controls="fleets" aria-selected="false">Frotas</button>
+              </li>
+              <li role="presentation">
+                  <button class="inline-block p-4 border-b-2 rounded-t-lg" id="intelligence-tab" data-tabs-target="#intelligence" type="button" role="tab" aria-controls="intelligence" aria-selected="false">🕵️ Inteligência</button>
               </li>
           </ul>
       </div>
@@ -80,6 +83,14 @@
           </div>
           <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="fleets" role="tabpanel" aria-labelledby="fleets-tab">
               <p class="text-sm text-gray-500 dark:text-gray-400">WIP: Gestão de Frotas.</p>
+          </div>
+          <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="intelligence" role="tabpanel" aria-labelledby="intelligence-tab">
+              <div id="intelligence-content">
+                  <div class="text-center py-12">
+                      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500 mx-auto mb-4"></div>
+                      <p class="text-slate-400">Carregando agência de inteligência...</p>
+                  </div>
+              </div>
           </div>
       </div>
     </div>

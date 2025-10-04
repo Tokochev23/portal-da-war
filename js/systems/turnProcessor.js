@@ -6,6 +6,7 @@
 import { db } from '../services/firebase.js';
 import { Logger } from '../utils.js';
 import ConsumerGoodsCalculator from './consumerGoodsCalculator.js';
+import turnEventsSystem from './turnEventsSystem.js';
 
 class TurnProcessor {
 
@@ -19,6 +20,12 @@ class TurnProcessor {
 
       const startTime = Date.now();
       let processedCount = 0;
+
+      // 1. PROCESSAR EVENTOS DE TURNO (Espionagem, etc)
+      await turnEventsSystem.processTurnEvents(turnNumber);
+
+      // 2. PROCESSAR ORDENS RECORRENTES DO MARKETPLACE
+      await this.processRecurringOrders(turnNumber);
 
       // Buscar todos os países
       const querySnapshot = await db.collection('paises').get();
@@ -43,6 +50,10 @@ class TurnProcessor {
 
             // Atualizar bens de consumo com nova estabilidade
             BensDeConsumo: consumerGoods.level,
+
+            // RESETAR ORÇAMENTO GASTO (novo turno = novo orçamento)
+            OrcamentoGasto: 0,
+            AgencyBudgetSpent: 0,
 
             // Metadados do processamento
             'ProcessamentoTurno': {
@@ -93,6 +104,37 @@ class TurnProcessor {
   }
 
   /**
+   * Processar ordens recorrentes do marketplace
+   */
+  static async processRecurringOrders(turnNumber) {
+    try {
+      console.log(`🔄 Processando ordens recorrentes do marketplace (Turno ${turnNumber})...`);
+
+      // Importar dinamicamente o sistema se necessário
+      if (!window.recurringOrdersSystem) {
+        const { RecurringOrdersSystem } = await import('./recurringOrdersSystem.js');
+        window.recurringOrdersSystem = new RecurringOrdersSystem();
+      }
+
+      // Primeiro fazer matching de novas ordens
+      await window.recurringOrdersSystem.matchOrders();
+
+      // Depois processar transações
+      const results = await window.recurringOrdersSystem.processTurnRecurringOrders(turnNumber);
+
+      console.log(`✅ Ordens recorrentes processadas: ${results.executed} executadas, ${results.failed} falhas`);
+
+      return results;
+
+    } catch (error) {
+      Logger.error(`Erro ao processar ordens recorrentes no turno ${turnNumber}:`, error);
+      console.error(`❌ Erro ao processar ordens recorrentes:`, error);
+      // Não falhar o turno todo por causa das ordens
+      return { executed: 0, failed: 0, error: error.message };
+    }
+  }
+
+  /**
    * Salva log do processamento de turno
    */
   static async saveTurnProcessingLog(turnNumber, processedCount, startTime) {
@@ -102,8 +144,8 @@ class TurnProcessor {
         timestamp: new Date().toISOString(),
         processedCount,
         duration: Date.now() - startTime,
-        systems: ['consumer_goods', 'stability_effects'],
-        version: '1.0'
+        systems: ['consumer_goods', 'stability_effects', 'recurring_orders'],
+        version: '1.1'
       };
 
       await db.collection('logs').doc(`turno_${turnNumber}_${Date.now()}`).set(logData);
