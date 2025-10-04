@@ -151,6 +151,10 @@ export function formatCurrencyCompact(valor) {
     return Formatter.formatCurrencyCompact(valor);
 }
 
+export function formatNumber(valor) {
+    return Formatter.formatNumber(valor);
+}
+
 export { Formatter };
 
 // === UTILITÁRIOS DE CÁLCULO ===

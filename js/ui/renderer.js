@@ -1,4 +1,4 @@
-import { formatCurrency, formatCurrencyCompact, formatDelta, animateCounter } from "../utils.js";
+import { formatCurrency, formatCurrencyCompact, formatDelta, animateCounter, formatNumber } from "../utils.js";
 import ResourceConsumptionCalculator from "../systems/resourceConsumptionCalculator.js";
 import ResourceProductionCalculator from "../systems/resourceProductionCalculator.js";
 import ConsumerGoodsCalculator from "../systems/consumerGoodsCalculator.js";
