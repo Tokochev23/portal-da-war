@@ -6,6 +6,7 @@ import { VehicleApprovalSystem } from "../components/vehicleApproval.js";
 import { NavalProductionSystem } from "../components/navalProduction.js";
 import { InventorySystem } from "../components/inventorySystem.js";
 import { GenericEquipmentManager } from "../components/genericEquipmentManager.js";
+import { initAdvancedCountryEditor } from "../components/advancedCountryEditor.js";
 import { showNotification, Logger, showConfirmBox } from "../utils.js";
 import { initEconomicSimulator } from "../systems/economicSimulator.js";
 import { calculatePIBTotal, formatCurrency, formatPIBPerCapita } from "../utils/pibCalculations.js";
@@ -644,6 +645,7 @@ let vehicleApprovalSystem = null;
 let navalProductionSystem = null;
 let inventorySystem = null;
 let economicSimulator = null;
+let advancedCountryEditor = null;
 // energyManager intentionally not initialized here; dashboard handles energy
 
 async function initVehicleApprovalSystem() {
@@ -695,6 +697,15 @@ async function initEconomicSystem() {
   }
 }
 
+async function initAdvancedEditor() {
+  try {
+    advancedCountryEditor = await initAdvancedCountryEditor();
+    Logger.info('Editor de País Avançado inicializado');
+  } catch (error) {
+    Logger.error('Erro ao inicializar Editor de País Avançado:', error);
+  }
+}
+
 async function initPlayerManagement() {
   try {
     // playerManager is exported singleton from services/playerManager.js
@@ -722,21 +733,23 @@ async function initNarratorSystems() {
       initNavalProductionSystem(),
       initInventorySystem(),
       initGenericEquipmentManager(),
-      initEconomicSystem()
+      initEconomicSystem(),
+      initAdvancedEditor()
     ]);
-    
+
     window.playerManager = playerManager;
     window.vehicleApprovalSystem = vehicleApprovalSystem;
     window.navalProductionSystem = navalProductionSystem;
     window.inventorySystem = inventorySystem;
-  window.economicSimulator = economicSimulator;
+    window.economicSimulator = economicSimulator;
+    window.advancedCountryEditor = advancedCountryEditor;
 
     // Expor dados para outros módulos
     window.narratorData = {
         getCatalog: () => catalog,
         getCountries: () => state.paises,
     };
-    
+
     console.log('✅ Todos os sistemas do narrador inicializados');
   } catch (error) {
     console.error('❌ Erro ao inicializar sistemas do narrador:', error);

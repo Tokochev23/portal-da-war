@@ -330,18 +330,47 @@ export class GenericEquipmentManager {
 
   async loadCountryInventory(countryId) {
     try {
-      const snapshot = await db.collection('inventories')
-        .doc(countryId)
-        .collection('items')
-        .where('isGeneric', '==', true)
-        .get();
+      const countryDoc = await db.collection('paises').doc(countryId).get();
+      if (!countryDoc.exists) {
+        this.currentInventory = {};
+        this.renderContent();
+        return;
+      }
 
+      const countryData = countryDoc.data();
+      const inventario = countryData.inventario || {};
+
+      // Converter o inventario em formato para exibição
       this.currentInventory = {};
-      snapshot.docs.forEach(doc => {
-        this.currentInventory[doc.id] = {
-          id: doc.id,
-          ...doc.data()
-        };
+
+      Object.keys(inventario).forEach(category => {
+        const quantity = inventario[category];
+        if (quantity > 0) {
+          // Determinar o tipo (vehicles, aircraft, naval)
+          let type = 'vehicles';
+          let equipment = getEquipment('vehicles', category);
+
+          if (!equipment) {
+            equipment = getEquipment('aircraft', category);
+            type = 'aircraft';
+          }
+
+          if (!equipment) {
+            equipment = getEquipment('naval', category);
+            type = 'naval';
+          }
+
+          if (equipment) {
+            this.currentInventory[category] = {
+              id: category,
+              category: category,
+              type: type,
+              name: equipment.name,
+              quantity: quantity,
+              icon: equipment.icon
+            };
+          }
+        }
       });
 
       this.renderContent();
@@ -364,33 +393,66 @@ export class GenericEquipmentManager {
     }
 
     try {
-      const itemData = {
-        name: equipment.name,
-        category: category,
-        type: type,
-        quantity: quantity,
-        isGeneric: true,
-        stats: equipment.stats,
-        icon: equipment.icon,
-        description: equipment.description,
-        year: equipment.year,
-        addedBy: window.currentUser?.uid || 'narrator',
-        addedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
+      // Buscar dados atuais do país
+      const countryDoc = await db.collection('paises').doc(this.selectedCountry).get();
+      if (!countryDoc.exists) {
+        alert('País não encontrado!');
+        return;
+      }
 
-      await db.collection('inventories')
-        .doc(this.selectedCountry)
-        .collection('items')
-        .add(itemData);
+      const countryData = countryDoc.data();
+      const currentInventory = countryData.inventario || {};
 
-      alert(`✅ ${quantity}x ${equipment.name} adicionado ao inventário!`);
+      // Adicionar ou somar a quantidade no campo inventario.{categoria}
+      const currentQty = currentInventory[category] || 0;
+      const newQty = currentQty + quantity;
+
+      // Atualizar o documento do país
+      await db.collection('paises').doc(this.selectedCountry).update({
+        [`inventario.${category}`]: newQty
+      });
+
+      // TAMBÉM salvar na coleção inventory para aparecer no dashboard
+      await this.syncToInventoryCollection(category, equipment, newQty);
+
+      alert(`✅ ${quantity}x ${equipment.name} adicionado!\nTotal agora: ${newQty}`);
 
       // Recarregar inventário
       await this.loadCountryInventory(this.selectedCountry);
     } catch (error) {
       console.error('Erro ao adicionar equipamento:', error);
       alert('Erro ao adicionar equipamento: ' + error.message);
+    }
+  }
+
+  async syncToInventoryCollection(category, equipment, quantity) {
+    try {
+      // Buscar ou criar documento de inventory
+      const inventoryRef = db.collection('inventory').doc(this.selectedCountry);
+      const inventoryDoc = await inventoryRef.get();
+
+      const updateData = {
+        [category]: {
+          name: equipment.name,
+          quantity: quantity,
+          icon: equipment.icon,
+          description: equipment.description,
+          stats: equipment.stats,
+          year: equipment.year,
+          updatedAt: new Date().toISOString()
+        }
+      };
+
+      if (inventoryDoc.exists) {
+        // Atualizar categoria específica
+        await inventoryRef.update(updateData);
+      } else {
+        // Criar documento novo
+        await inventoryRef.set(updateData);
+      }
+    } catch (error) {
+      console.error('Erro ao sincronizar com coleção inventory:', error);
+      // Não falhar a operação principal, apenas logar o erro
     }
   }
 
@@ -414,14 +476,16 @@ export class GenericEquipmentManager {
         return;
       }
 
-      await db.collection('inventories')
-        .doc(this.selectedCountry)
-        .collection('items')
-        .doc(itemId)
-        .update({
-          quantity: quantity,
-          updatedAt: new Date().toISOString()
-        });
+      // Atualizar campo inventario.{categoria} do país
+      await db.collection('paises').doc(this.selectedCountry).update({
+        [`inventario.${itemId}`]: quantity
+      });
+
+      // Sincronizar com coleção inventory
+      const equipment = getEquipment(item.type, itemId);
+      if (equipment) {
+        await this.syncToInventoryCollection(itemId, equipment, quantity);
+      }
 
       alert(`✅ Quantidade atualizada para ${quantity}`);
       await this.loadCountryInventory(this.selectedCountry);
@@ -438,11 +502,31 @@ export class GenericEquipmentManager {
     if (!confirm(`Remover ${item.name} do inventário?`)) return;
 
     try {
-      await db.collection('inventories')
-        .doc(this.selectedCountry)
-        .collection('items')
-        .doc(itemId)
-        .delete();
+      // Remover campo inventario.{categoria} do país (setar para 0)
+      await db.collection('paises').doc(this.selectedCountry).update({
+        [`inventario.${itemId}`]: 0
+      });
+
+      // Remover da coleção inventory também (setando quantity = 0)
+      const inventoryRef = db.collection('inventory').doc(this.selectedCountry);
+      const inventoryDoc = await inventoryRef.get();
+
+      if (inventoryDoc.exists) {
+        const inventoryData = inventoryDoc.data();
+        if (inventoryData[itemId]) {
+          // Criar cópia sem o item removido
+          const updatedInventory = { ...inventoryData };
+          delete updatedInventory[itemId];
+
+          // Se ficou vazio, deletar o documento todo
+          if (Object.keys(updatedInventory).length === 0) {
+            await inventoryRef.delete();
+          } else {
+            // Caso contrário, reescrever sem o item
+            await inventoryRef.set(updatedInventory);
+          }
+        }
+      }
 
       alert(`✅ ${item.name} removido do inventário!`);
       await this.loadCountryInventory(this.selectedCountry);

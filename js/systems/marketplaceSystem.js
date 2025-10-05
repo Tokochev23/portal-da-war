@@ -916,12 +916,12 @@ export class MarketplaceSystem {
         console.log('  - Graos:', countryData.Graos);
 
         // Usar os valores REAIS dos recursos que o país tem
-        // Permitir venda de até 50% do estoque para manter reservas estratégicas
+        // REGRA REMOVIDA: Agora permite vender 100% do estoque.
         const realResources = {
-            Carvao: Math.max(0, Math.floor((parseFloat(countryData.Carvao) || 0) * 0.5)),
-            Combustivel: Math.max(0, Math.floor((parseFloat(countryData.Combustivel) || 0) * 0.5)),
-            Metais: Math.max(0, Math.floor((parseFloat(countryData.Metais) || 0) * 0.5)),
-            Graos: Math.max(0, Math.floor((parseFloat(countryData.Graos) || 0) * 0.5))
+            Carvao: Math.max(0, Math.floor(parseFloat(countryData.Carvao) || 0)),
+            Combustivel: Math.max(0, Math.floor(parseFloat(countryData.Combustivel) || 0)),
+            Metais: Math.max(0, Math.floor(parseFloat(countryData.Metais) || 0)),
+            Graos: Math.max(0, Math.floor(parseFloat(countryData.Graos) || 0))
             // Energia removida - não é comerciável
         };
 
@@ -941,8 +941,8 @@ export class MarketplaceSystem {
                     const equipment = inventory[category][equipmentName];
 
                     if (equipment && typeof equipment === 'object' && equipment.quantity > 0) {
-                        // Só permite vender até 50% do inventário para manter defesas
-                        const availableQuantity = Math.floor(equipment.quantity * 0.5);
+                        // REGRA REMOVIDA: Agora permite vender 100% do estoque.
+                        const availableQuantity = equipment.quantity;
 
                         if (availableQuantity > 0) {
                             availableEquipment.push({
