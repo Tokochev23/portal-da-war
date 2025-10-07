@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Sistema de Loading Otimizado</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .test-section {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .test-section h2 {
+            margin-top: 0;
+            color: #06b6d4;
+        }
+
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 4px;
+        }
+
+        button:hover {
+            background: #2563eb;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .log {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .performance-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .metric {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #10b981;
+        }
+
+        .metric-label {
+            font-size: 0.8em;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        #test-content {
+            min-height: 200px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 16px;
+        }
+    </style>
+  <script type="module" crossorigin src="/portal-da-war/assets/test-optimized-loading-CyKh70Gj.js"></script>
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/modulepreload-polyfill-B5Qt9EMX.js">
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Teste do Sistema de Loading Otimizado</h1>
+
+        <div class="test-section">
+            <h2>📋 Template Loading Tests</h2>
+            <p>Teste o carregamento otimizado de templates com cache.</p>
+
+            <div>
+                <button onclick="testTemplateLoading()">Carregar Templates (Primeira vez)</button>
+                <button onclick="testTemplateCaching()">Testar Cache (Segunda vez)</button>
+                <button onclick="testBatchLoading()">Carregamento em Lote</button>
+                <button onclick="clearTemplateCache()">Limpar Cache</button>
+            </div>
+
+            <div id="test-content"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Performance Metrics</h2>
+            <div>
+                <button onclick="updateMetrics()">Atualizar Métricas</button>
+                <button onclick="showDetailedMetrics()">Métricas Detalhadas</button>
+                <button onclick="resetMetrics()">Reset Métricas</button>
+            </div>
+
+            <div class="performance-metrics" id="metrics-display">
+                <!-- Metrics will be populated here -->
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>⚡ Component Loading Tests</h2>
+            <p>Teste o carregamento otimizado de componentes de aeronaves.</p>
+
+            <div>
+                <button onclick="testComponentLoading()">Carregar Componentes</button>
+                <button onclick="testAirframeTab()">Testar Aba Fuselagens</button>
+                <button onclick="testEnginesTab()">Testar Aba Motores</button>
+                <button onclick="testWingsTab()">Testar Aba Asas</button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>📝 Log do Sistema</h2>
+            <div class="log" id="system-log">
+                Aguardando testes...
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

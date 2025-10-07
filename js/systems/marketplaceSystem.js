@@ -1019,14 +1019,27 @@ export class MarketplaceSystem {
 
         console.log('📊 Recurso do jogo mapeado:', gameResourceKey);
 
-        // Validação baseada no estoque REAL do país, não no saldo.
-        const available = Math.max(0, Math.floor(parseFloat(countryData[gameResourceKey]) || 0));
+        // Calcular excedente usando os calculadores do sistema
+        // Verificar se os calculadores estão disponíveis
+        if (!window.ResourceProductionCalculator || !window.ResourceConsumptionCalculator) {
+            console.error('❌ Calculadores de recursos não encontrados');
+            throw new Error('Sistema de cálculo de recursos não está disponível');
+        }
 
-        console.log(`💰 Estoque real de ${gameResourceKey}:`, available);
+        const resourceProduction = window.ResourceProductionCalculator.calculateCountryProduction(countryData);
+        const resourceConsumption = window.ResourceConsumptionCalculator.calculateCountryConsumption(countryData);
+
+        const production = resourceProduction[gameResourceKey] || 0;
+        const consumption = resourceConsumption[gameResourceKey] || 0;
+        const available = Math.max(0, Math.round(production - consumption));
+
+        console.log(`📈 Produção de ${gameResourceKey}:`, production);
+        console.log(`📉 Consumo de ${gameResourceKey}:`, consumption);
+        console.log(`💰 Disponível para venda:`, available);
 
         if (offerData.quantity > available) {
             throw new Error(
-                `Quantidade em estoque insuficiente. Disponível: ${available.toLocaleString()} ${marketConfig.defaultUnit} de ${marketConfig.displayName}`
+                `Quantidade insuficiente. Disponível: ${available.toLocaleString()} ${marketConfig.defaultUnit} de ${marketConfig.displayName}`
             );
         }
 

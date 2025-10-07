@@ -133,25 +133,26 @@ service cloud.firestore {
 
     // ===== MARKETPLACE =====
     match /marketplace_offers/{offerId} {
-      allow read: if isLoggedIn();
-      
-      // Players can create offers for themselves
-      allow create: if isLoggedIn() && request.resource.data.player_id == request.auth.uid;
+      // Qualquer um pode ler as ofertas
+      allow read: if true;
 
-      // Players can cancel their own offers (update status to 'cancelled')
-      // Staff can modify any offer
-      allow update: if (isLoggedIn() && resource.data.player_id == request.auth.uid &&
-                       request.resource.data.status == 'cancelled' &&
-                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updated_at'])) || isStaff();
-                       
-      // Deletion should only be done by staff for cleanup
-      allow delete: if isStaff();
+      // Jogador pode criar oferta para si mesmo, validando os dados essenciais
+      allow create: if isLoggedIn()
+        && request.resource.data.player_id == request.auth.uid
+        && request.resource.data.country_id == get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.paisId;
+
+      // Jogador pode atualizar (ex: cancelar) sua própria oferta, staff pode gerenciar todas
+      allow update: if isLoggedIn()
+        && (resource.data.player_id == request.auth.uid || isStaff());
+
+      // Apenas o dono ou staff podem deletar
+      allow delete: if isStaff() || (isLoggedIn() && resource.data.player_id == request.auth.uid);
     }
 
-    // ===== FALLBACK - Qualquer outra coleção =====
+    // ===== Regra global opcional =====
     match /{document=**} {
-      allow read: if isLoggedIn();
-      allow write: if isStaff();
+      allow read: if isLoggedIn();   // todos logados podem ler
+      allow write: if isStaff();     // só staff pode escrever
     }
   }
 }
