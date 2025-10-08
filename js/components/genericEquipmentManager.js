@@ -431,21 +431,33 @@ export class GenericEquipmentManager {
       const inventoryRef = db.collection('inventory').doc(this.selectedCountry);
       const inventoryDoc = await inventoryRef.get();
 
-      // Usar set com merge para garantir estrutura correta
-      const updateData = {
-        [category]: {
-          name: equipment.name,
-          quantity: quantity,
-          icon: equipment.icon,
-          description: equipment.description,
-          stats: equipment.stats || {},
-          year: equipment.year || 1954,
-          updatedAt: new Date().toISOString()
-        }
+      let inventory = {};
+      if (inventoryDoc.exists) {
+        inventory = inventoryDoc.data();
+      }
+
+      // Garantir que a categoria existe como objeto
+      if (!inventory[category]) {
+        inventory[category] = {};
+      }
+
+      // Nome do equipamento será a chave dentro da categoria
+      const equipmentName = equipment.name;
+
+      // Estrutura correta: inventory[categoria][nomeEquipamento] = { dados }
+      inventory[category][equipmentName] = {
+        quantity: quantity,
+        specs: equipment.stats || {},
+        cost: equipment.stats?.cost || 0,
+        icon: equipment.icon,
+        description: equipment.description,
+        year: equipment.year || 1954,
+        updatedAt: new Date().toISOString(),
+        approvedBy: 'narrator'
       };
 
-      // Sempre usar set com merge para evitar fragmentação
-      await inventoryRef.set(updateData, { merge: true });
+      // Salvar estrutura completa
+      await inventoryRef.set(inventory, { merge: true });
     } catch (error) {
       console.error('Erro ao sincronizar com coleção inventory:', error);
       // Não falhar a operação principal, apenas logar o erro
@@ -503,23 +515,35 @@ export class GenericEquipmentManager {
         [`inventario.${itemId}`]: 0
       });
 
-      // Remover da coleção inventory também (setando quantity = 0)
+      // Remover da coleção inventory também
       const inventoryRef = db.collection('inventory').doc(this.selectedCountry);
       const inventoryDoc = await inventoryRef.get();
 
       if (inventoryDoc.exists) {
         const inventoryData = inventoryDoc.data();
-        if (inventoryData[itemId]) {
-          // Criar cópia sem o item removido
-          const updatedInventory = { ...inventoryData };
-          delete updatedInventory[itemId];
 
-          // Se ficou vazio, deletar o documento todo
-          if (Object.keys(updatedInventory).length === 0) {
-            await inventoryRef.delete();
-          } else {
-            // Caso contrário, reescrever sem o item
-            await inventoryRef.set(updatedInventory);
+        // Buscar o equipamento para obter seu nome
+        const equipment = getEquipment(item.type, itemId);
+        if (equipment && inventoryData[itemId]) {
+          const equipmentName = equipment.name;
+
+          // Navegar na estrutura: inventory[categoria][nomeEquipamento]
+          if (inventoryData[itemId] && inventoryData[itemId][equipmentName]) {
+            const updatedInventory = { ...inventoryData };
+            delete updatedInventory[itemId][equipmentName];
+
+            // Se a categoria ficou vazia, remover ela também
+            if (Object.keys(updatedInventory[itemId]).length === 0) {
+              delete updatedInventory[itemId];
+            }
+
+            // Se ficou vazio completamente, deletar o documento todo
+            if (Object.keys(updatedInventory).length === 0) {
+              await inventoryRef.delete();
+            } else {
+              // Caso contrário, reescrever sem o item
+              await inventoryRef.set(updatedInventory);
+            }
           }
         }
       }
