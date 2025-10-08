@@ -8,11 +8,8 @@ const entryPoints = [
   'index.html',
   'criador-aeronaves.html',
   'criador-navios.html',
-  'criador-veiculos-refatorado.html',
   'dashboard.html',
-  'narrador.html',
-  'setup-espionage.html',
-  'test-optimized-loading.html'
+  'narrador.html'
 ];
 
 // Mapeia os nomes dos arquivos para caminhos absolutos

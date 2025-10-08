@@ -431,25 +431,21 @@ export class GenericEquipmentManager {
       const inventoryRef = db.collection('inventory').doc(this.selectedCountry);
       const inventoryDoc = await inventoryRef.get();
 
+      // Usar set com merge para garantir estrutura correta
       const updateData = {
         [category]: {
           name: equipment.name,
           quantity: quantity,
           icon: equipment.icon,
           description: equipment.description,
-          stats: equipment.stats,
-          year: equipment.year,
+          stats: equipment.stats || {},
+          year: equipment.year || 1954,
           updatedAt: new Date().toISOString()
         }
       };
 
-      if (inventoryDoc.exists) {
-        // Atualizar categoria específica
-        await inventoryRef.update(updateData);
-      } else {
-        // Criar documento novo
-        await inventoryRef.set(updateData);
-      }
+      // Sempre usar set com merge para evitar fragmentação
+      await inventoryRef.set(updateData, { merge: true });
     } catch (error) {
       console.error('Erro ao sincronizar com coleção inventory:', error);
       // Não falhar a operação principal, apenas logar o erro
