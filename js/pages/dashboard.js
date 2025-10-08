@@ -653,11 +653,8 @@ function renderDashboard(country) {
 
         <!-- Aircraft Tab -->
         <div id="tab-aircraft" class="dashboard-tab-content hidden">
-          <div class="bg-slate-900/50 border border-slate-800/50 rounded-xl p-6 text-center">
-            <div class="text-6xl mb-4">✈️</div>
-            <h3 class="text-xl font-semibold text-slate-200 mb-2">Sistema Aeronáutico</h3>
-            <p class="text-slate-400 mb-4">Gerencie sua força aérea</p>
-            <div class="text-sm text-slate-500">Em desenvolvimento...</div>
+          <div id="aircraft-inventory-container">
+            <!-- Aircraft inventory will be loaded here -->
           </div>
         </div>
 
@@ -714,6 +711,11 @@ function setupDashboardTabs() {
       // Load inventory when vehicles tab is selected
       if (tabId === 'vehicles') {
         loadVehicleInventory();
+      }
+
+      // Load aircraft inventory when aircraft tab is selected
+      if (tabId === 'aircraft') {
+        loadAircraftInventory();
       }
 
       // Load naval system when naval tab is selected
@@ -796,6 +798,141 @@ async function loadVehicleInventory() {
       `;
     }
   }
+}
+
+async function loadAircraftInventory() {
+  try {
+    const container = document.getElementById('aircraft-inventory-container');
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="flex items-center justify-center py-8">
+        <div class="text-slate-400">🔄 Carregando inventário aeronáutico...</div>
+      </div>
+    `;
+
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const paisId = await checkPlayerCountry(user.uid);
+    if (!paisId) return;
+
+    // Get inventory from Firebase
+    const inventoryDoc = await db.collection('inventory').doc(paisId).get();
+
+    if (!inventoryDoc.exists) {
+      container.innerHTML = `
+        <div class="bg-slate-900/50 border border-slate-800/50 rounded-xl p-6 text-center">
+          <div class="text-6xl mb-4">✈️</div>
+          <h3 class="text-xl font-semibold text-slate-200 mb-2">Inventário Aeronáutico Vazio</h3>
+          <p class="text-slate-400">Nenhuma aeronave encontrada</p>
+        </div>
+      `;
+      return;
+    }
+
+    const inventory = inventoryDoc.data();
+    container.innerHTML = renderAircraftInventory(inventory);
+
+  } catch (error) {
+    console.error('Erro ao carregar inventário aeronáutico:', error);
+    const container = document.getElementById('aircraft-inventory-container');
+    if (container) {
+      container.innerHTML = `
+        <div class="bg-red-900/50 border border-red-800/50 rounded-xl p-6 text-center">
+          <div class="text-6xl mb-4">❌</div>
+          <h3 class="text-xl font-semibold text-red-200 mb-2">Erro</h3>
+          <p class="text-red-400">Erro ao carregar inventário aeronáutico: ${error.message}</p>
+        </div>
+      `;
+    }
+  }
+}
+
+function renderAircraftInventory(inventory) {
+  // Filtrar apenas categorias de aeronaves
+  const aircraftCategories = ['Caca', 'CAS', 'Bomber', 'BomberAJato', 'BomberEstrategico', 'BomberEstrategicoAJato',
+                               'AWAC', 'HeliTransporte', 'HeliAtaque', 'TransporteAereo', 'Carga'];
+
+  const categories = Object.keys(inventory).filter(cat => aircraftCategories.includes(cat));
+
+  if (categories.length === 0) {
+    return `
+      <div class="bg-slate-900/50 border border-slate-800/50 rounded-xl p-6 text-center">
+        <div class="text-6xl mb-4">✈️</div>
+        <h3 class="text-xl font-semibold text-slate-200 mb-2">Inventário Aeronáutico Vazio</h3>
+        <p class="text-slate-400">Nenhuma aeronave encontrada</p>
+      </div>
+    `;
+  }
+
+  const categoryIcons = {
+    'Caca': '✈️',
+    'CAS': '💣',
+    'Bomber': '✈️',
+    'BomberAJato': '✈️',
+    'BomberEstrategico': '🛫',
+    'BomberEstrategicoAJato': '🛫',
+    'AWAC': '📡',
+    'HeliTransporte': '🚁',
+    'HeliAtaque': '🚁',
+    'TransporteAereo': '✈️',
+    'Carga': '✈️'
+  };
+
+  const categoryNames = {
+    'Caca': 'Caças',
+    'CAS': 'CAS',
+    'Bomber': 'Bombardeiros',
+    'BomberAJato': 'Bombardeiros a Jato',
+    'BomberEstrategico': 'Bombardeiros Estratégicos',
+    'BomberEstrategicoAJato': 'Bombardeiros Estratégicos a Jato',
+    'AWAC': 'AWAC',
+    'HeliTransporte': 'Helicópteros de Transporte',
+    'HeliAtaque': 'Helicópteros de Ataque',
+    'TransporteAereo': 'Transporte Aéreo',
+    'Carga': 'Carga'
+  };
+
+  return `
+    <div class="space-y-6">
+      <div class="bg-slate-900/50 border border-slate-800/50 rounded-xl p-6">
+        <h3 class="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
+          <span class="text-xl">✈️</span>
+          Inventário Aeronáutico
+        </h3>
+        <p class="text-sm text-slate-400 mb-6">Clique em uma categoria para ver as aeronaves</p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          ${categories.map(category => {
+            const categoryData = inventory[category];
+            const equipmentCount = Object.keys(categoryData).length;
+            const totalQuantity = Object.values(categoryData).reduce((sum, item) => sum + (item.quantity || 0), 0);
+            const totalMaintenanceCost = Object.values(categoryData).reduce((sum, item) => {
+              const quantity = item.quantity || 0;
+              const unitCost = item.cost || 0;
+              const maintenanceCost = unitCost * 0.05; // 5% do custo unitário
+              return sum + (maintenanceCost * quantity);
+            }, 0);
+
+            return `
+              <div class="inventory-category-card bg-slate-800/30 hover:bg-slate-700/50 border border-slate-700/30 rounded-lg p-4 cursor-pointer transition-colors" data-category="${category}">
+                <div class="text-center">
+                  <div class="text-3xl mb-2">${categoryIcons[category] || '✈️'}</div>
+                  <h4 class="font-semibold text-slate-200 mb-1">${categoryNames[category] || category}</h4>
+                  <div class="text-xs text-slate-400 space-y-1">
+                    <div>${equipmentCount} tipo${equipmentCount !== 1 ? 's' : ''}</div>
+                    <div>${totalQuantity} unidade${totalQuantity !== 1 ? 's' : ''}</div>
+                    <div class="text-red-400">🔧 ${formatCurrencyBrazil(totalMaintenanceCost)}/mês</div>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function renderInventory(inventory) {
