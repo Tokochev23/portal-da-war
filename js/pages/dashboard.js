@@ -4637,6 +4637,11 @@ window.closeNotificationsModal = closeNotificationsModal;
 window.markNotificationAsRead = markNotificationAsRead;
 window.markAllNotificationsAsRead = markAllNotificationsAsRead;
 window.deleteNotification = deleteNotification;
+window.openEmbargoesModal = openEmbargoesModal;
+window.closeEmbargoesModal = closeEmbargoesModal;
+window.openCreateEmbargoModal = openCreateEmbargoModal;
+window.closeCreateEmbargoModal = closeCreateEmbargoModal;
+window.liftEmbargo = liftEmbargo;
 
 async function openEmbargoesModal() {
   try {
