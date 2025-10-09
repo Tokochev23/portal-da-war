@@ -21,13 +21,16 @@ export class AdvancedCountryEditor {
         title: 'Geral e Político',
         fields: [
           { key: 'Pais', label: 'Nome do País', type: 'text', required: true },
-          { key: 'Player', label: 'Jogador', type: 'text' },
+          { key: 'Player', label: 'Jogador (UID)', type: 'text' },
           { key: 'ModeloPolitico', label: 'Modelo Político', type: 'text' },
           { key: 'Populacao', label: 'População', type: 'number', min: 0, step: 1000 },
           { key: 'Estabilidade', label: 'Estabilidade (%)', type: 'number', min: 0, max: 100, step: 0.1 },
           { key: 'Burocracia', label: 'Burocracia (%)', type: 'number', min: 0, max: 100, step: 0.1 },
           { key: 'Urbanizacao', label: 'Urbanização (%)', type: 'number', min: 0, max: 100, step: 0.1 },
-          { key: 'Visibilidade', label: 'Visibilidade', type: 'select', options: ['Público', 'Privado'] }
+          { key: 'Visibilidade', label: 'Visibilidade', type: 'select', options: ['Público', 'Privado'] },
+          { key: 'Ativo', label: 'País Ativo', type: 'checkbox' },
+          { key: 'DataCriacao', label: 'Data de Criação', type: 'readonly', description: 'Timestamp automático do Firebase' },
+          { key: 'DataVinculacao', label: 'Data de Vinculação', type: 'readonly', description: 'Timestamp de quando jogador foi vinculado' }
         ]
       },
       'economia-recursos': {
@@ -99,6 +102,13 @@ export class AdvancedCountryEditor {
         fields: [
           { key: 'WarPower', label: 'WarPower', type: 'number', min: 0, step: 0.1 },
           { key: 'CounterIntelligence', label: 'Contra-Inteligência', type: 'number', min: 0, max: 100, step: 0.1 },
+
+          // Orçamento Militar
+          { key: 'MilitaryBudgetPercent', label: 'Orçamento Militar (%)', type: 'number', min: 0, max: 100, step: 0.1 },
+          { key: 'MilitaryDistributionAircraft', label: 'Distribuição - Aviação (%)', type: 'number', min: 0, max: 100, step: 0.1 },
+          { key: 'MilitaryDistributionNaval', label: 'Distribuição - Naval (%)', type: 'number', min: 0, max: 100, step: 0.1 },
+          { key: 'MilitaryDistributionVehicles', label: 'Distribuição - Veículos (%)', type: 'number', min: 0, max: 100, step: 0.1 },
+          { key: 'AgencyBudgetSpent', label: 'Gasto da Agência de Inteligência', type: 'number', min: 0 },
 
           // Totalizadores simples
           { key: 'Exercito', label: 'Exército (total simplificado)', type: 'number', min: 0, step: 1 },
@@ -396,6 +406,13 @@ export class AdvancedCountryEditor {
         getter = () => input.value;
         break;
 
+      case 'checkbox':
+        input = this.createCheckboxField(fieldDef, currentValue);
+        // input é um wrapper, precisamos buscar o checkbox dentro dele
+        const checkbox = input.querySelector('input[type="checkbox"]');
+        getter = () => checkbox.checked;
+        break;
+
       case 'number':
         input = this.createNumberField(fieldDef, currentValue);
         getter = () => {
@@ -460,6 +477,30 @@ export class AdvancedCountryEditor {
     });
 
     return select;
+  }
+
+  createCheckboxField(fieldDef, value) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'flex items-center gap-2';
+
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = value === true;
+    input.className = 'rounded border-bg-ring/70 bg-bg text-brand-500 focus:ring-brand-500/30 focus:ring-offset-0 focus:ring-2 transition-all';
+    input.dataset.fieldKey = fieldDef.key;
+
+    const label = document.createElement('span');
+    label.className = 'text-sm text-slate-300';
+    label.textContent = value ? 'Sim' : 'Não';
+
+    input.addEventListener('change', () => {
+      label.textContent = input.checked ? 'Sim' : 'Não';
+    });
+
+    wrapper.appendChild(input);
+    wrapper.appendChild(label);
+
+    return wrapper;
   }
 
   createCalculatedField(fieldDef, value) {
