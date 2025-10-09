@@ -200,6 +200,9 @@ export class AdvancedCountryEditor {
     this.elements = {
       selectCountry: document.getElementById('select-pais-avancado'),
       btnSave: document.getElementById('btn-salvar-pais-avancado'),
+      btnCreate: document.getElementById('btn-criar-pais'),
+      btnDelete: document.getElementById('btn-deletar-pais'),
+      btnSplit: document.getElementById('btn-dividir-pais'),
       editorLoading: document.getElementById('editor-loading'),
       sections: {
         'geral-politico': document.getElementById('section-geral-politico'),
@@ -221,6 +224,24 @@ export class AdvancedCountryEditor {
     if (this.elements.btnSave) {
       this.elements.btnSave.addEventListener('click', () => {
         this.saveAllChanges();
+      });
+    }
+
+    if (this.elements.btnCreate) {
+      this.elements.btnCreate.addEventListener('click', () => {
+        this.createNewCountry();
+      });
+    }
+
+    if (this.elements.btnDelete) {
+      this.elements.btnDelete.addEventListener('click', () => {
+        this.deleteCountry();
+      });
+    }
+
+    if (this.elements.btnSplit) {
+      this.elements.btnSplit.addEventListener('click', () => {
+        this.splitCountry();
       });
     }
 
@@ -312,6 +333,7 @@ export class AdvancedCountryEditor {
       this.showLoading(false);
       this.hasUnsavedChanges = false;
       this.updateSaveButton();
+      this.updateActionButtons();
 
       showNotification('success', `País ${this.selectedCountry.Pais} carregado`);
     } catch (error) {
@@ -340,12 +362,25 @@ export class AdvancedCountryEditor {
     this.fieldGetters.clear();
     this.hasUnsavedChanges = false;
     this.updateSaveButton();
+    this.updateActionButtons();
 
     Object.values(this.elements.sections).forEach(section => {
       if (section) section.innerHTML = '';
     });
 
     this.showLoading(true);
+  }
+
+  updateActionButtons() {
+    const hasCountry = this.selectedCountry !== null;
+
+    if (this.elements.btnDelete) {
+      this.elements.btnDelete.disabled = !hasCountry;
+    }
+
+    if (this.elements.btnSplit) {
+      this.elements.btnSplit.disabled = !hasCountry;
+    }
   }
 
   renderAllSections() {
@@ -671,6 +706,198 @@ export class AdvancedCountryEditor {
         }
       }
     });
+  }
+
+  // ========== CRIAR NOVO PAÍS ==========
+  async createNewCountry() {
+    const countryName = prompt('🌍 Nome do novo país:');
+    if (!countryName || !countryName.trim()) {
+      return;
+    }
+
+    const countryId = `pais_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+    const defaultCountry = {
+      Pais: countryName.trim(),
+      Ativo: true,
+      Player: '',
+      ModeloPolitico: 'República',
+      Populacao: 10000000,
+      PIBPerCapita: 100,
+      PIB: 1000000000,
+      Estabilidade: 50,
+      Burocracia: 50,
+      Urbanizacao: 30,
+      Tecnologia: 20,
+      TecnologiaCivil: 20,
+      Visibilidade: 'Público',
+      IndustrialEfficiency: 30,
+      PoliticaIndustrial: 'balanceada',
+
+      // Recursos
+      Graos: 0,
+      Combustivel: 50,
+      Metais: 0,
+      Carvao: 0,
+      Uranio: 0,
+      BensDeConsumo: 0,
+
+      // Potenciais
+      PotencialAgricola: 5,
+      PotencialCombustivel: 2,
+      PotencialMetais: 3,
+      PotencialCarvao: 3,
+      PotencialUranio: 1,
+      PotencialHidreletrico: 5,
+
+      // Militar
+      WarPower: 0,
+      CounterIntelligence: 0,
+      Exercito: 0,
+      Aeronautica: 0,
+      Marinha: 0,
+      Veiculos: 0,
+
+      // Energia
+      Energia: {
+        capacidade: 100,
+        demanda: 100
+      },
+
+      DataCriacao: new Date()
+    };
+
+    try {
+      await db.collection('paises').doc(countryId).set(defaultCountry);
+      showNotification('success', `País "${countryName}" criado com sucesso!`);
+      await this.loadCountries();
+      this.elements.selectCountry.value = countryId;
+      await this.onCountryChanged();
+    } catch (error) {
+      Logger.error('Erro ao criar país:', error);
+      showNotification('error', 'Erro ao criar país: ' + error.message);
+    }
+  }
+
+  // ========== DELETAR PAÍS ==========
+  async deleteCountry() {
+    if (!this.selectedCountry) {
+      showNotification('warning', 'Selecione um país primeiro');
+      return;
+    }
+
+    const countryName = this.selectedCountry.Pais;
+
+    // Confirmação dupla
+    const confirm1 = confirm(`⚠️ ATENÇÃO: Você está prestes a DELETAR o país "${countryName}".\n\nEsta ação é IRREVERSÍVEL!\n\nDeseja continuar?`);
+    if (!confirm1) return;
+
+    const confirm2 = prompt(`Digite o nome do país "${countryName}" para confirmar a exclusão:`);
+    if (confirm2 !== countryName) {
+      showNotification('warning', 'Nome não corresponde. Operação cancelada.');
+      return;
+    }
+
+    try {
+      const countryId = this.selectedCountry.id;
+      await db.collection('paises').doc(countryId).delete();
+
+      showNotification('success', `País "${countryName}" deletado com sucesso`);
+
+      this.selectedCountry = null;
+      this.originalData = null;
+      await this.loadCountries();
+      this.hideEditor();
+    } catch (error) {
+      Logger.error('Erro ao deletar país:', error);
+      showNotification('error', 'Erro ao deletar país: ' + error.message);
+    }
+  }
+
+  // ========== DIVIDIR PAÍS ==========
+  async splitCountry() {
+    if (!this.selectedCountry) {
+      showNotification('warning', 'Selecione um país primeiro');
+      return;
+    }
+
+    const originalName = this.selectedCountry.Pais;
+
+    // Perguntar quantos países criar
+    const numCountries = parseInt(prompt(`🗺️ Dividir "${originalName}"\n\nEm quantos países deseja dividir? (2-10):`, '2'));
+
+    if (!numCountries || numCountries < 2 || numCountries > 10) {
+      showNotification('warning', 'Número inválido. Escolha entre 2 e 10 países.');
+      return;
+    }
+
+    const newCountries = [];
+    let totalPercentage = 0;
+
+    // Coletar nomes e percentuais
+    for (let i = 0; i < numCountries; i++) {
+      const name = prompt(`Nome do país ${i + 1}/${numCountries}:`, `${originalName} ${i + 1}`);
+      if (!name) {
+        showNotification('warning', 'Operação cancelada');
+        return;
+      }
+
+      const defaultPercent = Math.round((100 - totalPercentage) / (numCountries - i));
+      const percent = parseFloat(prompt(`Percentual de recursos para "${name}" (${100 - totalPercentage}% restante):`, defaultPercent));
+
+      if (!percent || percent <= 0 || percent > 100 - totalPercentage) {
+        showNotification('warning', 'Percentual inválido');
+        return;
+      }
+
+      newCountries.push({ name, percent: percent / 100 });
+      totalPercentage += percent;
+    }
+
+    // Confirmar
+    const summary = newCountries.map(c => `  • ${c.name}: ${(c.percent * 100).toFixed(1)}%`).join('\n');
+    if (!confirm(`Confirma divisão de "${originalName}"?\n\n${summary}`)) {
+      return;
+    }
+
+    try {
+      // Criar novos países
+      for (const newCountry of newCountries) {
+        const countryId = `pais_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+        const countryData = {
+          ...this.selectedCountry,
+          id: countryId,
+          Pais: newCountry.name,
+          PIB: Math.round(this.selectedCountry.PIB * newCountry.percent),
+          Populacao: Math.round(this.selectedCountry.Populacao * newCountry.percent),
+          Graos: Math.round((this.selectedCountry.Graos || 0) * newCountry.percent),
+          Combustivel: Math.round((this.selectedCountry.Combustivel || 0) * newCountry.percent),
+          Metais: Math.round((this.selectedCountry.Metais || 0) * newCountry.percent),
+          Carvao: Math.round((this.selectedCountry.Carvao || 0) * newCountry.percent),
+          Uranio: Math.round((this.selectedCountry.Uranio || 0) * newCountry.percent),
+          BensDeConsumo: Math.round((this.selectedCountry.BensDeConsumo || 0) * newCountry.percent),
+          Player: null,
+          DataCriacao: new Date()
+        };
+
+        delete countryData.DataVinculacao;
+
+        await db.collection('paises').doc(countryId).set(countryData);
+      }
+
+      // Deletar país original
+      await db.collection('paises').doc(this.selectedCountry.id).delete();
+
+      showNotification('success', `País "${originalName}" dividido em ${numCountries} países com sucesso!`);
+
+      await this.loadCountries();
+      this.selectedCountry = null;
+      this.hideEditor();
+    } catch (error) {
+      Logger.error('Erro ao dividir país:', error);
+      showNotification('error', 'Erro ao dividir país: ' + error.message);
+    }
   }
 }
 
