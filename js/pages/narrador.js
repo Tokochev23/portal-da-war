@@ -756,6 +756,203 @@ async function initNarratorSystems() {
   }
 }
 
+// ========== FIREBASE EXPORT/IMPORT TOOLS ==========
+
+async function exportarBancoCompleto() {
+  try {
+    const statusEl = document.getElementById('export-full-status');
+    statusEl.innerHTML = '<p class="text-yellow-400">⏳ Exportando banco de dados...</p>';
+
+    const colecoes = [
+      'paises', 'usuarios', 'configuracoes', 'inventory',
+      'marketplace_offers', 'marketplace_transactions', 'marketplace_embargoes',
+      'notifications', 'economic_history', 'espionage_operations',
+      'shipyard_transactions', 'naval_orders_rejected',
+      'vehicles_approved', 'vehicles_pending', 'vehicles_rejected', 'player_feedback'
+    ];
+
+    const exportData = {
+      timestamp: new Date().toISOString(),
+      version: '1.0',
+      collections: {}
+    };
+
+    for (const colecao of colecoes) {
+      try {
+        const snapshot = await db.collection(colecao).get();
+        exportData.collections[colecao] = [];
+        snapshot.forEach(doc => {
+          exportData.collections[colecao].push({ id: doc.id, data: doc.data() });
+        });
+      } catch (error) {
+        console.warn(`⚠️ Erro ao exportar ${colecao}:`, error.message);
+        exportData.collections[colecao] = [];
+      }
+    }
+
+    const jsonString = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `firebase-export-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    statusEl.innerHTML = `<p class="text-green-400">✅ Exportação concluída! ${Object.keys(exportData.collections).length} coleções exportadas.</p>`;
+  } catch (error) {
+    console.error('❌ Erro ao exportar:', error);
+    document.getElementById('export-full-status').innerHTML = `<p class="text-red-400">❌ Erro: ${error.message}</p>`;
+  }
+}
+
+async function exportarColecaoIndividual() {
+  const colecao = document.getElementById('narrador-collection-select').value;
+  if (!colecao) {
+    alert('Selecione uma coleção!');
+    return;
+  }
+
+  try {
+    const statusEl = document.getElementById('export-collection-status');
+    statusEl.innerHTML = `<p class="text-yellow-400">⏳ Exportando ${colecao}...</p>`;
+
+    const snapshot = await db.collection(colecao).get();
+    const docs = [];
+    snapshot.forEach(doc => {
+      docs.push({ id: doc.id, data: doc.data() });
+    });
+
+    const jsonString = JSON.stringify({ collection: colecao, documents: docs }, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${colecao}-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    statusEl.innerHTML = `<p class="text-green-400">✅ ${docs.length} documentos exportados de ${colecao}!</p>`;
+  } catch (error) {
+    console.error('❌ Erro:', error);
+    document.getElementById('export-collection-status').innerHTML = `<p class="text-red-400">❌ Erro: ${error.message}</p>`;
+  }
+}
+
+async function dividirIndochina() {
+  if (!confirm('⚠️ Isso irá dividir a Indochina em 4 países. Continuar?')) {
+    return;
+  }
+
+  try {
+    const statusEl = document.getElementById('dividir-indochina-status');
+    statusEl.innerHTML = '<p class="text-yellow-400">⏳ Procurando Indochina...</p>';
+
+    const paisesSnapshot = await db.collection('paises').get();
+    let indochinaDoc = null;
+    let indochinaId = null;
+
+    paisesSnapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.Pais && data.Pais.toLowerCase().includes('indochina')) {
+        indochinaDoc = data;
+        indochinaId = doc.id;
+      }
+    });
+
+    if (!indochinaDoc) {
+      statusEl.innerHTML = '<p class="text-red-400">❌ Indochina não encontrada!</p>';
+      return;
+    }
+
+    const recursos = {
+      PIB: indochinaDoc.PIB || 0,
+      Populacao: indochinaDoc.Populacao || 0,
+      Aco: indochinaDoc.Aco || 0,
+      Aluminio: indochinaDoc.Aluminio || 0,
+      Petroleo: indochinaDoc.Petroleo || 0,
+      Borracha: indochinaDoc.Borracha || 0,
+      Carvao: indochinaDoc.Carvao || 0,
+      Estabilidade: indochinaDoc.Estabilidade || 50
+    };
+
+    const novosPaises = [
+      { id: 'vietna-norte', Pais: 'Vietnã do Norte', Flag: '🇻🇳', proporcao: 0.30, Ideologia: 'Comunista' },
+      { id: 'vietna-sul', Pais: 'Vietnã do Sul', Flag: '🇻🇳', proporcao: 0.35, Ideologia: 'Democrata' },
+      { id: 'laos', Pais: 'Laos', Flag: '🇱🇦', proporcao: 0.20, Ideologia: 'Neutro' },
+      { id: 'cambodia', Pais: 'Camboja', Flag: '🇰🇭', proporcao: 0.15, Ideologia: 'Monarquia' }
+    ];
+
+    statusEl.innerHTML = '<p class="text-yellow-400">⏳ Criando novos países...</p>';
+
+    for (const novoPais of novosPaises) {
+      const paisData = {
+        Pais: novoPais.Pais,
+        Flag: novoPais.Flag,
+        Ideologia: novoPais.Ideologia,
+        PIB: Math.round(recursos.PIB * novoPais.proporcao),
+        Populacao: Math.round(recursos.Populacao * novoPais.proporcao),
+        Aco: Math.round(recursos.Aco * novoPais.proporcao),
+        Aluminio: Math.round(recursos.Aluminio * novoPais.proporcao),
+        Petroleo: Math.round(recursos.Petroleo * novoPais.proporcao),
+        Borracha: Math.round(recursos.Borracha * novoPais.proporcao),
+        Carvao: Math.round(recursos.Carvao * novoPais.proporcao),
+        PotencialCarvao: 3,
+        PotencialHidreletrico: 5,
+        Estabilidade: recursos.Estabilidade,
+        Diplomacia: indochinaDoc.Diplomacia || 50,
+        Player: null,
+        power_plants: [],
+        ForcaAerea: 0,
+        ForcaNaval: 0,
+        ForcaTerrestre: 0,
+        Exercito: {},
+        Marinha: {},
+        ForcaAerea_equipamento: {}
+      };
+
+      await db.collection('paises').doc(novoPais.id).set(paisData);
+    }
+
+    await db.collection('paises').doc(indochinaId).delete();
+
+    statusEl.innerHTML = `
+      <p class="text-green-400">✅ Divisão concluída!</p>
+      <ul class="text-sm text-slate-300 mt-2">
+        <li>🇻🇳 Vietnã do Norte (30%)</li>
+        <li>🇻🇳 Vietnã do Sul (35%)</li>
+        <li>🇱🇦 Laos (20%)</li>
+        <li>🇰🇭 Camboja (15%)</li>
+      </ul>
+    `;
+
+    // Recarregar página após 2 segundos
+    setTimeout(() => window.location.reload(), 2000);
+  } catch (error) {
+    console.error('❌ Erro:', error);
+    document.getElementById('dividir-indochina-status').innerHTML = `<p class="text-red-400">❌ Erro: ${error.message}</p>`;
+  }
+}
+
+// Event Listeners para as ferramentas de export/import
+document.addEventListener('DOMContentLoaded', () => {
+  const btnExportarBanco = document.getElementById('btn-exportar-banco');
+  const btnExportarColecao = document.getElementById('btn-exportar-colecao');
+  const btnDividirIndochina = document.getElementById('btn-dividir-indochina');
+
+  if (btnExportarBanco) {
+    btnExportarBanco.addEventListener('click', exportarBancoCompleto);
+  }
+
+  if (btnExportarColecao) {
+    btnExportarColecao.addEventListener('click', exportarColecaoIndividual);
+  }
+
+  if (btnDividirIndochina) {
+    btnDividirIndochina.addEventListener('click', dividirIndochina);
+  }
+});
+
 // Auto-inicializar quando o documento estiver carregado
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initNarratorSystems);
