@@ -30,3 +30,4 @@ nul
 
 # Claude settings (local only)
 .claude/settings.local.json
+firebase-export-*.json
