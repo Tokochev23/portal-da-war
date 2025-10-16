@@ -50,11 +50,17 @@ export class RecurringOrdersSystem {
         await this.validateBuyOrder(orderData, countryData, marketConfig);
       }
 
+      // Obter player_id do país ou do auth atual
+      const currentUser = await import('../services/firebase.js').then(m => m.auth.currentUser);
+      const player_id = orderData.player_id || currentUser?.uid || null;
+
       // Criar documento da ordem
       const order = {
         // Dados básicos
         country_id: orderData.country_id,
-        country_name: countryData.Nome || 'Unknown',
+        country_name: countryData.Pais || countryData.Nome || 'Unknown',
+        country_flag: countryData.Flag || '🏳️',
+        player_id: player_id,
         order_type: orderData.order_type, // 'buy' ou 'sell'
         item_id: orderData.item_id,
         item_name: marketConfig.name,
