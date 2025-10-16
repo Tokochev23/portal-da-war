@@ -397,10 +397,12 @@ export class MarketplaceSystem {
                     return;
                 }
 
-                // Verificar se expirou
-                const expiresAt = data.expires_at?.toDate ? data.expires_at.toDate() : new Date(data.expires_at);
-                if (expiresAt && expiresAt <= new Date()) {
-                    return;
+                // Verificar se expirou (ignorar se expires_at for null/undefined)
+                if (data.expires_at) {
+                    const expiresAt = data.expires_at?.toDate ? data.expires_at.toDate() : new Date(data.expires_at);
+                    if (expiresAt && expiresAt <= new Date()) {
+                        return;
+                    }
                 }
 
                 offers.push({
