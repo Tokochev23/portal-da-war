@@ -661,10 +661,20 @@ export class MarketplaceSystem {
                 status: offer.quantity - quantity === 0 ? 'completed' : 'active'
             });
 
+            // TRANSFERIR RECURSOS IMEDIATAMENTE (comprou/vendeu = entregou)
+            await this.transferResources(offer, quantity, offer.country_id, buyerCountryId);
+
+            // Marcar transação como completada instantaneamente
+            await transactionRef.update({
+                status: 'completed',
+                delivery_status: 'delivered',
+                completed_at: new Date()
+            });
+
             return {
                 success: true,
                 transactionId: transactionRef.id,
-                transaction: { id: transactionRef.id, ...transaction }
+                transaction: { id: transactionRef.id, ...transaction, status: 'completed' }
             };
 
         } catch (error) {
@@ -673,6 +683,69 @@ export class MarketplaceSystem {
                 success: false,
                 error: error.message
             };
+        }
+    }
+
+    /**
+     * Transferir recursos entre países (vendedor → comprador)
+     */
+    async transferResources(offer, quantity, sellerCountryId, buyerCountryId) {
+        try {
+            console.log(`🔄 Transferindo recursos: ${quantity} ${offer.unit} de ${offer.item_name}`);
+            console.log(`   Vendedor: ${sellerCountryId}`);
+            console.log(`   Comprador: ${buyerCountryId}`);
+
+            // Mapear item_id para campo de recurso do país
+            const resourceFieldMap = {
+                'coal': 'Carvao',
+                'oil': 'Combustivel',
+                'metals': 'Metais',
+                'food': 'Graos'
+            };
+
+            const resourceField = resourceFieldMap[offer.item_id];
+            if (!resourceField) {
+                console.warn(`⚠️ Item ${offer.item_id} não é um recurso transferível`);
+                return;
+            }
+
+            // Buscar dados atuais dos países
+            const sellerDoc = await db.collection('paises').doc(sellerCountryId).get();
+            const buyerDoc = await db.collection('paises').doc(buyerCountryId).get();
+
+            if (!sellerDoc.exists || !buyerDoc.exists) {
+                throw new Error('País não encontrado');
+            }
+
+            const sellerData = sellerDoc.data();
+            const buyerData = buyerDoc.data();
+
+            // Recursos atuais
+            const sellerCurrentAmount = parseFloat(sellerData[resourceField]) || 0;
+            const buyerCurrentAmount = parseFloat(buyerData[resourceField]) || 0;
+
+            // Calcular novos valores
+            const sellerNewAmount = Math.max(0, sellerCurrentAmount - quantity);
+            const buyerNewAmount = buyerCurrentAmount + quantity;
+
+            console.log(`   ${resourceField} vendedor: ${sellerCurrentAmount} → ${sellerNewAmount}`);
+            console.log(`   ${resourceField} comprador: ${buyerCurrentAmount} → ${buyerNewAmount}`);
+
+            // Atualizar vendedor (remover recursos)
+            await db.collection('paises').doc(sellerCountryId).update({
+                [resourceField]: sellerNewAmount
+            });
+
+            // Atualizar comprador (adicionar recursos)
+            await db.collection('paises').doc(buyerCountryId).update({
+                [resourceField]: buyerNewAmount
+            });
+
+            console.log(`✅ Recursos transferidos com sucesso!`);
+
+        } catch (error) {
+            console.error('❌ Erro ao transferir recursos:', error);
+            throw error;
         }
     }
 

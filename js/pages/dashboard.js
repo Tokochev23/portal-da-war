@@ -5698,20 +5698,16 @@ function renderTransactionCard(transaction, type) {
   const typeColor = type === 'sell' ? 'text-brand-400' : 'text-blue-400';
   const typeIcon = type === 'sell' ? '💰' : '🛒';
   const typeText = type === 'sell' ? 'Vendendo para' : 'Comprando de';
+  const actionText = type === 'sell' ? 'Venda Recorrente' : 'Compra Recorrente';
 
   // Partner info
   const partnerName = type === 'sell' ? transaction.buyer_country_name : transaction.seller_country_name;
   const partnerFlag = type === 'sell' ? '🇺🇳' : '🇺🇳'; // TODO: adicionar flags reais
 
-  // Status info
+  // Status info - Transação recorrente sempre ativa
   const statusColor = 'text-green-400';
-  const statusIcon = '✅';
-  const statusText = 'Ativo';
-
-  // Delivery info
-  const createdAt = transaction.created_at?.toDate ? transaction.created_at.toDate() : new Date(transaction.created_at);
-  const deliveryDeadline = transaction.delivery_deadline?.toDate ? transaction.delivery_deadline.toDate() : new Date(transaction.delivery_deadline);
-  const daysUntilDelivery = Math.ceil((deliveryDeadline - new Date()) / (1000 * 60 * 60 * 24));
+  const statusIcon = '🔄';
+  const statusText = 'Recorrente';
 
   return `
     <div class="bg-bg border border-bg-ring/70 rounded-lg p-4 hover:border-brand-400/30 transition-colors">
@@ -5720,7 +5716,7 @@ function renderTransactionCard(transaction, type) {
           <span class="text-2xl">${typeIcon}</span>
           <div>
             <h5 class="font-medium text-white">${transaction.item_name}</h5>
-            <p class="text-xs ${typeColor}">${typeText}</p>
+            <p class="text-xs ${typeColor}">${actionText}</p>
           </div>
         </div>
         <span class="${statusColor} text-xs">${statusIcon} ${statusText}</span>
@@ -5728,9 +5724,10 @@ function renderTransactionCard(transaction, type) {
 
       <div class="space-y-2 text-sm">
         <!-- Parceiro Comercial -->
-        <div class="bg-bg-soft rounded p-2 border border-bg-ring/30">
-          <p class="text-xs text-slate-400 mb-1">Parceiro comercial:</p>
+        <div class="bg-bg-soft rounded p-2 border border-bg-ring/30 mb-3">
+          <p class="text-xs text-slate-400 mb-1">${typeText}:</p>
           <p class="text-white font-medium">${partnerFlag} ${partnerName}</p>
+          <p class="text-xs text-green-400 mt-1">✅ Executando a cada turno</p>
         </div>
 
         <div class="flex justify-between">
@@ -5742,15 +5739,8 @@ function renderTransactionCard(transaction, type) {
           <span class="text-white font-medium">$${transaction.price_per_unit.toLocaleString()}</span>
         </div>
         <div class="flex justify-between">
-          <span class="text-slate-400">Valor total:</span>
+          <span class="text-slate-400">Valor total/turno:</span>
           <span class="text-brand-400 font-medium">$${transaction.total_value.toLocaleString()}</span>
-        </div>
-
-        <div class="pt-2 border-t border-bg-ring/50">
-          <div class="flex justify-between text-xs">
-            <span class="text-slate-400">Entrega em:</span>
-            <span class="${daysUntilDelivery <= 3 ? 'text-yellow-400' : 'text-slate-300'}">${daysUntilDelivery} dias</span>
-          </div>
         </div>
       </div>
 
