@@ -90,6 +90,9 @@ export class RecurringOrdersSystem {
       const orderRef = await db.collection(this.ordersCollection).add(order);
       console.log('✅ Ordem recorrente criada:', orderRef.id);
 
+      // Criar oferta visível no marketplace
+      await this.createMarketplaceOffer(orderRef.id, order, countryData);
+
       // Tentar matching imediato
       await this.matchOrders(orderRef.id);
 
@@ -99,6 +102,91 @@ export class RecurringOrdersSystem {
       console.error('❌ Erro ao criar ordem recorrente:', error);
       throw error;
     }
+  }
+
+  /**
+   * Criar oferta visível no marketplace para uma ordem recorrente
+   */
+  async createMarketplaceOffer(orderId, orderData, countryData) {
+    try {
+      console.log('📢 Criando oferta visível no marketplace para ordem recorrente:', orderId);
+
+      const offer = {
+        // Link para ordem recorrente
+        recurring_order_id: orderId,
+
+        // Dados básicos
+        type: orderData.order_type, // buy ou sell
+        category: this.getCategoryFromItemId(orderData.item_id),
+        title: `${orderData.order_type === 'sell' ? 'Venda' : 'Compra'} Recorrente: ${orderData.item_name}`,
+        description: `Ordem recorrente automática. Executada a cada turno enquanto houver estoque/orçamento disponível.`,
+
+        // Item
+        item_id: orderData.item_id,
+        item_name: orderData.item_name,
+
+        // Quantidade e preços
+        quantity: orderData.quantity,
+        unit: orderData.unit,
+        price_per_unit: orderData.price_per_unit,
+        total_value: orderData.quantity * orderData.price_per_unit,
+
+        // País
+        country_id: orderData.country_id,
+        country_name: orderData.country_name,
+        country_flag: countryData.Flag || '🏳️',
+        player_id: countryData.player_id || null,
+
+        // Status e datas
+        status: 'active',
+        created_at: orderData.created_at,
+        updated_at: orderData.updated_at,
+        expires_at: null, // Ofertas recorrentes não expiram automaticamente
+
+        // Configurações de entrega
+        delivery_time_days: 7, // Prazo padrão para recorrentes
+        min_quantity: Math.floor(orderData.quantity * 0.1), // Mínimo 10%
+        max_quantity: orderData.quantity,
+
+        // Metadados
+        views: 0,
+        interested_countries: [],
+        tech_level_required: 0,
+        is_recurring: true // Flag para identificar ofertas recorrentes
+      };
+
+      // Salvar oferta no marketplace
+      const offerRef = await db.collection('marketplace_offers').add(offer);
+      console.log('✅ Oferta visível criada no marketplace:', offerRef.id);
+
+      // Atualizar ordem recorrente com ID da oferta
+      await db.collection(this.ordersCollection).doc(orderId).update({
+        marketplace_offer_id: offerRef.id
+      });
+
+      return offerRef.id;
+
+    } catch (error) {
+      console.error('❌ Erro ao criar oferta visível:', error);
+      // Não lançar erro para não interromper criação da ordem
+      return null;
+    }
+  }
+
+  /**
+   * Obter categoria baseado no item_id
+   */
+  getCategoryFromItemId(itemId) {
+    // Recursos
+    if (['coal', 'oil', 'metals', 'food', 'steel', 'aluminum', 'rubber', 'electronics'].includes(itemId)) {
+      return 'resources';
+    }
+    // Naval
+    if (itemId.includes('ship') || itemId.includes('naval') || itemId.includes('submarine') || itemId.includes('carrier')) {
+      return 'naval';
+    }
+    // Veículos (padrão)
+    return 'vehicles';
   }
 
   /**
