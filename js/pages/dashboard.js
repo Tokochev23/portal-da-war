@@ -2183,6 +2183,29 @@ async function loadMarketplace() {
           </div>
         </div>
 
+        <!-- Active Trade Relations Section -->
+        <div class="bg-bg-soft rounded-xl border border-bg-ring/70 p-4">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <div>
+              <h3 class="text-lg font-semibold text-white">🔄 Relações Comerciais Ativas</h3>
+              <p class="text-sm text-slate-400">Transações recorrentes automáticas de recursos</p>
+            </div>
+            <button id="refresh-trade-relations-btn" class="px-3 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm rounded-lg transition-colors">
+              🔄 Atualizar
+            </button>
+          </div>
+
+          <!-- Trade Relations Content -->
+          <div id="trade-relations-content" class="space-y-4">
+            <div class="flex items-center justify-center py-8">
+              <div class="text-center">
+                <div class="animate-spin w-8 h-8 border-2 border-brand-400 border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p class="text-slate-400">Carregando relações comerciais...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Marketplace Content -->
         <div id="marketplace-content" class="min-h-[400px]">
           <!-- Content will be loaded here -->
@@ -2201,6 +2224,7 @@ async function loadMarketplace() {
 
     // Load initial content
     loadMarketplaceOffers('all', paisId);
+    loadTradeRelations(paisId); // Carregar relações comerciais ativas
 
     // Update embargo status indicator and notification count
     updateEmbargoStatusIndicator(paisId);
@@ -2404,6 +2428,20 @@ function setupMarketplaceListeners() {
           clearTestOffersBtn.innerHTML = '🗑️ Limpar Teste';
           clearTestOffersBtn.disabled = false;
         }, 3000);
+      }
+    });
+  }
+
+  // Refresh trade relations button
+  const refreshTradeRelationsBtn = document.getElementById('refresh-trade-relations-btn');
+  if (refreshTradeRelationsBtn) {
+    refreshTradeRelationsBtn.addEventListener('click', async () => {
+      const user = auth.currentUser;
+      if (user) {
+        const paisId = await checkPlayerCountry(user.uid);
+        if (paisId) {
+          await loadTradeRelations(paisId);
+        }
       }
     });
   }
@@ -5568,6 +5606,220 @@ function updateFavoriteButtons(offers) {
     }
   });
 }
+
+// ==========================================
+// TRADE RELATIONS MANAGEMENT
+// ==========================================
+
+/**
+ * Carregar e exibir relações comerciais ativas
+ */
+async function loadTradeRelations(countryId) {
+  const container = document.getElementById('trade-relations-content');
+  if (!container) return;
+
+  try {
+    // Inicializar sistema de ordens recorrentes
+    if (!window.recurringOrdersSystem) {
+      const { RecurringOrdersSystem } = await import('../systems/recurringOrdersSystem.js');
+      window.recurringOrdersSystem = new RecurringOrdersSystem();
+    }
+
+    // Buscar ordens recorrentes do país (compras e vendas)
+    const sellOrdersSnap = await db.collection('marketplace_recurring_orders')
+      .where('country_id', '==', countryId)
+      .where('order_type', '==', 'sell')
+      .where('status', '==', 'active')
+      .get();
+
+    const buyOrdersSnap = await db.collection('marketplace_recurring_orders')
+      .where('country_id', '==', countryId)
+      .where('order_type', '==', 'buy')
+      .where('status', '==', 'active')
+      .get();
+
+    // Buscar matches ativos (transações estabelecidas)
+    const matchesSnap = await db.collection('marketplace_order_matches')
+      .where('status', '==', 'active')
+      .get();
+
+    const sellOrders = [];
+    const buyOrders = [];
+    const matches = [];
+
+    sellOrdersSnap.forEach(doc => sellOrders.push({ id: doc.id, ...doc.data() }));
+    buyOrdersSnap.forEach(doc => buyOrders.push({ id: doc.id, ...doc.data() }));
+    matchesSnap.forEach(doc => matches.push({ id: doc.id, ...doc.data() }));
+
+    // Encontrar matches relevantes para este país
+    const relevantMatches = matches.filter(match => {
+      const sellOrder = sellOrders.find(o => o.id === match.sell_order_id);
+      const buyOrder = buyOrders.find(o => o.id === match.buy_order_id);
+      return sellOrder || buyOrder;
+    });
+
+    // Renderizar
+    if (sellOrders.length === 0 && buyOrders.length === 0) {
+      container.innerHTML = `
+        <div class="text-center py-8 text-slate-400">
+          <div class="text-4xl mb-2">🌐</div>
+          <p>Nenhuma relação comercial ativa</p>
+          <p class="text-xs mt-2">Crie ofertas de recursos para estabelecer comércio automático</p>
+        </div>
+      `;
+      return;
+    }
+
+    let html = '<div class="space-y-4">';
+
+    // Seção de Vendas
+    if (sellOrders.length > 0) {
+      html += `
+        <div>
+          <h4 class="text-sm font-semibold text-brand-400 mb-3">💰 Minhas Vendas Recorrentes (${sellOrders.length})</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            ${sellOrders.map(order => renderTradeRelationCard(order, 'sell', relevantMatches, countryId)).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // Seção de Compras
+    if (buyOrders.length > 0) {
+      html += `
+        <div>
+          <h4 class="text-sm font-semibold text-blue-400 mb-3">🛒 Minhas Compras Recorrentes (${buyOrders.length})</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            ${buyOrders.map(order => renderTradeRelationCard(order, 'buy', relevantMatches, countryId)).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
+
+  } catch (error) {
+    console.error('Erro ao carregar relações comerciais:', error);
+    container.innerHTML = `
+      <div class="text-center py-8 text-red-400">
+        <div class="text-4xl mb-2">⚠️</div>
+        <p>Erro ao carregar relações comerciais</p>
+        <p class="text-xs mt-2">${error.message}</p>
+      </div>
+    `;
+  }
+}
+
+/**
+ * Renderizar card de relação comercial
+ */
+function renderTradeRelationCard(order, type, matches, currentCountryId) {
+  const matchForOrder = matches.find(m =>
+    m.sell_order_id === order.id || m.buy_order_id === order.id
+  );
+
+  const hasMatch = !!matchForOrder;
+  const statusColor = hasMatch ? 'text-green-400' : 'text-yellow-400';
+  const statusIcon = hasMatch ? '✅' : '⏳';
+  const statusText = hasMatch ? 'Ativo' : 'Aguardando Match';
+
+  const typeColor = type === 'sell' ? 'text-brand-400' : 'text-blue-400';
+  const typeIcon = type === 'sell' ? '💰' : '🛒';
+  const typeText = type === 'sell' ? 'Vendendo' : 'Comprando';
+
+  return `
+    <div class="bg-bg border border-bg-ring/70 rounded-lg p-4 hover:border-brand-400/30 transition-colors">
+      <div class="flex items-start justify-between mb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">${typeIcon}</span>
+          <div>
+            <h5 class="font-medium text-white">${order.item_name}</h5>
+            <p class="text-xs ${typeColor}">${typeText}</p>
+          </div>
+        </div>
+        <span class="${statusColor} text-xs">${statusIcon} ${statusText}</span>
+      </div>
+
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between">
+          <span class="text-slate-400">Quantidade:</span>
+          <span class="text-white font-medium">${order.quantity.toLocaleString()} ${order.unit}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Preço/unidade:</span>
+          <span class="text-white font-medium">$${order.price_per_unit.toLocaleString()}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Valor total:</span>
+          <span class="text-brand-400 font-medium">$${(order.quantity * order.price_per_unit).toLocaleString()}</span>
+        </div>
+
+        ${hasMatch ? `
+          <div class="pt-2 border-t border-bg-ring/50 mt-2">
+            <p class="text-xs text-slate-400 mb-1">Parceiro comercial:</p>
+            <p class="text-white font-medium">${type === 'sell' ? matchForOrder.buy_country_name || 'Desconhecido' : matchForOrder.sell_country_name || 'Desconhecido'}</p>
+            <p class="text-xs text-green-400 mt-1">Executando a cada turno</p>
+          </div>
+        ` : ''}
+      </div>
+
+      <div class="mt-4 flex gap-2">
+        <button onclick="cancelTradeRelation('${order.id}')" class="flex-1 px-3 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 text-xs rounded transition-colors">
+          ❌ Cancelar
+        </button>
+        ${!hasMatch ? `
+          <button onclick="viewOrderDetails('${order.id}')" class="flex-1 px-3 py-2 bg-slate-600/20 hover:bg-slate-600/30 text-slate-300 text-xs rounded transition-colors">
+            👁️ Detalhes
+          </button>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Cancelar relação comercial
+ */
+async function cancelTradeRelation(orderId) {
+  if (!confirm('Tem certeza que deseja cancelar esta relação comercial recorrente?')) {
+    return;
+  }
+
+  try {
+    await db.collection('marketplace_recurring_orders').doc(orderId).update({
+      status: 'cancelled',
+      updated_at: new Date()
+    });
+
+    alert('✅ Relação comercial cancelada com sucesso!');
+
+    // Recarregar relações
+    const user = auth.currentUser;
+    if (user) {
+      const paisId = await checkPlayerCountry(user.uid);
+      if (paisId) {
+        await loadTradeRelations(paisId);
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao cancelar relação comercial:', error);
+    alert('❌ Erro ao cancelar: ' + error.message);
+  }
+}
+
+/**
+ * Ver detalhes da ordem
+ */
+function viewOrderDetails(orderId) {
+  // TODO: Implementar modal de detalhes
+  alert('Detalhes da ordem: ' + orderId);
+}
+
+// Expor funções globalmente
+window.loadTradeRelations = loadTradeRelations;
+window.cancelTradeRelation = cancelTradeRelation;
+window.viewOrderDetails = viewOrderDetails;
 
 // Initialize dashboard when DOM is ready
 if (document.readyState === 'loading') {

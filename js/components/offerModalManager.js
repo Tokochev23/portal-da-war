@@ -847,15 +847,9 @@ export class OfferModalManager {
       }
 
       // Verificar tipo de ordem
-      const orderType = formData.get('order_type');
-
-      if (orderType === 'recurring') {
-        // CRIAR ORDEM RECORRENTE
-        await this.handleRecurringOrderSubmit(formData, marketTypeId, marketConfig, unit);
-      } else {
-        // CRIAR OFERTA ÚNICA (comportamento original)
-        await this.handleOneTimeOfferSubmit(formData, marketTypeId, marketConfig, unit);
-      }
+      // TODAS as ofertas de recursos são RECORRENTES automaticamente
+      // Isso garante que as relações comerciais se mantenham turno após turno
+      await this.handleRecurringOrderSubmit(formData, marketTypeId, marketConfig, unit);
 
       this.closeModal();
 
