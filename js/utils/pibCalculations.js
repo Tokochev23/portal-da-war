@@ -182,9 +182,15 @@ export function formatCurrency(value) {
  * @returns {string} Valor formatado
  */
 export function formatPIBPerCapita(value) {
-  if (value >= 1000) {
-    return `$${value.toLocaleString()}`;
+  // Validar se value é um número válido
+  const numValue = parseFloat(value);
+  if (isNaN(numValue) || numValue === null || numValue === undefined) {
+    return '$0';
+  }
+
+  if (numValue >= 1000) {
+    return `$${numValue.toLocaleString()}`;
   } else {
-    return `$${value.toFixed(0)}`;
+    return `$${numValue.toFixed(0)}`;
   }
 }

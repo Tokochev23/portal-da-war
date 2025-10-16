@@ -943,7 +943,13 @@ class EconomicSimulator {
       } else {
         // Lógica padrão para outras ações (baseado no PIB)
         const result = EconomicCalculations.calculateBaseGrowth(action, country);
-        actionGrowthPercent = (result.preInflationGrowth * 100).toFixed(2);
+
+        // Calcular crescimento real considerando o valor investido vs PIB
+        const currentPIBPerCapita = parseFloat(country.PIBPerCapita) || 1;
+        const populacao = parseFloat(country.Populacao) || 1;
+        const actionGrowth = result.preInflationGrowth * (action.value * 1000000) / (currentPIBPerCapita * populacao);
+
+        actionGrowthPercent = (actionGrowth * 100).toFixed(2);
       }
 
       const preview = slot.querySelector('.growth-preview');
@@ -998,15 +1004,22 @@ class EconomicSimulator {
     if (applyButton) {
       const hasValidActions = [...this.actions.internal, ...this.actions.external]
         .some(action => action.type && action.value > 0 && action.dice > 0);
-      
+
+      // Verificar se há mudanças em tecnologia ou indicadores
+      const hasTechChanges = Object.values(this.changes.technology).some(v => v !== 0);
+      const hasIndicatorChanges = Object.values(this.changes.indicators).some(v => v !== 0);
+      const hasAnyChanges = hasValidActions || hasTechChanges || hasIndicatorChanges;
+
       const isOverBudget = (totalUsed * 1000000) > this.currentBudget;
-      
-      applyButton.disabled = !hasValidActions || isOverBudget;
-      
+
+      applyButton.disabled = !hasAnyChanges || isOverBudget;
+
       if (isOverBudget) {
         applyButton.textContent = '❌ Orçamento Excedido';
       } else if (hasValidActions) {
         applyButton.textContent = '⚡ Aplicar Investimentos';
+      } else if (hasTechChanges || hasIndicatorChanges) {
+        applyButton.textContent = '✅ Aplicar Mudanças';
       } else {
         applyButton.textContent = '⏳ Configure as Ações';
       }
@@ -1082,32 +1095,32 @@ class EconomicSimulator {
     let html = '<div class="space-y-6">';
 
     // === SEÇÃO ECONÔMICA (se houver ações econômicas) ===
-    if (results) {
+    if (results && results.newPIB !== undefined && results.newPIBPerCapita !== undefined) {
       const currentPIB = parseFloat(country.PIB) || 0;
-      const growthPercentage = (results.finalGrowth * 100).toFixed(2);
-      const potentialGrowthPercentage = (results.totalGrowth * 100).toFixed(2);
-      const inflationPercentage = (results.totalInflation * 100).toFixed(1);
+      const growthPercentage = ((results.finalGrowth || 0) * 100).toFixed(2);
+      const potentialGrowthPercentage = ((results.totalGrowth || 0) * 100).toFixed(2);
+      const inflationPercentage = ((results.totalInflation || 0) * 100).toFixed(1);
 
       html += `
         <!-- Resultado Principal -->
         <div class="bg-gradient-to-r from-purple-900/30 to-blue-900/30 border border-purple-500/30 rounded-xl p-6">
           <h4 class="text-lg font-semibold text-slate-200 mb-4">💰 Impacto Econômico</h4>
-          
+
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="text-center">
               <div class="text-lg font-bold text-slate-300">${formatPIBPerCapita(parseFloat(country.PIBPerCapita) || 0)}</div>
               <div class="text-xs text-slate-400 mt-1">PIB per Capita</div>
             </div>
-            
+
             <div class="text-center">
-              <div class="text-lg font-bold text-emerald-400">${formatPIBPerCapita(results.newPIBPerCapita)}</div>
+              <div class="text-lg font-bold text-emerald-400">${formatPIBPerCapita(results.newPIBPerCapita || 0)}</div>
               <div class="text-xs text-slate-400 mt-1">Novo PIB per Capita</div>
             </div>
-            
+
             <div class="text-center">
               <div class="text-2xl font-bold text-blue-400">+${growthPercentage}%</div>
               <div class="text-xs text-slate-400 mt-1">Crescimento Real</div>
-              <div class="text-xs text-emerald-300">${this.formatCurrency(results.newPIB)} PIB</div>
+              <div class="text-xs text-emerald-300">${this.formatCurrency(results.newPIB || 0)} PIB</div>
             </div>
             
             <div class="text-center">
@@ -1278,9 +1291,8 @@ class EconomicSimulator {
         <div class="text-sm text-slate-300 space-y-2">
           <div>• Todas as mudanças serão aplicadas permanentemente ao país</div>
           ${results ? '<div>• Ações econômicas serão registradas no histórico</div>' : ''}
-          ${results?.actions.some(a => a.isExternal) ? '<div>• Ações externas afetarão os países de destino</div>' : ''}
+          ${results?.actions?.some(a => a.isExternal) ? '<div>• Ações externas afetarão os países de destino</div>' : ''}
           ${hasTechChanges ? '<div>• Valores de tecnologia serão atualizados</div>' : ''}
-          ${hasResourceChanges ? '<div>• Recursos serão modificados</div>' : ''}
           ${hasIndicatorChanges ? '<div>• Indicadores nacionais serão alterados</div>' : ''}
         </div>
       </div>
@@ -1514,12 +1526,11 @@ class EconomicSimulator {
       
       // Mensagem de sucesso customizada
       let successMsg = 'Mudanças aplicadas com sucesso!';
-      if (results) {
-        successMsg = `Investimentos aplicados! PIB cresceu ${(results.finalGrowth * 100).toFixed(2)}%`;
-      } else if (hasTechChanges || hasResourceChanges || hasIndicatorChanges) {
+      if (results && results.finalGrowth !== undefined) {
+        successMsg = `Investimentos aplicados! PIB cresceu ${((results.finalGrowth || 0) * 100).toFixed(2)}%`;
+      } else if (hasTechChanges || hasIndicatorChanges) {
         const changes = [];
         if (hasTechChanges) changes.push('tecnologia');
-        if (hasResourceChanges) changes.push('recursos');
         if (hasIndicatorChanges) changes.push('indicadores');
         successMsg = `Mudanças em ${changes.join(', ')} aplicadas!`;
       }
@@ -1566,7 +1577,7 @@ class EconomicSimulator {
       };
 
       // === APLICAR MUDANÇAS ECONÔMICAS (se houver) ===
-      if (results) {
+      if (results && results.newPIB !== undefined && results.newPIBPerCapita !== undefined) {
         countryUpdates.PIB = results.newPIB;
         countryUpdates.PIBPerCapita = results.newPIBPerCapita;
         countryUpdates['geral.PIB'] = results.newPIB;
@@ -1583,15 +1594,8 @@ class EconomicSimulator {
         }
       }
 
-      // === APLICAR MUDANÇAS DE INDICADORES ===
-      for (const [field, delta] of Object.entries(this.changes.indicators)) {
-        if (delta !== 0) {
-          const current = parseFloat(country[field]) || 0;
-          const newValue = Math.min(100, Math.max(0, current + delta));
-          countryUpdates[field] = newValue;
-          countryUpdates[`geral.${field}`] = newValue;
-        }
-      }
+      // === APLICAR MUDANÇAS DE INDICADORES (será feito depois para não ser sobrescrito) ===
+      // Guardando para aplicar no final
 
       // === APLICAR EXTRAÇÃO DE RECURSOS (ações de exploration) ===
       const explorationActions = actions.filter(a => a.type === 'exploration' && a.resourceType && a.value && a.dice);
@@ -1725,24 +1729,35 @@ class EconomicSimulator {
       }
       
       // Aplicar mudanças de tecnologia e estabilidade
-      if (results.technologyChanges > 0) {
+      if (results && results.technologyChanges > 0) {
         const currentTech = parseFloat(this.getCountryById(this.selectedCountry).Tecnologia) || 0;
         const newTech = Math.min(100, currentTech + results.technologyChanges);
         countryUpdates.Tecnologia = newTech;
-        
+
         // Atualizar também na seção geral para sincronizar
         countryUpdates['geral.Tecnologia'] = newTech;
       }
-      
-      if (results.stabilityChanges > 0) {
+
+      if (results && results.stabilityChanges > 0) {
         const currentStability = parseFloat(this.getCountryById(this.selectedCountry).Estabilidade) || 0;
         const newStability = Math.min(100, currentStability + results.stabilityChanges);
         countryUpdates.Estabilidade = newStability;
-        
+
         // Atualizar também na seção geral para sincronizar
         countryUpdates['geral.Estabilidade'] = newStability;
       }
-      
+
+      // === APLICAR MUDANÇAS MANUAIS DE INDICADORES (POR ÚLTIMO PARA NÃO SER SOBRESCRITO) ===
+      for (const [field, delta] of Object.entries(this.changes.indicators)) {
+        if (delta !== 0) {
+          const current = parseFloat(country[field]) || 0;
+          const newValue = Math.min(100, Math.max(0, current + delta));
+          countryUpdates[field] = newValue;
+          countryUpdates[`geral.${field}`] = newValue;
+          Logger.info(`Mudança manual de ${field}: ${current} → ${newValue} (delta: ${delta})`);
+        }
+      }
+
       batch.update(countryRef, countryUpdates);
       
       // 2. Atualizar países de destino (ações externas)
@@ -1765,52 +1780,54 @@ class EconomicSimulator {
         }
       }
       
-      // 3. Salvar histórico econômico
-      const historyRef = db.collection('economic_history').doc();
-      const historyData = {
-        countryId: this.selectedCountry,
-        turn: currentTurn,
-        timestamp: new Date(),
-        totalInvestment: actions.reduce((acc, a) => acc + (parseFloat(a.value) || 0), 0),
-        actions: actions,
-        results: {
-          totalGrowth: results.totalGrowth,
-          finalGrowth: results.finalGrowth,
-          inflation: results.totalInflation,
-          newPIB: results.newPIB,
-          productiveChains: results.productiveChains
-        },
-        externalInvestments: {}
-      };
-      
-      // Registrar investimentos externos
-      actions.filter(a => a.isExternal).forEach(action => {
-        if (action.targetCountry) {
-          historyData.externalInvestments[action.targetCountry] = (parseFloat(action.value) || 0);
-        }
-      });
-      
-      batch.set(historyRef, historyData);
-      
-      // 4. Registrar no log de mudanças
-      const changeRef = db.collection('change_history').doc();
-      batch.set(changeRef, {
-        countryId: this.selectedCountry,
-        section: 'economia',
-        field: 'simulacao_economica',
-        oldValue: {
-          PIB: parseFloat(this.getCountryById(this.selectedCountry).PIB),
-          PIBPerCapita: parseFloat(this.getCountryById(this.selectedCountry).PIBPerCapita) || 0
-        },
-        newValue: {
-          PIB: results.newPIB,
-          PIBPerCapita: results.newPIBPerCapita
-        },
-        userName: auth.currentUser?.displayName || 'Narrador',
-        reason: `Simulação econômica: ${actions.length} ações aplicadas`,
-        timestamp: new Date(),
-        turn: currentTurn
-      });
+      // 3. Salvar histórico econômico (apenas se houver results válidos)
+      if (results && results.totalGrowth !== undefined) {
+        const historyRef = db.collection('economic_history').doc();
+        const historyData = {
+          countryId: this.selectedCountry,
+          turn: currentTurn,
+          timestamp: new Date(),
+          totalInvestment: actions.reduce((acc, a) => acc + (parseFloat(a.value) || 0), 0),
+          actions: actions,
+          results: {
+            totalGrowth: results.totalGrowth || 0,
+            finalGrowth: results.finalGrowth || 0,
+            inflation: results.totalInflation || 0,
+            newPIB: results.newPIB || 0,
+            productiveChains: results.productiveChains || []
+          },
+          externalInvestments: {}
+        };
+
+        // Registrar investimentos externos
+        actions.filter(a => a.isExternal).forEach(action => {
+          if (action.targetCountry) {
+            historyData.externalInvestments[action.targetCountry] = (parseFloat(action.value) || 0);
+          }
+        });
+
+        batch.set(historyRef, historyData);
+
+        // 4. Registrar no log de mudanças
+        const changeRef = db.collection('change_history').doc();
+        batch.set(changeRef, {
+          countryId: this.selectedCountry,
+          section: 'economia',
+          field: 'simulacao_economica',
+          oldValue: {
+            PIB: parseFloat(this.getCountryById(this.selectedCountry).PIB),
+            PIBPerCapita: parseFloat(this.getCountryById(this.selectedCountry).PIBPerCapita) || 0
+          },
+          newValue: {
+            PIB: results.newPIB || 0,
+            PIBPerCapita: results.newPIBPerCapita || 0
+          },
+          userName: auth.currentUser?.displayName || 'Narrador',
+          reason: `Simulação econômica: ${actions.length} ações aplicadas`,
+          timestamp: new Date(),
+          turn: currentTurn
+        });
+      }
       
       // Executar todas as operações
       await batch.commit();
