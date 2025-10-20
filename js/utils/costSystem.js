@@ -4,12 +4,12 @@ class CostSystem {
     
     static calculateCosts(vehicle) {
         console.log('📊 CostSystem: Starting cost calculation');
-        
+
         // FORÇA valores básicos se não encontrar dados
         let productionCost = 50000; // Base mínima de $50K
         let maintenanceCost = 5000;  // Base mínima de $5K
         let operationalCost = 15000; // Base mínima de $15K
-        
+
         try {
             if (vehicle && window.VEHICLE_COMPONENTS) {
                 // Early exit: nothing selected -> zero costs
@@ -26,7 +26,7 @@ class CostSystem {
                 const calculatedProduction = this.calculateProductionCost(vehicle);
                 const calculatedMaintenance = this.calculateMaintenanceCost(vehicle, calculatedProduction);
                 const calculatedOperational = this.calculateOperationalCost(vehicle);
-                
+
                 // Use valores calculados se são válidos
                 if (!isNaN(calculatedProduction) && calculatedProduction > 0) {
                     productionCost = calculatedProduction;
@@ -37,20 +37,32 @@ class CostSystem {
                 if (!isNaN(calculatedOperational) && calculatedOperational > 0) {
                     operationalCost = calculatedOperational;
                 }
+
+                // Aplicar modificadores de leis nacionais
+                if (window.currentUserCountry?.currentModifiers) {
+                    const modifiers = window.currentUserCountry.currentModifiers;
+
+                    // Modificador de custo de produção militar (negativo reduz custo)
+                    if (typeof modifiers.militaryProductionCost === 'number') {
+                        const costModifier = 1 + modifiers.militaryProductionCost;
+                        productionCost *= costModifier;
+                        console.log(`🏛️ Lei Nacional: Custo de produção ${modifiers.militaryProductionCost > 0 ? '+' : ''}${(modifiers.militaryProductionCost * 100).toFixed(0)}%`);
+                    }
+                }
             }
         } catch (error) {
             console.error('🚨 Error in cost calculation, using defaults:', error);
         }
-        
+
         const totalOwnershipCost = productionCost + (maintenanceCost * 10) + (operationalCost * 10);
-        
+
         console.log('💰 Final CostSystem Results:', {
             production: productionCost,
             maintenance: maintenanceCost,
             operational: operationalCost,
             total_ownership: totalOwnershipCost
         });
-        
+
         return {
             production: productionCost,
             maintenance: maintenanceCost,

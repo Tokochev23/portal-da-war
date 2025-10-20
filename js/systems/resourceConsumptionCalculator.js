@@ -179,6 +179,12 @@ class ResourceConsumptionCalculator {
           resourceConsumption *= militaryModifiers[resource];
         }
 
+        // NOVO: 8. Aplicar modificadores das Leis Nacionais
+        if (country.currentModifiers && country.currentModifiers.consumptionModifiers && country.currentModifiers.consumptionModifiers[resource.toLowerCase()]) {
+          const lawModifier = 1 + country.currentModifiers.consumptionModifiers[resource.toLowerCase()];
+          resourceConsumption *= lawModifier;
+        }
+
         // Arredondar para inteiro
         consumption[resource] = Math.round(resourceConsumption);
       });

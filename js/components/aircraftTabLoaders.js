@@ -2,7 +2,7 @@
 
 import { optimizedTemplateLoader } from './OptimizedTemplateLoader.js';
 
-class TabLoaders {
+export class TabLoaders {
   constructor() {
     this.tabContent = null;
     this.currentTechLevel = 50; // Default tech level
@@ -3765,5 +3765,5 @@ class TabLoaders {
   }
 }
 
-window.tabLoaders = new TabLoaders();
+
 

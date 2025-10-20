@@ -102,16 +102,29 @@ class NavalCostSystem {
     static calculateCosts(ship) {
         const hull = this.getSelectedHull(ship);
         const propulsion = this.getSelectedPropulsion(ship);
-        
+
         if (!hull) {
             return this.getDefaultCosts();
         }
 
         try {
             const breakdown = this.calculateCostBreakdown(ship, hull, propulsion);
-            const productionCost = Object.values(breakdown).reduce((sum, cost) => sum + cost, 0);
+            let productionCost = Object.values(breakdown).reduce((sum, cost) => sum + cost, 0);
             const maintenanceCost = this.calculateMaintenanceCost(ship, hull, propulsion);
             const operationalCost = this.calculateOperationalCost(ship, hull, propulsion);
+
+            // Aplicar modificadores de leis nacionais
+            if (window.currentUserCountry?.currentModifiers) {
+                const modifiers = window.currentUserCountry.currentModifiers;
+
+                // Modificador de custo de produção militar (negativo reduz custo)
+                if (typeof modifiers.militaryProductionCost === 'number') {
+                    const costModifier = 1 + modifiers.militaryProductionCost;
+                    productionCost *= costModifier;
+                    console.log(`🏛️ Lei Nacional: Custo de produção ${modifiers.militaryProductionCost > 0 ? '+' : ''}${(modifiers.militaryProductionCost * 100).toFixed(0)}%`);
+                }
+            }
+
             const totalOwnershipCost = productionCost + (maintenanceCost * 10) + (operationalCost * 10); // 10-year lifecycle
 
             return {

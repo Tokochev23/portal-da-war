@@ -12,6 +12,8 @@ import { initEconomicSimulator } from "../systems/economicSimulator.js";
 import { calculatePIBTotal, formatCurrency, formatPIBPerCapita } from "../utils/pibCalculations.js";
 import { runAdvancedEconomyMigration } from '../../scripts/migrate-advanced-economy.js';
 import { initTabSystem } from "../utils/tabSystem.js";
+import { WorldMap } from "../components/worldMap.js";
+import { MapControls } from "../components/mapControls.js";
 
 // Catálogo local (fallback). Pode ser salvo no Firestore em configuracoes/campos
 const localCatalog = {
@@ -100,6 +102,18 @@ const el = {
   refreshPlayers: document.getElementById('refresh-players'),
   assignRandom: document.getElementById('assign-random'),
   clearAllAssignments: document.getElementById('clear-all-assignments'),
+
+  // Gestão Manual de Exaustão
+  exhaustionCountrySelect: document.getElementById('exhaustion-country-select'),
+  exhaustionValueInput: document.getElementById('exhaustion-value-input'),
+  exhaustionReasonInput: document.getElementById('exhaustion-reason-input'),
+  btnApplyManualExhaustion: document.getElementById('btn-apply-manual-exhaustion'),
+
+  // Gestão de Estado de Guerra
+  warCountrySelect: document.getElementById('war-country-select'),
+  warTargetSelect: document.getElementById('war-target-select'),
+  currentWarsDisplay: document.getElementById('current-wars-display'),
+  btnUpdateWarStatus: document.getElementById('btn-update-war-status'),
 };
 
 async function carregarCatalogo() {
@@ -141,18 +155,21 @@ function renderMenuSecoes() {
 }
 
 function renderSelectPaises() {
-  if (!el.selectPais) return;
-  el.selectPais.innerHTML = '';
-  state.paises.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p.id;
-    opt.textContent = p.Pais || p.id;
-    el.selectPais.appendChild(opt);
+  const selects = [el.selectPais, el.exhaustionCountrySelect, el.warCountrySelect].filter(Boolean);
+  if (selects.length === 0) return;
+
+  const optionsHtml = state.paises.map(p => `<option value="${p.id}">${p.Pais || p.id}</option>`).join('');
+
+  selects.forEach(select => {
+    select.innerHTML = optionsHtml;
+    if (select.id === 'select-pais' && state.paisSelecionado) {
+      select.value = state.paisSelecionado;
+    }
   });
+
   if (!state.paisSelecionado && state.paises.length) {
     state.paisSelecionado = state.paises[0].id;
   }
-  if (state.paisSelecionado) el.selectPais.value = state.paisSelecionado;
 }
 
 function inputFor(fieldKey, fieldDef, valor, paisData = null) {
@@ -314,6 +331,17 @@ if (el.btnSalvarTurno) el.btnSalvarTurno.addEventListener('click', async ()=>{
 if (el.logout) el.logout.addEventListener('click', (e)=>{ e.preventDefault(); auth.signOut(); });
 document.addEventListener('DOMContentLoaded', () => {
   initTabSystem(); // Initialize the tab system
+
+  // Inicializar mapa quando a aba for clicada
+  const mapTab = document.getElementById('tab-mapa');
+  if (mapTab) {
+    mapTab.addEventListener('click', async () => {
+      // Só inicializar uma vez
+      if (!worldMap) {
+        await initWorldMap();
+      }
+    });
+  }
 
   const openBtn = document.getElementById('btn-open-rules-editor');
   const rulesPanel = document.getElementById('rules-editor-panel');
@@ -618,6 +646,60 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Botão para processar transições de leis
+  const processLawsButton = document.getElementById('btn-process-law-transitions');
+  if (processLawsButton) {
+    processLawsButton.addEventListener('click', async () => {
+      try {
+        processLawsButton.disabled = true;
+        processLawsButton.textContent = '🏛️ Processando Leis...';
+        await processLawTransitions();
+      } catch (error) {
+        console.error('Erro ao acionar o processamento de leis:', error);
+        showNotification('error', 'Erro ao processar leis: ' + error.message);
+      } finally {
+        processLawsButton.disabled = false;
+        processLawsButton.textContent = '🏛️ Processar Transições de Leis';
+      }
+    });
+  }
+
+  // Botão para aplicar efeitos das leis
+  const applyEffectsButton = document.getElementById('btn-apply-law-effects');
+  if (applyEffectsButton) {
+    applyEffectsButton.addEventListener('click', async () => {
+      try {
+        applyEffectsButton.disabled = true;
+        applyEffectsButton.textContent = '⚙️ Aplicando Efeitos...';
+        await applyNationalLawEffects();
+      } catch (error) {
+        console.error('Erro ao acionar a aplicação de efeitos:', error);
+        showNotification('error', 'Erro ao aplicar efeitos: ' + error.message);
+      } finally {
+        applyEffectsButton.disabled = false;
+        applyEffectsButton.textContent = '⚙️ Aplicar Efeitos das Leis';
+      }
+    });
+  }
+
+  // Botão para processar exaustão de guerra
+  const processExhaustionButton = document.getElementById('btn-process-exhaustion');
+  if (processExhaustionButton) {
+    processExhaustionButton.addEventListener('click', async () => {
+      try {
+        processExhaustionButton.disabled = true;
+        processExhaustionButton.textContent = '📉 Processando Exaustão...';
+        await processWarExhaustion();
+      } catch (error) {
+        console.error('Erro ao acionar o processamento de exaustão:', error);
+        showNotification('error', 'Erro ao processar exaustão: ' + error.message);
+      } finally {
+        processExhaustionButton.disabled = false;
+        processExhaustionButton.textContent = '📉 Processar Exaustão de Guerra';
+      }
+    });
+  }
+
   const simulateButton = document.getElementById('btn-simulate-consumption');
   if (simulateButton) {
     simulateButton.addEventListener('click', async () => {
@@ -634,7 +716,164 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('Erro na simulação: ' + error.message);
       } finally {
         simulateButton.disabled = false;
-        simulateButton.textContent = '🔮 Simular 3 Turnos';
+        simulateButton.textContent = '📊 Simular Consumo de Recursos';
+      }
+    });
+  }
+
+  if (el.btnApplyManualExhaustion) {
+    el.btnApplyManualExhaustion.addEventListener('click', async () => {
+      const countryId = el.exhaustionCountrySelect.value;
+      const value = parseFloat(el.exhaustionValueInput.value);
+      const reason = el.exhaustionReasonInput.value.trim();
+
+      if (!countryId || isNaN(value)) {
+        showNotification('error', 'Por favor, selecione um país e insira um valor numérico.');
+        return;
+      }
+
+      if (reason.length < 5) {
+        showNotification('error', 'Por favor, insira um motivo com pelo menos 5 caracteres.');
+        return;
+      }
+
+      const btn = el.btnApplyManualExhaustion;
+      try {
+        btn.disabled = true;
+        btn.textContent = 'Aplicando...';
+
+        const countryRef = db.collection('paises').doc(countryId);
+        const countryDoc = await countryRef.get();
+
+        if (!countryDoc.exists) {
+          throw new Error('País não encontrado no banco de dados.');
+        }
+
+        const currentExhaustion = countryDoc.data().warExhaustion || 0;
+        const newExhaustion = Math.max(0, Math.min(100, currentExhaustion + value));
+
+        // Atualiza o país e cria um log da alteração
+        const batch = db.batch();
+        batch.update(countryRef, { warExhaustion: newExhaustion });
+
+        const logRef = db.collection('change_log').doc();
+        batch.set(logRef, {
+          type: 'MANUAL_EXHAUSTION_CHANGE',
+          countryId: countryId,
+          countryName: countryDoc.data().Pais || countryId,
+          oldValue: currentExhaustion,
+          newValue: newExhaustion,
+          changeValue: value,
+          reason: reason,
+          narratorId: auth.currentUser.uid,
+          narratorName: auth.currentUser.displayName || 'Narrador',
+          timestamp: new Date()
+        });
+
+        await batch.commit();
+
+        showNotification('success', `Exaustão de ${countryDoc.data().Pais} ajustada para ${newExhaustion.toFixed(2)}%`);
+        el.exhaustionValueInput.value = '';
+        el.exhaustionReasonInput.value = '';
+
+      } catch (error) {
+        console.error('Erro ao aplicar ajuste manual de exaustão:', error);
+        showNotification('error', `Erro: ${error.message}`);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Aplicar Ajuste de Exaustão';
+      }
+    });
+  }
+
+  // Gestão de Estado de Guerra
+  if (el.warCountrySelect) {
+    el.warCountrySelect.addEventListener('change', async () => {
+      const countryId = el.warCountrySelect.value;
+      if (!countryId) return;
+
+      try {
+        // Carregar dados do país
+        const countryDoc = await db.collection('paises').doc(countryId).get();
+        if (!countryDoc.exists) return;
+
+        const countryData = countryDoc.data();
+        const inWarWith = countryData.inWarWith || [];
+
+        // Atualizar display de guerras atuais
+        if (inWarWith.length > 0) {
+          const warCountryNames = await Promise.all(
+            inWarWith.map(async enemyId => {
+              const enemyDoc = await db.collection('paises').doc(enemyId).get();
+              return enemyDoc.exists ? enemyDoc.data().Pais : enemyId;
+            })
+          );
+          el.currentWarsDisplay.textContent = `Em guerra com: ${warCountryNames.join(', ')}`;
+          el.currentWarsDisplay.className = 'text-sm text-red-400 mb-2';
+        } else {
+          el.currentWarsDisplay.textContent = 'Este país está em paz';
+          el.currentWarsDisplay.className = 'text-sm text-green-400 mb-2';
+        }
+
+        // Preencher lista de países disponíveis (exceto o próprio)
+        const allCountries = state.paises.filter(p => p.id !== countryId);
+        el.warTargetSelect.innerHTML = allCountries.map(p => {
+          const isSelected = inWarWith.includes(p.id);
+          return `<option value="${p.id}" ${isSelected ? 'selected' : ''}>${p.Pais || p.id}</option>`;
+        }).join('');
+
+      } catch (error) {
+        console.error('Erro ao carregar estado de guerra:', error);
+      }
+    });
+  }
+
+  if (el.btnUpdateWarStatus) {
+    el.btnUpdateWarStatus.addEventListener('click', async () => {
+      const countryId = el.warCountrySelect.value;
+      if (!countryId) {
+        showNotification('error', 'Selecione um país primeiro');
+        return;
+      }
+
+      try {
+        el.btnUpdateWarStatus.disabled = true;
+        el.btnUpdateWarStatus.textContent = 'Atualizando...';
+
+        // Pegar países selecionados
+        const selectedOptions = Array.from(el.warTargetSelect.selectedOptions);
+        const inWarWith = selectedOptions.map(opt => opt.value);
+
+        // Atualizar no Firestore
+        await db.collection('paises').doc(countryId).update({
+          inWarWith: inWarWith
+        });
+
+        // Criar log da mudança
+        const countryDoc = await db.collection('paises').doc(countryId).get();
+        const countryName = countryDoc.data().Pais || countryId;
+
+        await db.collection('change_log').add({
+          type: 'WAR_STATUS_CHANGE',
+          countryId: countryId,
+          countryName: countryName,
+          newWarStatus: inWarWith,
+          narratorId: auth.currentUser.uid,
+          narratorName: auth.currentUser.displayName || 'Narrador',
+          timestamp: new Date()
+        });
+
+        showNotification('success', `Estado de guerra de ${countryName} atualizado!`);
+
+        // Recarregar display
+        el.warCountrySelect.dispatchEvent(new Event('change'));
+
+      } catch (error) {
+        console.error('Erro ao atualizar estado de guerra:', error);
+        showNotification('error', `Erro: ${error.message}`);
+      } finally {
+        el.btnUpdateWarStatus.disabled = false;
+        el.btnUpdateWarStatus.textContent = 'Atualizar Estado de Guerra';
       }
     });
   }
@@ -722,6 +961,42 @@ async function initPlayerManagement() {
   }
 }
 
+let worldMap = null;
+let mapControls = null;
+
+async function initWorldMap() {
+  try {
+    // Verificar se estamos na aba do mapa
+    const mapContainer = document.getElementById('world-map');
+    if (!mapContainer) {
+      Logger.warn('Container do mapa não encontrado');
+      return;
+    }
+
+    // Criar instância do mapa
+    worldMap = new WorldMap('world-map');
+    await worldMap.initialize(true); // true = modo narrador
+
+    // Criar controles do mapa
+    mapControls = new MapControls(worldMap);
+    mapControls.render('map-controls-container');
+
+    // Atualizar mensagem de status
+    const mapInfo = document.getElementById('map-info-text');
+    if (mapInfo) {
+      mapInfo.textContent = 'Mapa carregado com sucesso!';
+    }
+
+    Logger.info('Mapa mundial inicializado');
+  } catch (error) {
+    Logger.error('Erro ao inicializar mapa mundial:', error);
+    const mapInfo = document.getElementById('map-info-text');
+    if (mapInfo) {
+      mapInfo.textContent = 'Erro ao carregar mapa: ' + error.message;
+    }
+  }
+}
+
 // Energy activation removed from narrador; use country dashboard instead.
 
 async function initNarratorSystems() {
@@ -761,4 +1036,414 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initNarratorSystems);
 } else {
   initNarratorSystems();
+}
+
+/**
+ * Executa o script de migração de leis nacionais
+ */
+async function runMigrationScript() {
+  console.log('🔧 Iniciando migração de Leis Nacionais...');
+  showNotification('info', 'Iniciando migração...');
+
+  try {
+    const DEFAULT_VALUES = {
+      mobilizationLaw: 'volunteer_only',
+      economicLaw: 'civilian_economy',
+      warExhaustion: 0,
+      inWarWith: [],
+      lawChange: null
+    };
+
+    const paisesSnapshot = await db.collection('paises').get();
+
+    if (paisesSnapshot.empty) {
+      showNotification('warning', 'Nenhum país encontrado');
+      return;
+    }
+
+    let needsMigration = 0;
+    const countriesToMigrate = [];
+
+    paisesSnapshot.forEach(doc => {
+      const countryData = doc.data();
+      const missingFields = [];
+
+      if (countryData.mobilizationLaw === undefined) missingFields.push('mobilizationLaw');
+      if (countryData.economicLaw === undefined) missingFields.push('economicLaw');
+      if (countryData.warExhaustion === undefined) missingFields.push('warExhaustion');
+      if (countryData.inWarWith === undefined) missingFields.push('inWarWith');
+      if (countryData.lawChange === undefined) missingFields.push('lawChange');
+
+      if (missingFields.length > 0) {
+        needsMigration++;
+        countriesToMigrate.push({
+          ref: doc.ref,
+          missingFields: missingFields
+        });
+      }
+    });
+
+    if (needsMigration === 0) {
+      console.log('✅ Todos os países já estão atualizados');
+      showNotification('success', 'Todos os países já possuem os campos necessários');
+      return;
+    }
+
+    console.log(`🚀 Migrando ${needsMigration} países...`);
+
+    const batch = db.batch();
+    for (const country of countriesToMigrate) {
+      const updates = {};
+      country.missingFields.forEach(field => {
+        updates[field] = DEFAULT_VALUES[field];
+      });
+      batch.update(country.ref, updates);
+    }
+
+    await batch.commit();
+
+    console.log(`✅ Migração concluída: ${needsMigration} países atualizados`);
+    showNotification('success', `Migração concluída! ${needsMigration} países atualizados`);
+
+  } catch (error) {
+    console.error('❌ Erro na migração:', error);
+    showNotification('error', `Erro na migração: ${error.message}`);
+  }
+}
+
+/**
+ * Executa o script de configuração de leis no gameConfig
+ */
+async function runSetupGameConfig() {
+  console.log('⚙️ Configurando leis nacionais no gameConfig...');
+  showNotification('info', 'Configurando leis...');
+
+  try {
+    // Importar configuração do setup-game-config.js
+    const nationalLawsConfig = {
+      mobilizationLaws: {
+        disarmed_nation: {
+          level: 1,
+          name: 'Nação Desarmada',
+          recruitablePopulation: 0.01,
+          bonuses: { resourceProduction: 0.15, civilianFactoryEfficiency: 0.10 },
+          penalties: { militaryProductionSpeed: -0.50 }
+        },
+        volunteer_only: {
+          level: 2,
+          name: 'Apenas Voluntários',
+          recruitablePopulation: 0.015,
+          bonuses: { resourceProduction: 0.05 },
+          penalties: { militaryProductionSpeed: -0.10 }
+        },
+        limited_conscription: {
+          level: 3,
+          name: 'Conscrição Limitada',
+          recruitablePopulation: 0.025,
+          bonuses: {},
+          penalties: {}
+        },
+        extensive_conscription: {
+          level: 4,
+          name: 'Conscrição Extensa',
+          recruitablePopulation: 0.05,
+          bonuses: { militaryProductionCost: -0.05 },
+          penalties: { resourceProduction: -0.07 }
+        },
+        service_by_requirement: {
+          level: 5,
+          name: 'Serviço por Exigência',
+          recruitablePopulation: 0.10,
+          bonuses: { militaryProductionCost: -0.10 },
+          penalties: { resourceProduction: -0.14, civilianFactoryEfficiency: -0.07 }
+        },
+        all_adults_serve: {
+          level: 6,
+          name: 'Todos os Adultos Servem',
+          recruitablePopulation: 0.20,
+          bonuses: { militaryProductionCost: -0.15 },
+          penalties: { resourceProduction: -0.35, civilianFactoryEfficiency: -0.20, warExhaustionPassiveGain: 0.1 }
+        }
+      },
+      economicLaws: {
+        civilian_economy: {
+          level: 1,
+          name: 'Economia Civil',
+          bonuses: { civilianFactoryEfficiency: 0.20 },
+          penalties: { militaryCapacity: -0.30 },
+          consumptionModifiers: { metals: -0.25, fuel: -0.25, grain: 0.15 }
+        },
+        early_mobilization: {
+          level: 2,
+          name: 'Mobilização Inicial',
+          bonuses: { civilianFactoryEfficiency: 0.10 },
+          penalties: { militaryCapacity: -0.15 },
+          consumptionModifiers: { metals: -0.10, fuel: -0.10, grain: 0.05 }
+        },
+        partial_mobilization: {
+          level: 3,
+          name: 'Mobilização Parcial',
+          bonuses: {},
+          penalties: {},
+          consumptionModifiers: {}
+        },
+        war_economy: {
+          level: 4,
+          name: 'Economia de Guerra',
+          bonuses: { militaryCapacity: 0.20 },
+          penalties: { civilianFactoryEfficiency: -0.20 },
+          consumptionModifiers: { metals: 0.20, fuel: 0.20, coal: 0.20, energy: 0.20 }
+        },
+        total_mobilization: {
+          level: 5,
+          name: 'Mobilização Total',
+          bonuses: { militaryCapacity: 0.40 },
+          penalties: { civilianFactoryEfficiency: -0.40, recruitablePopulation: -0.05, warExhaustionPassiveGain: 0.1 },
+          consumptionModifiers: { metals: 0.35, fuel: 0.35, coal: 0.35, energy: 0.35, grain: -0.20 }
+        }
+      }
+    };
+
+    await db.collection('gameConfig').doc('nationalLaws').set(nationalLawsConfig);
+
+    console.log('✅ Configuração de leis criada/atualizada com sucesso');
+    showNotification('success', 'Configuração de leis criada com sucesso no gameConfig!');
+
+  } catch (error) {
+    console.error('❌ Erro ao configurar leis:', error);
+    showNotification('error', `Erro ao configurar leis: ${error.message}`);
+  }
+}
+
+// Event listeners para os botões de migração
+document.addEventListener('DOMContentLoaded', () => {
+  const btnMigrate = document.getElementById('btn-migrate-national-laws');
+  const btnSetup = document.getElementById('btn-setup-game-config');
+
+  if (btnMigrate) {
+    btnMigrate.addEventListener('click', async () => {
+      const confirmed = await showConfirmBox(
+        'Migrar Leis Nacionais',
+        'Esta ação adicionará os campos de leis nacionais em todos os países que ainda não os possuem. É seguro executar múltiplas vezes. Continuar?',
+        'Sim, migrar',
+        'Cancelar'
+      );
+
+      if (!confirmed) return;
+
+      try {
+        btnMigrate.disabled = true;
+        btnMigrate.textContent = '⏳ Migrando...';
+        await runMigrationScript();
+      } finally {
+        btnMigrate.disabled = false;
+        btnMigrate.textContent = '🔧 Migrar Leis Nacionais';
+      }
+    });
+  }
+
+  if (btnSetup) {
+    btnSetup.addEventListener('click', async () => {
+      const confirmed = await showConfirmBox(
+        'Configurar Leis no GameConfig',
+        'Esta ação criará/atualizará a configuração de leis nacionais no Firestore. Continuar?',
+        'Sim, configurar',
+        'Cancelar'
+      );
+
+      if (!confirmed) return;
+
+      try {
+        btnSetup.disabled = true;
+        btnSetup.textContent = '⏳ Configurando...';
+        await runSetupGameConfig();
+      } finally {
+        btnSetup.disabled = false;
+        btnSetup.textContent = '⚙️ Configurar Leis no GameConfig';
+      }
+    });
+  }
+});
+
+import { calculateEffectiveModifiers } from '../systems/lawAndExhaustionCalculator.js';
+
+/**
+ * Calcula e aplica os modificadores de Leis Nacionais para todos os países.
+ * Salva o resultado no campo 'currentModifiers' de cada país.
+ */
+async function applyNationalLawEffects() {
+  console.log('Calculando e aplicando efeitos de leis nacionais...');
+  showNotification('info', 'Calculando efeitos de leis para todos os países...');
+
+  try {
+    const lawsDoc = await db.collection('gameConfig').doc('nationalLaws').get();
+    if (!lawsDoc.exists) {
+      throw new Error('Configuração de Leis Nacionais não encontrada.');
+    }
+    const lawsConfig = lawsDoc.data();
+
+    const paisesSnapshot = await db.collection('paises').get();
+    if (paisesSnapshot.empty) {
+      showNotification('warning', 'Nenhum país encontrado.');
+      return;
+    }
+
+    const batch = db.batch();
+    let processedCount = 0;
+
+    paisesSnapshot.forEach(doc => {
+      const countryData = doc.data();
+      const countryRef = doc.ref;
+
+      const modifiers = calculateEffectiveModifiers(countryData, lawsConfig);
+      
+      batch.update(countryRef, { currentModifiers: modifiers });
+      processedCount++;
+    });
+
+    if (processedCount > 0) {
+      await batch.commit();
+      console.log(`✅ Efeitos de leis aplicados a ${processedCount} países.`);
+      showNotification('success', `Efeitos de leis aplicados a ${processedCount} países.`);
+    } else {
+      showNotification('info', 'Nenhum país precisou de atualização de efeitos.');
+    }
+
+  } catch (error) {
+    console.error('Erro ao aplicar efeitos de leis:', error);
+    showNotification('error', `Erro no processo: ${error.message}`);
+  }
+}
+
+/**
+ * Processa o ganho ou perda passiva de Exaustão de Guerra para todos os países.
+ */
+async function processWarExhaustion() {
+  console.log('Processando Exaustão de Guerra...');
+  showNotification('info', 'Processando Exaustão de Guerra para todos os países...');
+
+  try {
+    const lawsDoc = await db.collection('gameConfig').doc('nationalLaws').get();
+    if (!lawsDoc.exists) {
+      throw new Error('Configuração de Leis Nacionais não encontrada.');
+    }
+    const lawsConfig = lawsDoc.data();
+
+    const paisesSnapshot = await db.collection('paises').get();
+    if (paisesSnapshot.empty) {
+      showNotification('warning', 'Nenhum país encontrado.');
+      return;
+    }
+
+    const batch = db.batch();
+    let processedCount = 0;
+
+    paisesSnapshot.forEach(doc => {
+      const countryData = doc.data();
+      const countryRef = doc.ref;
+
+      const mobilizationLaw = lawsConfig.mobilizationLaws[countryData.mobilizationLaw];
+      const economicLaw = lawsConfig.economicLaws[countryData.economicLaw];
+      const currentExhaustion = countryData.warExhaustion || 0;
+      let newExhaustion = currentExhaustion;
+
+      if (countryData.inWarWith && countryData.inWarWith.length > 0) {
+        // Em guerra: aumenta a exaustão
+        let increase = 0;
+        if (mobilizationLaw && economicLaw) {
+          increase = (mobilizationLaw.level + economicLaw.level) * 0.05;
+        }
+        // Bônus de exaustão de leis de mobilização total
+        if (mobilizationLaw?.penalties?.warExhaustionPassiveGain) {
+          increase += mobilizationLaw.penalties.warExhaustionPassiveGain;
+        }
+        if (economicLaw?.penalties?.warExhaustionPassiveGain) {
+          increase += economicLaw.penalties.warExhaustionPassiveGain;
+        }
+        newExhaustion = Math.min(100, currentExhaustion + increase);
+      } else {
+        // Em paz: diminui a exaustão
+        newExhaustion = Math.max(0, currentExhaustion - 2);
+      }
+
+      if (newExhaustion !== currentExhaustion) {
+        batch.update(countryRef, { warExhaustion: newExhaustion });
+        processedCount++;
+      }
+    });
+
+    if (processedCount > 0) {
+      await batch.commit();
+      console.log(`✅ Exaustão de Guerra processada para ${processedCount} países.`);
+      showNotification('success', `Exaustão de Guerra processada para ${processedCount} países.`);
+    } else {
+      showNotification('info', 'Nenhum país precisou de atualização de exaustão.');
+    }
+
+  } catch (error) {
+    console.error('Erro ao processar Exaustão de Guerra:', error);
+    showNotification('error', `Erro no processo: ${error.message}`);
+  }
+}
+
+/**
+ * Processa a transição gradual de Leis Nacionais para todos os países.
+ * Esta função deve ser chamada como parte do processo de final de turno.
+ */
+async function processLawTransitions() {
+  console.log('Iniciando o processamento da transição de leis...');
+  showNotification('info', 'Processando transições de leis para todos os países...');
+
+  try {
+    const paisesSnapshot = await db.collection('paises').get();
+    if (paisesSnapshot.empty) {
+      console.log('Nenhum país para processar.');
+      showNotification('warning', 'Nenhum país encontrado.');
+      return;
+    }
+
+    const batch = db.batch();
+    let processedCount = 0;
+
+    paisesSnapshot.forEach(doc => {
+      const countryData = doc.data();
+      const countryRef = doc.ref;
+      const countryName = countryData.Pais || countryData.Nome || doc.id;
+      
+      if (countryData.lawChange && countryData.lawChange.totalTurns > 0) {
+        const newProgress = countryData.lawChange.progress + 1;
+        let updates = {};
+
+        if (newProgress >= countryData.lawChange.totalTurns) {
+          // Transição concluída
+          console.log(`-> Transição para '${countryData.lawChange.targetLaw}' concluída em ${countryName}.`);
+          updates.lawChange = null;
+          if (countryData.lawChange.type === 'mobilization') {
+            updates.mobilizationLaw = countryData.lawChange.targetLaw;
+          } else if (countryData.lawChange.type === 'economic') {
+            updates.economicLaw = countryData.lawChange.targetLaw;
+          }
+        } else {
+          // Transição em andamento
+          updates['lawChange.progress'] = newProgress;
+        }
+        
+        batch.update(countryRef, updates);
+        processedCount++;
+      }
+    });
+
+    if (processedCount > 0) {
+      await batch.commit();
+      console.log(`✅ Transição de leis processada para ${processedCount} países.`);
+      showNotification('success', `Transição de leis processada para ${processedCount} países.`);
+    } else {
+      console.log('Nenhuma transição de lei ativa para processar.');
+      showNotification('info', 'Nenhuma transição de lei ativa encontrada.');
+    }
+
+  } catch (error) {
+    console.error('Erro ao processar transição de leis:', error);
+    showNotification('error', `Erro no processo: ${error.message}`);
+  }
 }

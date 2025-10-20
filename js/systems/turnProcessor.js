@@ -7,6 +7,7 @@ import { db } from '../services/firebase.js';
 import { Logger } from '../utils.js';
 import ConsumerGoodsCalculator from './consumerGoodsCalculator.js';
 import turnEventsSystem from './turnEventsSystem.js';
+import { calculateEffectiveModifiers } from './lawAndExhaustionCalculator.js';
 
 class TurnProcessor {
 
@@ -26,6 +27,12 @@ class TurnProcessor {
 
       // 2. PROCESSAR ORDENS RECORRENTES DO MARKETPLACE
       await this.processRecurringOrders(turnNumber);
+
+      // 3. PROCESSAR TRANSIÇÕES DE LEIS NACIONAIS
+      await this.processLawTransitions(turnNumber);
+
+      // 4. APLICAR EFEITOS DAS LEIS NACIONAIS (modificadores)
+      await this.applyNationalLawEffects(turnNumber);
 
       // Buscar todos os países
       const querySnapshot = await db.collection('paises').get();
@@ -135,6 +142,114 @@ class TurnProcessor {
   }
 
   /**
+   * Processar transições de leis nacionais
+   */
+  static async processLawTransitions(turnNumber) {
+    try {
+      console.log(`🏛️ Processando transições de leis (Turno ${turnNumber})...`);
+
+      const paisesSnapshot = await db.collection('paises')
+        .where('lawChange', '!=', null)
+        .get();
+
+      if (paisesSnapshot.empty) {
+        console.log('✅ Nenhuma transição de lei em andamento.');
+        return { processed: 0 };
+      }
+
+      const batch = db.batch();
+      let processedCount = 0;
+
+      paisesSnapshot.forEach(doc => {
+        const country = doc.data();
+        const lawChange = country.lawChange;
+
+        if (!lawChange) return;
+
+        // Incrementa o progresso da transição
+        lawChange.progress += 1;
+
+        if (lawChange.progress >= lawChange.totalTurns) {
+          // Transição completa! Aplica a nova lei
+          const updateData = {
+            [lawChange.type + 'Law']: lawChange.targetLaw,
+            lawChange: null // Remove a transição
+          };
+          batch.update(doc.ref, updateData);
+          console.log(`✅ ${country.Pais || doc.id}: Transição para ${lawChange.targetLaw} completa!`);
+        } else {
+          // Ainda em transição
+          batch.update(doc.ref, { lawChange });
+          console.log(`🔄 ${country.Pais || doc.id}: Transição ${lawChange.progress}/${lawChange.totalTurns}`);
+        }
+
+        processedCount++;
+      });
+
+      if (processedCount > 0) {
+        await batch.commit();
+        console.log(`✅ ${processedCount} transições de leis processadas.`);
+      }
+
+      return { processed: processedCount };
+
+    } catch (error) {
+      Logger.error(`Erro ao processar transições de leis no turno ${turnNumber}:`, error);
+      console.error(`❌ Erro ao processar transições de leis:`, error);
+      return { processed: 0, error: error.message };
+    }
+  }
+
+  /**
+   * Aplicar efeitos das leis nacionais (modificadores)
+   */
+  static async applyNationalLawEffects(turnNumber) {
+    try {
+      console.log(`⚙️ Aplicando efeitos de leis nacionais (Turno ${turnNumber})...`);
+
+      // Buscar configuração de leis
+      const lawsDoc = await db.collection('gameConfig').doc('nationalLaws').get();
+      if (!lawsDoc.exists) {
+        console.warn('⚠️ Configuração de leis nacionais não encontrada.');
+        return { processed: 0 };
+      }
+      const lawsConfig = lawsDoc.data();
+
+      // Buscar todos os países
+      const paisesSnapshot = await db.collection('paises').get();
+      if (paisesSnapshot.empty) {
+        return { processed: 0 };
+      }
+
+      const batch = db.batch();
+      let processedCount = 0;
+
+      paisesSnapshot.forEach(doc => {
+        const countryData = doc.data();
+
+        // Calcular modificadores efetivos
+        const modifiers = calculateEffectiveModifiers(countryData, lawsConfig);
+
+        // Atualizar país com os modificadores
+        batch.update(doc.ref, { currentModifiers: modifiers });
+        processedCount++;
+      });
+
+      if (processedCount > 0) {
+        await batch.commit();
+        console.log(`✅ Efeitos de leis aplicados a ${processedCount} países.`);
+      }
+
+      return { processed: processedCount };
+
+    } catch (error) {
+      Logger.error(`Erro ao aplicar efeitos de leis no turno ${turnNumber}:`, error);
+      console.error(`❌ Erro ao aplicar efeitos de leis:`, error);
+      return { processed: 0, error: error.message };
+    }
+  }
+
+  /**
    * Salva log do processamento de turno
    */
   static async saveTurnProcessingLog(turnNumber, processedCount, startTime) {
@@ -144,8 +259,8 @@ class TurnProcessor {
         timestamp: new Date().toISOString(),
         processedCount,
         duration: Date.now() - startTime,
-        systems: ['consumer_goods', 'stability_effects', 'recurring_orders'],
-        version: '1.1'
+        systems: ['consumer_goods', 'stability_effects', 'recurring_orders', 'national_laws', 'law_transitions'],
+        version: '1.2'
       };
 
       await db.collection('logs').doc(`turno_${turnNumber}_${Date.now()}`).set(logData);

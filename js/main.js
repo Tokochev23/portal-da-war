@@ -907,8 +907,47 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// Inicializar mapa do mundo (modo somente visualização)
+let playerWorldMap = null;
+
+async function initPlayerWorldMap() {
+  try {
+    const mapContainer = document.getElementById('world-map-player');
+    if (!mapContainer) {
+      console.log('Container do mapa não encontrado');
+      return;
+    }
+
+    // Importar WorldMap
+    const { WorldMap } = await import('./components/worldMap.js');
+
+    // Criar instância do mapa em modo somente leitura
+    playerWorldMap = new WorldMap('world-map-player');
+    await playerWorldMap.initialize(false); // false = modo player (read-only)
+
+    // Atualizar mensagem de status
+    const mapInfo = document.getElementById('map-info-text-player');
+    if (mapInfo) {
+      mapInfo.textContent = 'Mapa carregado com sucesso!';
+    }
+
+    console.log('Mapa mundial (players) inicializado');
+  } catch (error) {
+    console.error('Erro ao inicializar mapa mundial:', error);
+    const mapInfo = document.getElementById('map-info-text-player');
+    if (mapInfo) {
+      mapInfo.textContent = 'Erro ao carregar mapa: ' + error.message;
+    }
+  }
+}
+
 // Carregamento inicial
 document.addEventListener('DOMContentLoaded', () => {
   console.log("DOM carregado, iniciando aplicação");
   loadSiteData();
+
+  // Inicializar mapa após um pequeno delay para garantir que o Leaflet carregou
+  setTimeout(() => {
+    initPlayerWorldMap();
+  }, 500);
 });

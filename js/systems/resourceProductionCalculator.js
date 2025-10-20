@@ -182,6 +182,18 @@ class ResourceProductionCalculator {
           resourceProduction *= climateModifiers[resource];
         }
 
+        // NOVO: 7. Aplicar modificadores das Leis Nacionais
+        if (country.currentModifiers) {
+          // Modificador geral de produção de recursos
+          if (typeof country.currentModifiers.resourceProduction === 'number') {
+            resourceProduction *= (1 + country.currentModifiers.resourceProduction);
+          }
+          // Modificador de eficiência de fábrica civil (afeta recursos industriais)
+          if (typeof country.currentModifiers.civilianFactoryEfficiency === 'number') {
+            resourceProduction *= (1 + country.currentModifiers.civilianFactoryEfficiency);
+          }
+        }
+
         // Arredondar para inteiro
         production[resource] = Math.round(resourceProduction);
       });

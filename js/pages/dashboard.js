@@ -8,6 +8,7 @@ import ResourceProductionCalculator from '../systems/resourceProductionCalculato
 import { ShipyardSystem } from '../systems/shipyardSystem.js';
 import MarketplaceSystem from '../systems/marketplaceSystem.js';
 import { OfferModalManager } from '../components/offerModalManager.js';
+import { LawChangeModalManager } from '../components/lawChangeModalManager.js'; // <-- NOVA IMPORTAÇÃO
 import { getFlagHTML } from '../ui/renderer.js';
 
 function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
@@ -179,7 +180,24 @@ function calculateShipProductionCapacity(country) {
   return orcamentoDisponivel * distribution.naval * tecnologiaCivil * eficienciaIndustrial * tecnologiaNaval * urbanizacao;
 }
 
-function renderDashboard(country) {
+async function renderDashboard(country) {
+  // Carrega a configuração das leis primeiro
+  let lawsConfig = null;
+  try {
+    const lawsDoc = await db.collection('gameConfig').doc('nationalLaws').get();
+    if (lawsDoc.exists) {
+      lawsConfig = lawsDoc.data();
+    }
+  } catch (error) {
+    console.error('Erro ao carregar configuração de leis:', error);
+  }
+
+  // Validar se a configuração de leis foi carregada corretamente
+  const lawsAvailable = lawsConfig?.mobilizationLaws && lawsConfig?.economicLaws;
+  if (!lawsAvailable) {
+    console.warn('⚠️ Configuração de leis nacionais não encontrada no gameConfig');
+  }
+
   // Cálculos essenciais
   const energyEstimate = EconomicCalculations.computeEnergyDemandGW(country);
   const consumerGoodsData = ConsumerGoodsCalculator.calculateConsumerGoods(country);
@@ -201,10 +219,14 @@ function renderDashboard(country) {
   const budget = calculateBudget(country); // ORÇAMENTO GERAL DO PAÍS
   const militaryBudget = calculateMilitaryBudget(country); // ORÇAMENTO MILITAR
   const distribution = getMilitaryDistribution(country);
-  // Usar valores de investimento direto (sem deduzir manutenção)
-  const vehicleProductionCapacity = militaryBudget * distribution.vehicles;
-  const aircraftProductionCapacity = militaryBudget * distribution.aircraft;
-  const shipProductionCapacity = militaryBudget * distribution.naval;
+
+  // Aplicar modificadores de leis nacionais na capacidade militar
+  const militaryCapacityModifier = 1 + (country.currentModifiers?.militaryCapacity || 0);
+
+  // Usar valores de investimento direto (sem deduzir manutenção) com modificadores
+  const vehicleProductionCapacity = militaryBudget * distribution.vehicles * militaryCapacityModifier;
+  const aircraftProductionCapacity = militaryBudget * distribution.aircraft * militaryCapacityModifier;
+  const shipProductionCapacity = militaryBudget * distribution.naval * militaryCapacityModifier;
   const militaryConsequences = calculateMilitaryBudgetConsequences(country);
 
   return `
@@ -302,6 +324,8 @@ function renderDashboard(country) {
                   </div>
                 </div>
               </div>
+
+              ${renderNationalLawsPanel(country, lawsConfig)}
 
               <!-- Consumer Goods -->
               <div class="bg-slate-900/50 border border-slate-800/50 rounded-xl p-6">
@@ -1650,6 +1674,79 @@ function renderNavalExamples(shipyardSystem, currentLevel) {
   }).join('');
 }
 
+/**
+ * NOVO: Renderiza o painel de Leis Nacionais e Esforço de Guerra.
+ * @param {object} country - O objeto de dados do país.
+ * @param {object} lawsConfig - A configuração das leis nacionais.
+ * @returns {string} O HTML do painel.
+ */
+function renderNationalLawsPanel(country, lawsConfig) {
+  // Validação completa da configuração de leis
+  if (!country || !lawsConfig || !lawsConfig.mobilizationLaws || !lawsConfig.economicLaws) {
+    console.warn('⚠️ Painel de leis não pode ser renderizado: configuração incompleta');
+    return ''; // Retorna vazio se não houver config válida
+  }
+
+  // 1. Lógica da Exaustão de Guerra
+  const exhaustion = country.warExhaustion || 0;
+  let exhaustionColor = 'bg-green-600';
+  if (exhaustion > 75) {
+    exhaustionColor = 'bg-red-600';
+  } else if (exhaustion > 40) {
+    exhaustionColor = 'bg-yellow-500';
+  }
+
+  // 2. Lógica das Leis Ativas
+  const mobilizationLawName = lawsConfig.mobilizationLaws[country.mobilizationLaw]?.name || 'Desconhecida';
+  const economicLawName = lawsConfig.economicLaws[country.economicLaw]?.name || 'Desconhecida';
+
+  // 3. Lógica do Progresso de Mudança de Lei
+  let lawChangeHtml = '';
+  if (country.lawChange) {
+    const { type, targetLaw, progress, totalTurns } = country.lawChange;
+    const targetLawName = lawsConfig[type + 'Laws'][targetLaw]?.name || 'Desconhecida';
+    const turnsRemaining = totalTurns - progress;
+    const progressPercentage = (progress / totalTurns) * 100;
+    lawChangeHtml = `
+      <div id="law-change-progress-panel" class="mt-4">
+        <h4 class="text-sm font-semibold text-slate-300 mb-2">Mudança de Lei em Progresso...</h4>
+        <div id="law-change-info" class="text-sm text-slate-400 mb-1">Mudando para "${targetLawName}". Turnos restantes: ${turnsRemaining}</div>
+        <div class="w-full bg-slate-700 rounded-full h-2.5">
+          <div id="law-change-progress-bar" class="bg-indigo-500 h-2.5 rounded-full" style="width: ${progressPercentage}%"></div>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div id="national-laws-panel" class="bg-slate-900/50 border border-slate-800/50 rounded-xl p-6">
+      <h3 class="text-lg font-semibold text-slate-200 mb-4">Leis Nacionais e Esforço de Guerra</h3>
+      <!-- Exaustão de Guerra -->
+      <div class="mb-4">
+        <div class="flex justify-between items-center mb-1">
+          <span class="text-sm font-medium text-slate-300">Exaustão de Guerra</span>
+          <span id="war-exhaustion-value" class="text-sm font-bold text-slate-300">${exhaustion.toFixed(1)}%</span>
+        </div>
+        <div class="w-full bg-slate-700 rounded-full h-2.5">
+          <div id="war-exhaustion-bar" class="${exhaustionColor} h-2.5 rounded-full" style="width: ${exhaustion}%"></div>
+        </div>
+      </div>
+      <!-- Leis Ativas -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div id="mobilization-law-card" onclick="window.openLawModal('mobilization')" class="bg-slate-800/30 p-3 rounded-lg border border-slate-700/50 hover:border-blue-500/50 cursor-pointer transition-all">
+          <h4 class="text-xs text-slate-400">Lei de Conscrição</h4>
+          <p id="mobilization-law-display" class="font-semibold text-slate-100">${mobilizationLawName}</p>
+        </div>
+        <div id="economic-law-card" onclick="window.openLawModal('economic')" class="bg-slate-800/30 p-3 rounded-lg border border-slate-700/50 hover:border-blue-500/50 cursor-pointer transition-all">
+          <h4 class="text-xs text-slate-400">Lei Econômica</h4>
+          <p id="economic-law-display" class="font-semibold text-slate-100">${economicLawName}</p>
+        </div>
+      </div>
+      ${lawChangeHtml}
+    </div>
+  `;
+}
+
 // Função para fazer upgrade do estaleiro
 window.upgradeShipyard = async function(countryId) {
   try {
@@ -1795,7 +1892,24 @@ async function initDashboard() {
     // Salvar país globalmente para as funções de controle
     window.currentCountry = country;
 
-    document.getElementById('dashboard-content').innerHTML = renderDashboard(country);
+    // INICIALIZAÇÃO DOS SISTEMAS
+    const lawChangeManager = new LawChangeModalManager();
+    window.openLawModal = async (lawType) => {
+      // Carregar configuração de leis
+      const lawsDoc = await db.collection('gameConfig').doc('nationalLaws').get();
+      const lawsConfig = lawsDoc.exists ? lawsDoc.data() : null;
+
+      if (!lawsConfig) {
+        console.error('Configuração de leis não encontrada');
+        return;
+      }
+
+      // Recarrega os dados do país para garantir que estão atualizados
+      const freshCountryData = await reloadCurrentCountry();
+      lawChangeManager.openModal(lawType, freshCountryData, lawsConfig);
+    };
+
+    document.getElementById('dashboard-content').innerHTML = await renderDashboard(country);
     setupDashboardTabs();
 
   } catch (error) {
@@ -1811,6 +1925,12 @@ async function initDashboard() {
   }
 }
 
+/**
+ * NOVO: Renderiza o painel de Leis Nacionais e Esforço de Guerra.
+ * @param {object} country - O objeto de dados do país.
+ * @param {object} lawsConfig - A configuração das leis nacionais.
+ * @returns {string} O HTML do painel.
+ */
 // Expor calculadores de recursos globalmente para o OfferModalManager
 window.ResourceProductionCalculator = ResourceProductionCalculator;
 window.ResourceConsumptionCalculator = ResourceConsumptionCalculator;
@@ -3643,8 +3763,8 @@ async function openCreateOfferModal() {
       offerModalManager = new OfferModalManager(marketplaceSystem);
     }
 
-    // Abrir modal inteligente de venda de recursos
-    await offerModalManager.openResourceSellModal();
+    // Abrir modal de seleção (recursos ou equipamentos)
+    await offerModalManager.openSelectionModal();
 
   } catch (error) {
     console.error('Erro ao abrir modal de criação:', error);

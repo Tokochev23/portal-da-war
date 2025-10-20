@@ -70,7 +70,68 @@
       </div>
       <div id="dashboard-tab-content">
           <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="overview" role="tabpanel" aria-labelledby="overview-tab">
-              <p class="text-sm text-gray-500 dark:text-gray-400">Visão geral do país.</p>
+          <!-- Estatísticas Econômicas e Sociais -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <!-- Estabilidade -->
+            <div id="estabilidade-card" class="bg-slate-800/50 p-4 rounded-lg shadow-lg text-center">
+              <h4 class="text-sm font-semibold text-slate-400 mb-1">Estabilidade</h4>
+              <div id="estabilidade-value" class="text-3xl font-bold text-emerald-400">--%</div>
+              <div id="estabilidade-label" class="text-xs text-slate-500">Tranquilo</div>
+            </div>
+            <!-- Burocracia -->
+            <div class="bg-slate-800/50 p-4 rounded-lg shadow-lg text-center">
+              <h4 class="text-sm font-semibold text-slate-400 mb-1">Burocracia</h4>
+              <div id="burocracia-value" class="text-3xl font-bold text-sky-400">--%</div>
+            </div>
+            <!-- População -->
+            <div class="bg-slate-800/50 p-4 rounded-lg shadow-lg text-center">
+              <h4 class="text-sm font-semibold text-slate-400 mb-1">População</h4>
+              <div id="populacao-value" class="text-3xl font-bold text-slate-300">--</div>
+            </div>
+            <!-- Tecnologia -->
+            <div class="bg-slate-800/50 p-4 rounded-lg shadow-lg text-center">
+              <h4 class="text-sm font-semibold text-slate-400 mb-1">Tecnologia</h4>
+              <div id="tecnologia-value" class="text-3xl font-bold text-purple-400">--%</div>
+            </div>
+          </div>
+
+          <!-- Leis Nacionais e Esforço de Guerra -->
+          <div id="national-laws-panel" class="bg-slate-800/50 p-4 rounded-lg shadow-lg mb-6">
+            <h3 class="text-lg font-semibold text-slate-200 mb-3">Leis Nacionais e Esforço de Guerra</h3>
+            <!-- Exaustão de Guerra -->
+            <div class="mb-4">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-sm font-medium text-slate-300">Exaustão de Guerra</span>
+                <span id="war-exhaustion-value" class="text-sm font-bold text-slate-300">--%</span>
+              </div>
+              <div class="w-full bg-slate-700 rounded-full h-2.5">
+                <div id="war-exhaustion-bar" class="bg-green-600 h-2.5 rounded-full" style="width: 0%"></div>
+              </div>
+            </div>
+            <!-- Leis Ativas -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div id="mobilization-law-card" class="bg-slate-900/50 p-3 rounded-md">
+                <h4 class="text-xs text-slate-400">Lei de Conscrição</h4>
+                <p id="mobilization-law-display" class="font-semibold text-slate-100">--</p>
+              </div>
+              <div id="economic-law-card" class="bg-slate-900/50 p-3 rounded-md">
+                <h4 class="text-xs text-slate-400">Lei Econômica</h4>
+                <p id="economic-law-display" class="font-semibold text-slate-100">--</p>
+              </div>
+            </div>
+            <!-- Progresso de Mudança de Lei (Oculto por padrão) -->
+            <div id="law-change-progress-panel" class="hidden mt-4">
+              <h4 class="text-sm font-semibold text-slate-300 mb-2">Mudança de Lei em Progresso...</h4>
+              <div id="law-change-info" class="text-sm text-slate-400 mb-1"></div>
+              <div class="w-full bg-slate-700 rounded-full h-2.5">
+                <div id="law-change-progress-bar" class="bg-indigo-500 h-2.5 rounded-full" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Orçamento e Indústria -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <!-- Card de Orçamento -->
           </div>
           <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="inventory" role="tabpanel" aria-labelledby="inventory-tab">
               <h2 class="text-xl font-semibold mb-4">Inventário Nacional</h2>
@@ -79,7 +140,14 @@
               <div id="inventory-vehicles" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
           </div>
           <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="market" role="tabpanel" aria-labelledby="market-tab">
-              <p class="text-sm text-gray-500 dark:text-gray-400">WIP: Mercado Internacional.</p>
+              <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Mercado Internacional</h2>
+                <button id="open-sell-resource-modal-btn" class="px-4 py-2 bg-brand-500 text-white font-semibold rounded-lg hover:bg-brand-600 transition-colors">
+                  🔥 Vender Recursos
+                </button>
+              </div>
+              <p class="text-sm text-gray-500 dark:text-gray-400">Crie e gerencie suas ofertas de compra e venda no mercado global.</p>
+              <!-- O conteúdo das ofertas do mercado será carregado aqui -->
           </div>
           <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="fleets" role="tabpanel" aria-labelledby="fleets-tab">
               <p class="text-sm text-gray-500 dark:text-gray-400">WIP: Gestão de Frotas.</p>

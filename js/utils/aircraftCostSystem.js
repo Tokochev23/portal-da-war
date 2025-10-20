@@ -7,9 +7,22 @@ class AircraftCostSystem {
 
         try {
             const breakdown = this.calculateCostBreakdown(aircraft);
-            const productionCost = Object.values(breakdown).reduce((sum, cost) => sum + cost, 0);
+            let productionCost = Object.values(breakdown).reduce((sum, cost) => sum + cost, 0);
             const maintenanceCost = this.calculateMaintenanceCost(aircraft, breakdown);
             const operationalCost = this.calculateOperationalCost(aircraft);
+
+            // Aplicar modificadores de leis nacionais
+            if (window.currentUserCountry?.currentModifiers) {
+                const modifiers = window.currentUserCountry.currentModifiers;
+
+                // Modificador de custo de produção militar (negativo reduz custo)
+                if (typeof modifiers.militaryProductionCost === 'number') {
+                    const costModifier = 1 + modifiers.militaryProductionCost;
+                    productionCost *= costModifier;
+                    console.log(`🏛️ Lei Nacional: Custo de produção ${modifiers.militaryProductionCost > 0 ? '+' : ''}${(modifiers.militaryProductionCost * 100).toFixed(0)}%`);
+                }
+            }
+
             const totalOwnershipCost = productionCost + (maintenanceCost * 10) + (operationalCost * 10); // 10-year lifecycle
 
             return {

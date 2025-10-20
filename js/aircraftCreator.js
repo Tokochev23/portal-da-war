@@ -2,110 +2,186 @@
 // Main logic file - loads component data and runs calculations.
 
 import { auth, checkPlayerCountry, getCountryData, getGameConfig } from './services/firebase.js';
-
-// Import Aircraft ECS system
 import { legacyBridge } from './aircraft/core/LegacyBridge.js';
+import { TabLoaders } from './components/aircraftTabLoaders.js';
 
-// Global state for the creator
-let currentUserCountry = null;
+class AircraftCreatorApp {
+    constructor() {
+        this.isInitialized = false;
+        this.currentUserCountry = null;
+        this.tabLoaders = new TabLoaders();
+        this.loadingElement = document.getElementById('initial-loading');
+        this.statusElement = document.getElementById('loading-status');
+    }
 
-/**
- * Primary initialization function for the Aircraft Creator.
- * This function ensures that all necessary data (user, country, tech levels)
- * is loaded and validated before initializing the main UI.
- * This makes the creator self-contained and robust.
- */
-async function initializeAircraftCreatorApp() {
-    const loadingElement = document.getElementById('initial-loading');
-    const statusElement = document.getElementById('loading-status');
+    updateLoadingStatus(message) {
+        if (this.statusElement) this.statusElement.textContent = message;
+    }
 
-    const updateLoadingStatus = (message) => {
-        if (statusElement) statusElement.textContent = message;
-    };
-
-    try {
-        updateLoadingStatus('Aguardando autenticação...');
-        
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                updateLoadingStatus('Usuário autenticado. Verificando país...');
-                
-                const paisId = await checkPlayerCountry(user.uid);
-                
-                if (paisId) {
-                    updateLoadingStatus('País encontrado. Carregando dados de tecnologia...');
-                    
-                    const [countryData, gameConfig] = await Promise.all([
-                        getCountryData(paisId),
-                        getGameConfig()
-                    ]);
-                    
-                    if (countryData) {
-                        const currentYear = 1953 + (gameConfig?.turnoAtual || 1);
-                        const aircraftTech = countryData.Aeronautica || 50;
-                        
-                        currentUserCountry = {
-                            ...countryData,
-                            id: paisId,
-                            aircraftTech: aircraftTech,
-                            name: countryData.Pais,
-                            year: currentYear
-                        };
-                        
-                        window.currentUserCountry = currentUserCountry;
-                        
-                        console.log(`✅ País do usuário carregado: ${currentUserCountry.name} | Ano: ${currentUserCountry.year}`, currentUserCountry);
-
-                        // Initialize Aircraft ECS system
-                        updateLoadingStatus('Inicializando sistema de aeronaves...');
-                        legacyBridge.initialize();
-
-                        // Validate the bridge
-                        if (!legacyBridge.validateBridge()) {
-                            throw new Error('Falha na inicialização do sistema ECS de aeronaves');
-                        }
-
-                        console.log('✅ Aircraft ECS system initialized successfully');
-
-                        if (window.aircraftCreatorApp && !window.aircraftCreatorApp.isInitialized) {
-                            await window.aircraftCreatorApp.initialize();
-                        }
-                    } else {
-                        throw new Error(`Não foi possível carregar os dados para o país com ID: ${paisId}`);
-                    }
+    async init() {
+        console.log('🚀 Initializing Aircraft Creator App...');
+        try {
+            this.updateLoadingStatus('Awaiting authentication...');
+            
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    await this.loadUserAndGameData(user);
                 } else {
-                    updateLoadingStatus('Você não está vinculado a um país. Redirecionando...');
-                    setTimeout(() => { window.location.href = 'index.html'; }, 3000);
-                     throw new Error('Usuário não vinculado a um país.');
+                    this.handleNotAuthenticated();
+                }
+            });
+        } catch (error) {
+            this.handleInitializationError(error);
+        }
+    }
+
+    async loadUserAndGameData(user) {
+        try {
+            this.updateLoadingStatus('User authenticated. Checking country...');
+            const paisId = await checkPlayerCountry(user.uid);
+
+            if (paisId) {
+                this.updateLoadingStatus('Country found. Loading technology data...');
+                const [countryData, gameConfig] = await Promise.all([
+                    getCountryData(paisId),
+                    getGameConfig()
+                ]);
+
+                if (countryData) {
+                    const currentYear = 1953 + (gameConfig?.turnoAtual || 1);
+                    const aircraftTech = countryData.Aeronautica || 50;
+
+                    this.currentUserCountry = {
+                        ...countryData,
+                        id: paisId,
+                        aircraftTech: aircraftTech,
+                        name: countryData.Pais,
+                        year: currentYear
+                    };
+
+                    window.currentUserCountry = this.currentUserCountry;
+                    console.log(`✅ User country loaded: ${this.currentUserCountry.name} | Year: ${this.currentUserCountry.year}`, this.currentUserCountry);
+
+                    await this.finishInitialization();
+                } else {
+                    throw new Error(`Could not load data for country with ID: ${paisId}`);
                 }
             } else {
-                updateLoadingStatus('Nenhum usuário logado. Redirecionando para a página inicial...');
-                setTimeout(() => { window.location.href = 'index.html'; }, 3000);
-                throw new Error('Usuário não autenticado.');
+                this.handleNoCountryLinked();
             }
-        });
+        } catch (error) {
+            this.handleInitializationError(error);
+        }
+    }
 
-    } catch (error) {
-        console.error('❌ Erro fatal na inicialização do Criador de Aeronaves:', error);
-        updateLoadingStatus(`Erro: ${error.message}`);
-        if (loadingElement) {
-            loadingElement.innerHTML = `<div class="text-red-400 text-center p-4">${error.message}</div>`;
+    async finishInitialization() {
+        this.updateLoadingStatus('Initializing aircraft systems...');
+        legacyBridge.initialize();
+
+        if (!legacyBridge.validateBridge()) {
+            throw new Error('Failed to initialize aircraft ECS system');
+        }
+        console.log('✅ Aircraft ECS system initialized successfully');
+
+        this.updateLoadingStatus('Loading aircraft components...');
+        const componentsLoaded = await loadAircraftComponents();
+
+        if (componentsLoaded) {
+            this.updateLoadingStatus('Components loaded. Finalizing...');
+            this.setupTabEvents();
+            this.tabLoaders.loadCategoryTab(); // Load initial tab
+            this.hideLoadingScreen();
+            console.log('✅ Aircraft Creator is ready.');
+        } else {
+            throw new Error('Failed to load essential aircraft components.');
+        }
+    }
+
+    setupTabEvents() {
+        const tabButtons = document.querySelectorAll('.tab-button');
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const tab = button.dataset.tab;
+                this.loadTab(tab);
+            });
+        });
+    }
+
+    loadTab(tab) {
+        console.log(`Attempting to load tab: ${tab}`);
+        switch (tab) {
+            case 'category':
+                this.tabLoaders.loadCategoryTab();
+                break;
+            case 'structure':
+                this.tabLoaders.loadStructureTab();
+                break;
+            case 'cell':
+                this.tabLoaders.loadCellTab();
+                break;
+            case 'wings':
+                this.tabLoaders.loadWingsTab();
+                break;
+            case 'propulsion':
+                this.tabLoaders.loadPropulsionTab();
+                break;
+            case 'supercharger':
+                this.tabLoaders.loadSuperchargerTab();
+                break;
+            case 'weapons':
+                this.tabLoaders.loadWeaponsTab();
+                break;
+            case 'avionics':
+                this.tabLoaders.loadAvionicsTab();
+                break;
+            default:
+                console.warn(`Unknown tab: ${tab}`);
+        }
+    }
+
+    hideLoadingScreen() {
+        if (this.loadingElement) {
+            this.loadingElement.style.opacity = '0';
+            setTimeout(() => {
+                this.loadingElement.style.display = 'none';
+            }, 500); // Fade-out transition time
+        }
+    }
+
+    handleNotAuthenticated() {
+        this.updateLoadingStatus('No user logged in. Redirecting to home page...');
+        setTimeout(() => { window.location.href = 'index.html'; }, 3000);
+        throw new Error('User not authenticated.');
+    }
+
+    handleNoCountryLinked() {
+        this.updateLoadingStatus('You are not linked to a country. Redirecting...');
+        setTimeout(() => { window.location.href = 'index.html'; }, 3000);
+        throw new Error('User not linked to a country.');
+    }
+
+    handleInitializationError(error) {
+        console.error('❌ Fatal error initializing Aircraft Creator:', error);
+        this.updateLoadingStatus(`Error: ${error.message}`);
+        if (this.loadingElement) {
+            this.loadingElement.innerHTML = `<div class="text-red-400 text-center p-4">${error.message}</div>`;
         }
     }
 }
 
-
-// Dados dos componentes incluídos diretamente (para evitar problemas CORS)
+// Load aircraft components data
 async function loadAircraftComponents() {
-    console.log('🔄 Carregando todos os componentes da aeronave via import dinâmico...');
+    console.log('🔄 Loading all aircraft components via dynamic import...');
     try {
-        const airframesModule = await import('./data/aircraft_components/airframes.js');
-        const enginesModule = await import('./data/aircraft_components/aircraft_engines.js');
-        const weaponsModule = await import('./data/aircraft_components/aircraft_weapons.js');
-        const avionicsModule = await import('./data/aircraft_components/avionics.js');
-        const wingsModule = await import('./data/aircraft_components/wings.js');
-        const superchargersModule = await import('./data/aircraft_components/superchargers.js');
-        const specialEquipmentModule = await import('./data/aircraft_components/special_equipment.js'); // NEW
+        const [airframesModule, enginesModule, weaponsModule, avionicsModule, wingsModule, superchargersModule, specialEquipmentModule] = await Promise.all([
+            import('./data/aircraft_components/airframes.js'),
+            import('./data/aircraft_components/aircraft_engines.js'),
+            import('./data/aircraft_components/aircraft_weapons.js'),
+            import('./data/aircraft_components/avionics.js'),
+            import('./data/aircraft_components/wings.js'),
+            import('./data/aircraft_components/superchargers.js'),
+            import('./data/aircraft_components/special_equipment.js')
+        ]);
 
         window.AIRCRAFT_COMPONENTS.airframes = airframesModule.airframes;
         window.AIRCRAFT_COMPONENTS.aircraft_engines = enginesModule.aircraft_engines;
@@ -114,137 +190,63 @@ async function loadAircraftComponents() {
         window.AIRCRAFT_COMPONENTS.wing_types = wingsModule.wing_types;
         window.AIRCRAFT_COMPONENTS.wing_features = wingsModule.wing_features;
         window.AIRCRAFT_COMPONENTS.superchargers = superchargersModule.superchargers;
-        window.AIRCRAFT_COMPONENTS.special_equipment = specialEquipmentModule.special_equipment; // NEW
+        window.AIRCRAFT_COMPONENTS.special_equipment = specialEquipmentModule.special_equipment;
 
-        console.log('✅ Todos os componentes foram carregados com sucesso.');
+        console.log('✅ All components loaded successfully.');
         return true;
     } catch (error) {
-        console.error('❌ Erro fatal ao carregar componentes dinamicamente:', error);
+        console.error('❌ Fatal error loading components dynamically:', error);
         return false;
     }
 }
 
-// Garantir que a função esteja disponível globalmente
-window.loadAircraftComponents = loadAircraftComponents;
-
-// Global state for the aircraft being designed
+// Initialize global objects
+window.AIRCRAFT_COMPONENTS = {};
 window.currentAircraft = {
-    name: 'Nova Aeronave',
+    name: 'New Aircraft',
     airframe: null,
     engine: null,
-    wings: {
-        type: null,
-        features: []
-    },
+    wings: { type: null, features: [] },
     supercharger: 'none',
     weapons: [],
     avionics: [],
     quantity: 1
 };
 
-// Initialize global components object
-if (!window.AIRCRAFT_COMPONENTS) {
-    window.AIRCRAFT_COMPONENTS = {
-        airframes: {},
-        aircraft_engines: {},
-        aircraft_weapons: {},
-        avionics: {},
-        wing_types: {},
-        wing_features: {},
-        superchargers: {}
-    };
-}
-
 // --- GLOBAL FUNCTIONS --- //
-window.AIRCRAFT_COMPONENTS = window.AIRCRAFT_COMPONENTS;
-window.currentAircraft = window.currentAircraft;
-window.getCurrentUserCountry = () => currentUserCountry;
+window.getCurrentUserCountry = () => window.aircraftCreatorApp?.currentUserCountry;
 
+// These functions are now handled by the legacy bridge or directly within the tab loaders
+// It's recommended to phase them out and use the ECS or tab loader methods directly
 window.selectAirframe = function(airframeId) {
-    if (!window.AIRCRAFT_COMPONENTS?.airframes[airframeId]) {
-        console.error('Airframe not found:', airframeId);
-        return;
-    }
-    window.currentAircraft.airframe = airframeId;
-    document.querySelectorAll('.airframe-card').forEach(card => {
-        card.classList.remove('selected', 'border-cyan-400', 'ring-1', 'ring-cyan-400/50');
-        card.classList.add('border-slate-700/50', 'bg-slate-800/40');
-    });
-    const selectedCard = document.querySelector(`[onclick="selectAirframe('${airframeId}')"]`);
-    if (selectedCard) {
-        selectedCard.classList.add('selected', 'border-cyan-400', 'ring-1', 'ring-cyan-400/50');
-        selectedCard.classList.remove('border-slate-700/50', 'bg-slate-800/40');
-    }
-    updateAircraftCalculations();
+    console.warn('Legacy selectAirframe called. Please update to use the new system.');
+    legacyBridge.legacyAircraftProxy.airframe = airframeId;
 };
 
 window.selectAircraftEngine = function(engineId) {
-    if (!window.AIRCRAFT_COMPONENTS?.aircraft_engines[engineId]) {
-        console.error('Engine not found:', engineId);
-        return;
-    }
-    window.currentAircraft.engine = engineId;
-    document.querySelectorAll('.engine-card').forEach(card => {
-        card.classList.remove('selected', 'border-cyan-400', 'ring-1', 'ring-cyan-400/50');
-        card.classList.add('border-slate-700/50', 'bg-slate-800/40');
-    });
-    const selectedCard = document.querySelector(`[onclick="selectAircraftEngine('${engineId}')"]`);
-    if (selectedCard) {
-        selectedCard.classList.add('selected', 'border-cyan-400', 'ring-1', 'ring-cyan-400/50');
-        selectedCard.classList.remove('border-slate-700/50', 'bg-slate-800/40');
-    }
-    updateAircraftCalculations();
+    console.warn('Legacy selectAircraftEngine called. Please update to use the new system.');
+    legacyBridge.legacyAircraftProxy.engine = engineId;
 };
 
 window.toggleAircraftWeapon = function(weaponId) {
-    if (!window.currentAircraft.weapons) {
-        window.currentAircraft.weapons = [];
-    }
-    const index = window.currentAircraft.weapons.indexOf(weaponId);
+    console.warn('Legacy toggleAircraftWeapon called. Please update to use the new system.');
+    const currentWeapons = legacyBridge.legacyAircraftProxy.weapons || [];
+    const index = currentWeapons.indexOf(weaponId);
     if (index > -1) {
-        window.currentAircraft.weapons.splice(index, 1);
+        currentWeapons.splice(index, 1);
     } else {
-        window.currentAircraft.weapons.push(weaponId);
+        currentWeapons.push(weaponId);
     }
-    const card = document.querySelector(`[onclick="toggleAircraftWeapon('${weaponId}')"]`);
-    if (card) {
-        card.classList.toggle('selected');
-        card.classList.toggle('border-cyan-400');
-    }
-    updateAircraftCalculations();
+    legacyBridge.legacyAircraftProxy.weapons = currentWeapons;
 };
 
 window.updateAircraftCalculations = function() {
-    // Always update displays, even if no airframe is selected, to show default/empty states
-    // The calculation functions themselves will return error/default objects if data is missing.
-    if (window.calculateAircraftPerformance) {
-        const performance = window.calculateAircraftPerformance();
-        updateAircraftDisplays(performance);
-    }
-    if (window.calculateAircraftCosts) {
-        const costs = window.calculateAircraftCosts();
-        updateCostDisplays(costs);
-    }
+    // This function is now largely managed by the ECS and real-time feedback systems
+    // Kept for any remaining legacy dependencies
 };
 
-function updateAircraftDisplays(performance) {
-    const weightEl = document.getElementById('total-weight-display');
-    const speedEl = document.getElementById('max-speed-display');
-    const thrustEl = document.getElementById('thrust-weight-ratio-display');
-    if (weightEl && performance.totalWeight) {
-        weightEl.textContent = Math.round(performance.totalWeight) + ' kg';
-    }
-    if (speedEl && (performance.maxSpeed || performance.maxSpeedKph)) {
-        const speed = performance.maxSpeed || performance.maxSpeedKph;
-        speedEl.textContent = Math.round(speed) + ' km/h';
-    }
-    if (thrustEl && performance.thrustToWeight) {
-        thrustEl.textContent = performance.thrustToWeight.toFixed(2) + ':1';
-    }
-}
-
 // --- ROBUST INITIALIZATION ---
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Inicializando sistema de aeronaves com novo fluxo...');
-    initializeAircraftCreatorApp();
+document.addEventListener('DOMContentLoaded', () => {
+    window.aircraftCreatorApp = new AircraftCreatorApp();
+    window.aircraftCreatorApp.init();
 });

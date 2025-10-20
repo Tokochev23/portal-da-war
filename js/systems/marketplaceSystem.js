@@ -1,6 +1,7 @@
 // js/systems/marketplaceSystem.js - Sistema de Marketplace Internacional
 
-import { db, auth } from '../services/firebase.js';
+import { app, db, auth } from '../services/firebase.js';
+import { getFunctions, httpsCallable } from "firebase/functions";
 import { checkPlayerCountry } from '../services/firebase.js';
 import { getMarketTypeConfig, getGameResourceKey, RESOURCE_MAPPING } from '../data/resourceMapping.js';
 
@@ -246,7 +247,7 @@ export class MarketplaceSystem {
             throw new Error('Tipo de oferta inválido');
         }
 
-        if (!data.category || !['resources', 'vehicles', 'naval'].includes(data.category)) {
+        if (!data.category || !['resources', 'vehicles', 'naval', 'aircraft'].includes(data.category)) {
             throw new Error('Categoria inválida');
         }
 
@@ -311,7 +312,7 @@ export class MarketplaceSystem {
         if (data.category === 'resources') {
             // Verificar recursos disponíveis
             // TODO: Implementar verificação de inventário de recursos
-        } else if (data.category === 'vehicles' || data.category === 'naval') {
+        } else if (data.category === 'vehicles' || data.category === 'naval' || data.category === 'aircraft') {
             // Verificar equipamentos no inventário
             const inventoryDoc = await db.collection('inventory').doc(countryData.id || data.country_id).get();
             if (inventoryDoc.exists) {
@@ -345,181 +346,41 @@ export class MarketplaceSystem {
     }
 
     /**
-     * Buscar ofertas com filtros - Versão completamente sem índices
+     * Buscar ofertas com filtros usando a Cloud Function 'getMarketplaceOffers'.
+     * A lógica de filtragem e ordenação agora é executada no servidor.
      */
     async getOffers(filters = {}) {
         try {
-            const collectionRef = db.collection(this.collections.offers);
-            let offers = [];
-            let snapshot;
+            console.info("🔍 Buscando ofertas usando a Cloud Function 'getMarketplaceOffers' (v9)...");
 
-            // Abordagem completamente sem índices: buscar todos os documentos e filtrar no cliente
-            try {
-                console.info('🔍 Buscando ofertas usando filtragem client-side (sem índices)');
-                snapshot = await collectionRef.get();
-            } catch (getAllError) {
-                console.warn('Falha ao buscar todos os documentos, tentando listagem:', getAllError);
+            const functions = getFunctions(app); // Obter instância do Functions
+            const getMarketplaceOffersCallable = httpsCallable(functions, 'getMarketplaceOffers');
 
-                try {
-                    // Fallback: tentar listar documentos se disponível
-                    const docRefs = await collectionRef.listDocuments();
-                    const docPromises = docRefs.slice(0, 100).map(ref => ref.get());
-                    const docs = await Promise.all(docPromises);
+            const result = await getMarketplaceOffersCallable({ filters });
 
-                    // Criar um objeto snapshot mock
-                    snapshot = {
-                        docs: docs.filter(doc => doc.exists),
-                        size: docs.filter(doc => doc.exists).length,
-                        empty: docs.filter(doc => doc.exists).length === 0,
-                        forEach: function(callback) {
-                            this.docs.forEach(callback);
-                        }
-                    };
-                } catch (listError) {
-                    console.warn('Listagem de documentos falhou, retornando resultados vazios:', listError);
-
-                    // Fallback final: retornar resultados vazios mas sistema funcionando
-                    snapshot = {
-                        docs: [],
-                        size: 0,
-                        empty: true,
-                        forEach: function() {}
-                    };
-                }
+            if (result.data && result.data.success) {
+                console.info(`✅ ${result.data.offers.length} ofertas recebidas do servidor.`);
+                return {
+                    success: true,
+                    offers: result.data.offers,
+                    hasMore: result.data.hasMore,
+                    total: result.data.offers.length
+                };
+            } else {
+                throw new Error(result.data.error || 'A Cloud Function retornou um erro inesperado.');
             }
-
-            // Processar todos os documentos e aplicar filtros client-side
-            snapshot.forEach(doc => {
-                const data = doc.data();
-
-                // Filtro básico de status (sempre ativo)
-                if (data.status !== 'active') {
-                    return;
-                }
-
-                // Verificar se expirou (ignorar se expires_at for null/undefined)
-                if (data.expires_at) {
-                    const expiresAt = data.expires_at?.toDate ? data.expires_at.toDate() : new Date(data.expires_at);
-                    if (expiresAt && expiresAt <= new Date()) {
-                        return;
-                    }
-                }
-
-                offers.push({
-                    id: doc.id,
-                    ...data
-                });
-            });
-
-            // Aplicar todos os filtros client-side
-            let filteredOffers = offers;
-
-            // Filtros básicos
-            if (filters.category && filters.category !== 'all') {
-                filteredOffers = filteredOffers.filter(offer => offer.category === filters.category);
-            }
-
-            if (filters.type && filters.type !== 'all') {
-                filteredOffers = filteredOffers.filter(offer => offer.type === filters.type);
-            }
-
-            if (filters.seller_id) {
-                filteredOffers = filteredOffers.filter(offer => offer.seller_id === filters.seller_id);
-            }
-
-            if (filters.buyer_id) {
-                filteredOffers = filteredOffers.filter(offer => offer.buyer_id === filters.buyer_id);
-            }
-
-            // Filtros de busca
-            if (filters.searchTerm) {
-                const term = filters.searchTerm.toLowerCase();
-                filteredOffers = filteredOffers.filter(offer =>
-                    (offer.title && offer.title.toLowerCase().includes(term)) ||
-                    (offer.description && offer.description.toLowerCase().includes(term)) ||
-                    (offer.item_name && offer.item_name.toLowerCase().includes(term)) ||
-                    (offer.country_name && offer.country_name.toLowerCase().includes(term))
-                );
-            }
-
-            // Filtros avançados de preço e quantidade
-            if (filters.priceMin !== null && filters.priceMin !== undefined) {
-                filteredOffers = filteredOffers.filter(offer => offer.price_per_unit >= filters.priceMin);
-            }
-
-            if (filters.priceMax !== null && filters.priceMax !== undefined) {
-                filteredOffers = filteredOffers.filter(offer => offer.price_per_unit <= filters.priceMax);
-            }
-
-            if (filters.quantityMin !== null && filters.quantityMin !== undefined) {
-                filteredOffers = filteredOffers.filter(offer => offer.quantity >= filters.quantityMin);
-            }
-
-            if (filters.quantityMax !== null && filters.quantityMax !== undefined) {
-                filteredOffers = filteredOffers.filter(offer => offer.quantity <= filters.quantityMax);
-            }
-
-            // Ordenação client-side
-            const orderBy = filters.orderBy || 'created_at';
-            const orderDirection = filters.orderDirection || 'desc';
-
-            filteredOffers.sort((a, b) => {
-                let aVal = a[orderBy];
-                let bVal = b[orderBy];
-
-                // Converter datas se necessário
-                if (orderBy.includes('_at') && aVal && bVal) {
-                    aVal = aVal.toDate ? aVal.toDate() : new Date(aVal);
-                    bVal = bVal.toDate ? bVal.toDate() : new Date(bVal);
-                }
-
-                // Converter para números se necessário
-                if (typeof aVal === 'string' && !isNaN(aVal)) aVal = parseFloat(aVal);
-                if (typeof bVal === 'string' && !isNaN(bVal)) bVal = parseFloat(bVal);
-
-                if (orderDirection === 'desc') {
-                    return bVal > aVal ? 1 : bVal < aVal ? -1 : 0;
-                } else {
-                    return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
-                }
-            });
-
-            // Filtros adicionais
-            if (filters.countryFilter) {
-                filteredOffers = filteredOffers.filter(offer => offer.country_id === filters.countryFilter);
-            }
-
-            if (filters.timeFilter !== null && filters.timeFilter !== undefined) {
-                const now = new Date();
-                const maxTime = new Date(now.getTime() + filters.timeFilter * 24 * 60 * 60 * 1000);
-                filteredOffers = filteredOffers.filter(offer => {
-                    const expiresAt = offer.expires_at?.toDate ? offer.expires_at.toDate() : new Date(offer.expires_at);
-                    return expiresAt <= maxTime;
-                });
-            }
-
-            // Verificar embargos
-            filteredOffers = await this.filterEmbargoedOffers(filteredOffers, filters.current_country_id);
-
-            // Aplicar limite final após toda a filtragem
-            if (filters.limit && filteredOffers.length > filters.limit) {
-                filteredOffers = filteredOffers.slice(0, filters.limit);
-            }
-
-            console.info(`✅ Ofertas filtradas: ${filteredOffers.length} encontradas usando filtragem client-side`);
-
-            return {
-                success: true,
-                offers: filteredOffers,
-                total: filteredOffers.length,
-                totalCount: filteredOffers.length
-            };
 
         } catch (error) {
-            console.error('Erro ao buscar ofertas:', error);
+            console.error("Erro ao chamar a Cloud Function 'getMarketplaceOffers':", error);
+            let errorMessage = error.message;
+            if (error.code === 'functions/unauthenticated') {
+                errorMessage = 'Erro de autenticação. Por favor, faça login novamente.';
+            } else if (error.code === 'functions/internal') {
+                errorMessage = 'Ocorreu um erro interno no servidor. Tente novamente mais tarde.';
+            }
             return {
                 success: false,
-                error: error.message,
+                error: errorMessage,
                 offers: []
             };
         }
@@ -687,25 +548,40 @@ export class MarketplaceSystem {
     }
 
     /**
-     * Transferir recursos entre países (vendedor → comprador)
+     * Transferir recursos OU equipamentos entre países (vendedor → comprador)
      */
     async transferResources(offer, quantity, sellerCountryId, buyerCountryId) {
         try {
-            console.log(`🔄 Transferindo recursos: ${quantity} ${offer.unit} de ${offer.item_name}`);
+            console.log(`🔄 Transferindo: ${quantity} ${offer.unit} de ${offer.item_name}`);
             console.log(`   Vendedor: ${sellerCountryId}`);
             console.log(`   Comprador: ${buyerCountryId}`);
+            console.log(`   Categoria: ${offer.category}`);
 
-            // Mapear item_id para campo de recurso do país
+            // Verificar se é equipamento (veículo, navio, avião)
+            if (offer.category === 'vehicles' || offer.category === 'naval' || offer.category === 'aircraft') {
+                await this.transferEquipment(offer, quantity, sellerCountryId, buyerCountryId);
+                return;
+            }
+
+            // Se não for equipamento, transferir como recurso
+            // Usar getMarketTypeConfig para obter o gameResourceId correto
+            const marketTypeConfig = getMarketTypeConfig(offer.item_id);
+            if (!marketTypeConfig) {
+                console.warn(`⚠️ Item ${offer.item_id} não encontrado no RESOURCE_MAPPING`);
+                return;
+            }
+
+            // Mapear gameResourceId para campo de recurso do país
             const resourceFieldMap = {
-                'coal': 'Carvao',
-                'oil': 'Combustivel',
-                'metals': 'Metais',
-                'food': 'Graos'
+                'carvao': 'Carvao',
+                'combustivel': 'Combustivel',
+                'metais': 'Metais',
+                'graos': 'Graos'
             };
 
-            const resourceField = resourceFieldMap[offer.item_id];
+            const resourceField = resourceFieldMap[marketTypeConfig.gameResourceId];
             if (!resourceField) {
-                console.warn(`⚠️ Item ${offer.item_id} não é um recurso transferível`);
+                console.warn(`⚠️ Recurso ${marketTypeConfig.gameResourceId} não é transferível`);
                 return;
             }
 
@@ -745,6 +621,136 @@ export class MarketplaceSystem {
 
         } catch (error) {
             console.error('❌ Erro ao transferir recursos:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Transferir equipamentos entre inventários (vendedor → comprador)
+     */
+    async transferEquipment(offer, quantity, sellerCountryId, buyerCountryId) {
+        try {
+            console.log(`🚁 Transferindo equipamento: ${offer.item_id}`);
+
+            const itemId = offer.item_id;
+
+            // O itemId pode estar no formato "Category/ItemName" (ex: "MBT/MBT Genérico")
+            // Precisamos separar para acessar a estrutura aninhada do Firestore
+            const parts = itemId.split('/');
+            const isNested = parts.length === 2;
+            const categoryId = isNested ? parts[0] : itemId;
+            const itemName = isNested ? parts[1] : null;
+
+            console.log(`   Estrutura: ${isNested ? 'aninhada' : 'plana'}`);
+            if (isNested) {
+                console.log(`   Categoria: ${categoryId}, Item: ${itemName}`);
+            }
+
+            // Buscar inventários
+            const sellerInventoryRef = db.collection('inventory').doc(sellerCountryId);
+            const buyerInventoryRef = db.collection('inventory').doc(buyerCountryId);
+
+            const sellerInventoryDoc = await sellerInventoryRef.get();
+            const buyerInventoryDoc = await buyerInventoryRef.get();
+
+            const sellerInventory = sellerInventoryDoc.exists ? sellerInventoryDoc.data() : {};
+            const buyerInventory = buyerInventoryDoc.exists ? buyerInventoryDoc.data() : {};
+
+            // Buscar item do vendedor (considerar estrutura aninhada)
+            let sellerItem;
+            if (isNested) {
+                sellerItem = sellerInventory[categoryId]?.[itemName];
+            } else {
+                sellerItem = sellerInventory[itemId];
+            }
+
+            if (!sellerItem || sellerItem.quantity < quantity) {
+                throw new Error(`Estoque insuficiente do vendedor para ${itemId}`);
+            }
+
+            console.log(`   Vendedor tem: ${sellerItem.quantity} ${itemId}`);
+            console.log(`   Transferindo: ${quantity} unidades`);
+
+            // Reduzir do vendedor
+            const sellerNewQuantity = sellerItem.quantity - quantity;
+
+            if (isNested) {
+                // Estrutura aninhada
+                if (sellerNewQuantity <= 0) {
+                    // Remover item
+                    await sellerInventoryRef.update({
+                        [`${categoryId}.${itemName}`]: db.FieldValue.delete()
+                    });
+                    console.log(`   ✅ Item ${categoryId}/${itemName} removido do inventário do vendedor`);
+                } else {
+                    await sellerInventoryRef.update({
+                        [`${categoryId}.${itemName}.quantity`]: sellerNewQuantity
+                    });
+                    console.log(`   ✅ Vendedor agora tem: ${sellerNewQuantity} ${categoryId}/${itemName}`);
+                }
+            } else {
+                // Estrutura plana
+                if (sellerNewQuantity <= 0) {
+                    await sellerInventoryRef.update({
+                        [itemId]: db.FieldValue.delete()
+                    });
+                    console.log(`   ✅ Item ${itemId} removido do inventário do vendedor`);
+                } else {
+                    await sellerInventoryRef.update({
+                        [`${itemId}.quantity`]: sellerNewQuantity
+                    });
+                    console.log(`   ✅ Vendedor agora tem: ${sellerNewQuantity} ${itemId}`);
+                }
+            }
+
+            // Adicionar ao comprador
+            let buyerItem;
+            if (isNested) {
+                buyerItem = buyerInventory[categoryId]?.[itemName];
+            } else {
+                buyerItem = buyerInventory[itemId];
+            }
+
+            if (buyerItem) {
+                // Já possui este item
+                const buyerNewQuantity = buyerItem.quantity + quantity;
+
+                if (isNested) {
+                    await buyerInventoryRef.update({
+                        [`${categoryId}.${itemName}.quantity`]: buyerNewQuantity
+                    });
+                } else {
+                    await buyerInventoryRef.update({
+                        [`${itemId}.quantity`]: buyerNewQuantity
+                    });
+                }
+                console.log(`   ✅ Comprador agora tem: ${buyerNewQuantity} ${itemId}`);
+            } else {
+                // Não possui, criar novo item
+                if (isNested) {
+                    await buyerInventoryRef.set({
+                        [categoryId]: {
+                            [itemName]: {
+                                ...sellerItem,
+                                quantity: quantity
+                            }
+                        }
+                    }, { merge: true });
+                } else {
+                    await buyerInventoryRef.set({
+                        [itemId]: {
+                            ...sellerItem,
+                            quantity: quantity
+                        }
+                    }, { merge: true });
+                }
+                console.log(`   ✅ Comprador recebeu: ${quantity} ${itemId} (novo item)`);
+            }
+
+            console.log(`✅ Equipamento transferido com sucesso!`);
+
+        } catch (error) {
+            console.error('❌ Erro ao transferir equipamento:', error);
             throw error;
         }
     }
@@ -1010,27 +1016,42 @@ export class MarketplaceSystem {
     getAvailableEquipment(inventory) {
         const availableEquipment = [];
 
-        Object.keys(inventory).forEach(category => {
-            if (typeof inventory[category] === 'object' && inventory[category] !== null) {
-                Object.keys(inventory[category]).forEach(equipmentName => {
-                    const equipment = inventory[category][equipmentName];
+        // Inventário no Firestore pode ter estrutura aninhada: { MBT: { "MBT Genérico": {...} } }
+        // ou estrutura plana: { itemId: {...} }
+        Object.keys(inventory).forEach(categoryOrItemId => {
+            const data = inventory[categoryOrItemId];
 
-                    if (equipment && typeof equipment === 'object' && equipment.quantity > 0) {
-                        // REGRA REMOVIDA: Agora permite vender 100% do estoque.
-                        const availableQuantity = equipment.quantity;
+            if (!data || typeof data !== 'object') return;
 
-                        if (availableQuantity > 0) {
-                            availableEquipment.push({
-                                id: `${category}_${equipmentName}`.toLowerCase().replace(/\s+/g, '_'),
-                                name: equipmentName,
-                                category: category,
-                                available_quantity: availableQuantity,
-                                total_quantity: equipment.quantity,
-                                unit_cost: equipment.cost || 0,
-                                maintenance_cost: (equipment.cost || 0) * 0.05 || 0,
-                                type: this.getEquipmentType(category)
-                            });
-                        }
+            // Verificar se tem quantity diretamente (estrutura plana)
+            if (data.quantity !== undefined && data.quantity > 0) {
+                availableEquipment.push({
+                    id: categoryOrItemId,
+                    name: data.name || categoryOrItemId,
+                    category: data.category || 'vehicles',
+                    available_quantity: data.quantity,
+                    total_quantity: data.quantity,
+                    unit_cost: data.cost || 0,
+                    maintenance_cost: (data.cost || 0) * 0.05 || 0,
+                    type: data.category || 'vehicles'
+                });
+            } else {
+                // Estrutura aninhada - iterar pelos subitens
+                Object.keys(data).forEach(itemName => {
+                    const itemData = data[itemName];
+
+                    if (itemData && typeof itemData === 'object' && itemData.quantity > 0) {
+                        const fullItemId = `${categoryOrItemId}/${itemName}`;
+                        availableEquipment.push({
+                            id: fullItemId,
+                            name: itemName,
+                            category: itemData.category || 'vehicles',
+                            available_quantity: itemData.quantity,
+                            total_quantity: itemData.quantity,
+                            unit_cost: itemData.cost || 0,
+                            maintenance_cost: (itemData.cost || 0) * 0.05 || 0,
+                            type: itemData.category || 'vehicles'
+                        });
                     }
                 });
             }
