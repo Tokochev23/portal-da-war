@@ -8,6 +8,8 @@ const entryPoints = [
   'index.html',
   'criador-aeronaves.html',
   'criador-navios.html',
+  'criador-divisoes.html',
+  'divisoes.html',
   'dashboard.html',
   'narrador.html'
 ];

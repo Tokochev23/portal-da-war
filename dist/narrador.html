@@ -7,14 +7,56 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%23ffb400%22/%3E%3Ctext x=%228%22 y=%2211%22 font-size=%2210%22 text-anchor=%22middle%22 fill=%22%230b1020%22%3EN%3C/text%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/portal-da-war/assets/narrador-Bpz99fAc.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin="" />
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+          crossorigin=""></script>
+
+
+  <!-- Custom styles for map -->
+  <style>
+    .province-tooltip {
+      background-color: rgba(15, 23, 42, 0.95) !important;
+      border: 1px solid rgba(148, 163, 184, 0.3) !important;
+      color: #e2e8f0 !important;
+      font-size: 12px !important;
+      padding: 4px 8px !important;
+      border-radius: 6px !important;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    .leaflet-popup-content-wrapper {
+      background-color: rgba(15, 23, 42, 0.95) !important;
+      border: 1px solid rgba(148, 163, 184, 0.3) !important;
+      border-radius: 8px !important;
+    }
+
+    .leaflet-popup-content {
+      color: #e2e8f0 !important;
+      margin: 12px !important;
+    }
+
+    .leaflet-popup-tip {
+      background-color: rgba(15, 23, 42, 0.95) !important;
+    }
+  </style>
+  <script type="module" crossorigin src="/portal-da-war/assets/narrador-DSL_VbhP.js"></script>
   <link rel="modulepreload" crossorigin href="/portal-da-war/assets/preload-helper-f85Crcwt.js">
-  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/firebase-BARDcBiw.js">
-  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/shipyardSystem-3T5A70zK.js">
-  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/navalProduction-C2TpryFF.js">
-  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/economicCalculations-IGtO7BBL.js">
-  <link rel="stylesheet" crossorigin href="/portal-da-war/assets/main-DxipV6cL.css">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/utils-DLoRv3re.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/firebase-BN3MSMQD.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/shipyardSystem-DnhrZxPe.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/navalProduction-F9Xymcws.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/economicCalculations-Dr0U9Xmg.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/worldMap-Dt5RFk0g.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/lawAndExhaustionCalculator-COcnTsA2.js">
+  <link rel="stylesheet" crossorigin href="/portal-da-war/assets/main-DSS0_k_y.css">
 </head>
 <body class="bg-bg text-slate-200">
   <header class="border-b border-bg-ring/70 sticky top-0 z-40 bg-bg/90 backdrop-blur">
@@ -113,9 +155,9 @@
             <span>Ferramentas</span>
           </button>
           
-          <button 
-            id="tab-energia" 
-            class="tab-button flex items-center gap-2 px-1 py-4 border-b-2 border-transparent text-sm font-medium text-slate-400 hover:text-slate-200 hover:border-slate-300 transition-colors" 
+          <button
+            id="tab-energia"
+            class="tab-button flex items-center gap-2 px-1 py-4 border-b-2 border-transparent text-sm font-medium text-slate-400 hover:text-slate-200 hover:border-slate-300 transition-colors"
             data-tab="energia"
             role="tab"
             aria-controls="panel-energia"
@@ -123,10 +165,21 @@
             <span class="text-base">⚡</span>
             <span>Energia</span>
           </button>
-          
-          <button 
-            id="tab-admin" 
-            class="tab-button flex items-center gap-2 px-1 py-4 border-b-2 border-transparent text-sm font-medium text-slate-400 hover:text-slate-200 hover:border-slate-300 transition-colors" 
+
+          <button
+            id="tab-mapa"
+            class="tab-button flex items-center gap-2 px-1 py-4 border-b-2 border-transparent text-sm font-medium text-slate-400 hover:text-slate-200 hover:border-slate-300 transition-colors"
+            data-tab="mapa"
+            role="tab"
+            aria-controls="panel-mapa"
+          >
+            <span class="text-base">🗺️</span>
+            <span>Mapa</span>
+          </button>
+
+          <button
+            id="tab-admin"
+            class="tab-button flex items-center gap-2 px-1 py-4 border-b-2 border-transparent text-sm font-medium text-slate-400 hover:text-slate-200 hover:border-slate-300 transition-colors"
             data-tab="admin"
             role="tab"
             aria-controls="panel-admin"
@@ -216,11 +269,27 @@
 
               <!-- Country Selection -->
               <div class="p-4 border-b border-brand-500/20 bg-brand-500/5">
-                <div class="max-w-md">
-                  <label class="text-sm font-semibold text-slate-300 mb-2 block">Selecione o País</label>
-                  <select id="select-pais-avancado" class="w-full rounded-lg bg-bg border border-bg-ring/70 p-3 text-base focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/30 transition-all">
-                    <option value="">Carregando países...</option>
-                  </select>
+                <div class="flex items-end gap-3">
+                  <div class="flex-1 max-w-md">
+                    <label class="text-sm font-semibold text-slate-300 mb-2 block">Selecione o País</label>
+                    <select id="select-pais-avancado" class="w-full rounded-lg bg-bg border border-bg-ring/70 p-3 text-base focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/30 transition-all">
+                      <option value="">Carregando países...</option>
+                    </select>
+                  </div>
+                  <div class="flex gap-2">
+                    <button id="btn-criar-pais" class="px-4 py-2.5 rounded-lg bg-blue-500 text-white font-semibold hover:bg-blue-400 transition-colors flex items-center gap-2">
+                      <span>➕</span>
+                      <span>Criar</span>
+                    </button>
+                    <button id="btn-dividir-pais" disabled class="px-4 py-2.5 rounded-lg bg-yellow-500 text-slate-900 font-semibold hover:bg-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                      <span>✂️</span>
+                      <span>Dividir</span>
+                    </button>
+                    <button id="btn-deletar-pais" disabled class="px-4 py-2.5 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                      <span>🗑️</span>
+                      <span>Deletar</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -553,6 +622,69 @@
             </div>
           </div>
 
+          <!-- Gestão Manual de Exaustão -->
+          <div class="mt-8 rounded-xl border border-red-500/30 bg-gradient-to-b from-red-500/5 to-red-600/10 p-8">
+            <div class="mb-6">
+              <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-500/20 border border-red-500/30 mb-4">
+                <span class="text-3xl">📉</span>
+              </div>
+              <h3 class="text-xl font-semibold text-red-200 mb-2">Gestão Manual de Exaustão</h3>
+              <p class="text-slate-400 mb-6">
+                Ajuste manualmente a exaustão de guerra de países para refletir eventos narrativos como batalhas perdidas ou vitórias importantes.
+              </p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div class="md:col-span-1">
+                <label for="exhaustion-country-select" class="block text-sm font-medium text-slate-300 mb-2">País</label>
+                <select id="exhaustion-country-select" class="block w-full rounded-lg bg-slate-800 border border-slate-700 text-white px-3 py-2 focus:border-red-400 focus:ring focus:ring-red-400/20 focus:ring-opacity-50"></select>
+              </div>
+              <div class="md:col-span-1">
+                <label for="exhaustion-value-input" class="block text-sm font-medium text-slate-300 mb-2">Valor (+/-)</label>
+                <input type="number" id="exhaustion-value-input" class="block w-full rounded-lg bg-slate-800 border border-slate-700 text-white px-3 py-2 focus:border-red-400 focus:ring focus:ring-red-400/20 focus:ring-opacity-50" placeholder="Ex: 5 ou -10">
+              </div>
+              <div class="md:col-span-2">
+                <label for="exhaustion-reason-input" class="block text-sm font-medium text-slate-300 mb-2">Motivo</label>
+                <input type="text" id="exhaustion-reason-input" class="block w-full rounded-lg bg-slate-800 border border-slate-700 text-white px-3 py-2 focus:border-red-400 focus:ring focus:ring-red-400/20 focus:ring-opacity-50" placeholder="Ex: Perdeu batalha de Stalingrado">
+              </div>
+            </div>
+            <div class="mt-6 text-right">
+              <button id="btn-apply-manual-exhaustion" class="px-6 py-3 rounded-lg bg-red-500 text-slate-900 font-semibold hover:bg-red-400 transition-colors">
+                Aplicar Ajuste de Exaustão
+              </button>
+            </div>
+          </div>
+
+          <!-- Gestão de Estado de Guerra -->
+          <div class="mt-8 rounded-xl border border-orange-500/30 bg-gradient-to-b from-orange-500/5 to-orange-600/10 p-8">
+            <div class="mb-6">
+              <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-500/20 border border-orange-500/30 mb-4">
+                <span class="text-3xl">⚔️</span>
+              </div>
+              <h3 class="text-xl font-semibold text-orange-200 mb-2">Gestão de Estado de Guerra</h3>
+              <p class="text-slate-400 mb-6">
+                Declare ou encerre guerras entre países. Países em guerra ganham exaustão automaticamente a cada turno.
+              </p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label for="war-country-select" class="block text-sm font-medium text-slate-300 mb-2">País</label>
+                <select id="war-country-select" class="block w-full rounded-lg bg-slate-800 border border-slate-700 text-white px-3 py-2 focus:border-orange-400 focus:ring focus:ring-orange-400/20 focus:ring-opacity-50"></select>
+              </div>
+              <div>
+                <label for="war-target-select" class="block text-sm font-medium text-slate-300 mb-2">Em guerra com (Ctrl+Click para múltiplos)</label>
+                <select id="war-target-select" multiple size="5" class="block w-full rounded-lg bg-slate-800 border border-slate-700 text-white px-3 py-2 focus:border-orange-400 focus:ring focus:ring-orange-400/20 focus:ring-opacity-50"></select>
+              </div>
+            </div>
+            <div class="mt-4">
+              <p id="current-wars-display" class="text-sm text-slate-400">Selecione um país para ver seu estado de guerra atual</p>
+            </div>
+            <div class="mt-6 text-right">
+              <button id="btn-update-war-status" class="px-6 py-3 rounded-lg bg-orange-500 text-slate-900 font-semibold hover:bg-orange-400 transition-colors">
+                Atualizar Estado de Guerra
+              </button>
+            </div>
+          </div>
+
           <!-- Coming Soon -->
           <div class="mt-8 text-center">
             <div class="inline-flex items-center px-4 py-2 rounded-full bg-slate-700/50 border border-slate-600/50">
@@ -570,6 +702,67 @@
         </div>
         <div class="text-center py-16 rounded-xl bg-bg-soft border border-bg-ring/70">
             <span class="text-slate-400 text-sm">🚧 Em desenvolvimento...</span>
+        </div>
+      </div>
+
+      <!-- MAP TAB -->
+      <div id="panel-mapa" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-mapa">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <!-- Map Controls Sidebar -->
+          <div class="lg:col-span-1">
+            <div id="map-controls-container"></div>
+          </div>
+
+          <!-- Map Container -->
+          <div class="lg:col-span-3">
+            <div class="rounded-xl border border-bg-ring/70 bg-bg-soft overflow-hidden">
+              <div class="p-4 border-b border-bg-ring/50 bg-gradient-to-r from-blue-500/10 to-purple-500/10">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h3 class="text-xl font-bold text-slate-100 flex items-center gap-2">
+                      <span>🗺️</span>
+                      <span>Mapa do Mundo</span>
+                    </h3>
+                    <p class="text-sm text-slate-400 mt-1">Clique nas províncias para pintá-las com a cor selecionada</p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <div class="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30">
+                      <span class="text-xs text-emerald-300 font-semibold">Modo Narrador</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mapa Leaflet -->
+              <div id="world-map" style="height: 700px; width: 100%;" class="bg-slate-900"></div>
+
+              <!-- Info Bar -->
+              <div class="p-3 border-t border-bg-ring/50 bg-bg/50">
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                  <div class="flex items-center gap-4">
+                    <span>🖱️ Clique para pintar</span>
+                    <span>🔍 Scroll para zoom</span>
+                    <span>✋ Arraste para mover</span>
+                  </div>
+                  <div id="map-info-text" class="text-slate-500">
+                    Carregando mapa...
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Instruções -->
+            <div class="mt-4 rounded-xl border border-blue-500/30 bg-blue-500/5 p-4">
+              <h4 class="text-sm font-semibold text-blue-200 mb-2">💡 Como usar</h4>
+              <ul class="text-sm text-slate-300 space-y-1">
+                <li>• Selecione uma cor na paleta à esquerda</li>
+                <li>• Clique em qualquer província do mapa para pintá-la</li>
+                <li>• As mudanças são salvas automaticamente e sincronizadas em tempo real</li>
+                <li>• Outros narradores verão suas alterações instantaneamente</li>
+                <li>• Use "Resetar Mapa" para limpar todas as cores</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -679,9 +872,43 @@
               🧪 Testar Processamento de Turno
             </button>
 
-            <button id="btn-reprocess-turn" class="mt-2 rounded-lg bg-yellow-600 text-white font-medium px-4 py-2 hover:bg-yellow-500 transition-colors">
-              🔄 Reprocessar Turno Atual
-            </button>
+        <div class="admin-action">
+          <button id="btn-reprocess-turn" class="btn-admin">🔄 Reprocessar Turno Atual</button>
+          <p>Força o reprocessamento do turno atual, aplicando novamente os efeitos de consumo e estabilidade.</p>
+        </div>
+
+        <div class="admin-action">
+          <button id="btn-process-law-transitions" class="btn-admin">🏛️ Processar Transições de Leis</button>
+          <p>Avança o progresso de todas as mudanças de leis nacionais em 1 turno. Execute como parte do checklist de fim de turno.</p>
+        </div>
+
+        <div class="admin-action">
+          <button id="btn-apply-law-effects" class="btn-admin">⚙️ Aplicar Efeitos das Leis</button>
+          <p>Calcula os bônus e penalidades atuais de todas as leis (incluindo transições) e os salva nos países.</p>
+        </div>
+
+        <div class="admin-action">
+          <button id="btn-process-exhaustion" class="btn-admin">📉 Processar Exaustão de Guerra</button>
+          <p>Aplica o ganho/perda de exaustão de guerra para todos os países com base em seu estado de guerra/paz.</p>
+        </div>
+
+        <hr>
+
+        <h2 class="text-xl font-bold mb-2 text-slate-200">Migrações e Configuração</h2>
+        <div class="admin-action bg-slate-800/50 p-4 rounded-lg space-y-3">
+          <div>
+            <button id="btn-migrate-national-laws" class="btn-admin bg-purple-600 hover:bg-purple-700">🔧 Migrar Leis Nacionais</button>
+            <p class="text-sm text-slate-400 mt-1">Adiciona os campos de leis nacionais em todos os países (seguro executar múltiplas vezes)</p>
+          </div>
+          <div>
+            <button id="btn-setup-game-config" class="btn-admin bg-blue-600 hover:bg-blue-700">⚙️ Configurar Leis no GameConfig</button>
+            <p class="text-sm text-slate-400 mt-1">Cria/atualiza a configuração de leis nacionais no Firestore</p>
+          </div>
+        </div>
+
+        <hr class="my-6 border-slate-700">
+
+        <h2>Simulações e Testes</h2>
           </div>
         </div>
       </div>

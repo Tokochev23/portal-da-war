@@ -34,6 +34,9 @@ class TurnProcessor {
       // 4. APLICAR EFEITOS DAS LEIS NACIONAIS (modificadores)
       await this.applyNationalLawEffects(turnNumber);
 
+      // 5. PROCESSAR RECRUTAMENTO PROGRESSIVO DE DIVISÕES
+      await this.processDivisionRecruitment(turnNumber);
+
       // Buscar todos os países
       const querySnapshot = await db.collection('paises').get();
       const batch = db.batch();
@@ -345,6 +348,83 @@ class TurnProcessor {
     } catch (error) {
       Logger.error('Erro ao verificar processamento do turno:', error);
       return false;
+    }
+  }
+
+  /**
+   * Processar recrutamento progressivo de divisões
+   */
+  static async processDivisionRecruitment(turnNumber) {
+    try {
+      console.log(`🎖️ Processando recrutamento de divisões (Turno ${turnNumber})...`);
+
+      // Buscar todas as divisões em recrutamento
+      const divisionsSnapshot = await db.collection('divisions')
+        .where('recruitmentStatus', '==', 'recruiting')
+        .get();
+
+      if (divisionsSnapshot.empty) {
+        console.log('✅ Nenhuma divisão em recrutamento.');
+        return { processed: 0, ready: 0 };
+      }
+
+      const batch = db.batch();
+      let processedCount = 0;
+      let readyCount = 0;
+
+      divisionsSnapshot.forEach(doc => {
+        const division = doc.data();
+        const recruitment = division.recruitment || {};
+
+        // Calcular progresso
+        const currentTurn = recruitment.currentTurn || 0;
+        const totalTurns = recruitment.totalTurns || 1;
+        const progressPerTurn = recruitment.progressPerTurn || 1.0;
+
+        // Incrementar turno
+        const newTurn = currentTurn + 1;
+        const newProgress = Math.min(newTurn * progressPerTurn, 1.0);
+
+        // Verificar se está pronto
+        const isReady = newTurn >= totalTurns || newProgress >= 1.0;
+
+        if (isReady) {
+          // Divisão pronta! Marcar como completa
+          batch.update(doc.ref, {
+            recruitmentStatus: 'ready',
+            'recruitment.currentTurn': totalTurns,
+            'recruitment.progress': 1.0,
+            'recruitment.completedAt': new Date().toISOString(),
+            'recruitment.completedAtTurn': turnNumber
+          });
+
+          readyCount++;
+          console.log(`✅ ${division.name || doc.id}: Divisão pronta! (${division.trainingLevel})`);
+        } else {
+          // Ainda em recrutamento, atualizar progresso
+          batch.update(doc.ref, {
+            'recruitment.currentTurn': newTurn,
+            'recruitment.progress': newProgress
+          });
+
+          const percentage = (newProgress * 100).toFixed(0);
+          console.log(`🔄 ${division.name || doc.id}: ${percentage}% (${newTurn}/${totalTurns} turnos)`);
+        }
+
+        processedCount++;
+      });
+
+      if (processedCount > 0) {
+        await batch.commit();
+        console.log(`✅ ${processedCount} divisões processadas, ${readyCount} prontas!`);
+      }
+
+      return { processed: processedCount, ready: readyCount };
+
+    } catch (error) {
+      Logger.error(`Erro ao processar recrutamento de divisões no turno ${turnNumber}:`, error);
+      console.error(`❌ Erro ao processar recrutamento:`, error);
+      return { processed: 0, ready: 0, error: error.message };
     }
   }
 

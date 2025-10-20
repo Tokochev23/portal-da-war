@@ -605,6 +605,23 @@ async function renderDashboard(country) {
                       </div>
                     </div>
                   </a>
+
+                  <!-- Division Designer -->
+                  <a href="criador-divisoes.html" class="block p-4 bg-slate-800/30 hover:bg-slate-700/50 rounded-lg border border-slate-700/30 transition-colors">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-3">
+                        <span class="text-xl">🎖️</span>
+                        <div>
+                          <div class="font-medium text-slate-200">Division Designer</div>
+                          <div class="text-xs text-slate-400">Crie divisões personalizadas combinando unidades de combate e suporte</div>
+                          <div class="text-xs text-green-400 mt-1">Sistema completo • 27 unidades de combate • 23 unidades de suporte</div>
+                        </div>
+                      </div>
+                      <div class="text-right">
+                        <div class="text-xs text-brand-400 font-semibold">✨ NOVO</div>
+                      </div>
+                    </div>
+                  </a>
                 </div>
               </div>
             </div>

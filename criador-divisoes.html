@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🎖️ Division Designer • WAR Era 1954</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%23ffb400%22/%3E%3Ctext x=%228%22 y=%2211%22 font-size=%2210%22 text-anchor=%22middle%22 fill=%22%230b1020%22%3EW%3C/text%3E%3C/svg%3E" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg: {
+              DEFAULT: "#0b1020",
+              soft: "#10172a",
+              ring: "#1e293b"
+            },
+            brand: {
+              50:"#fff7e6",100:"#ffefcc",200:"#ffe099",300:"#ffd166",400:"#ffc233",
+              500:"#ffb400",600:"#e09f00",700:"#b37d00",800:"#805900",900:"#4d3600"
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Inter Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #0a0e1a 0%, #0f1729 50%, #0a0e1a 100%);
+      background-attachment: fixed;
+      color: #e2e8f0;
+    }
+
+    /* Grid de unidades - VISUAL MELHORADO */
+    .unit-slot {
+      aspect-ratio: 1;
+      min-height: 90px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .unit-slot::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(251, 191, 36, 0.05), transparent);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .unit-slot:hover::before {
+      opacity: 1;
+    }
+
+    .unit-slot:hover {
+      transform: translateY(-4px) scale(1.02);
+      box-shadow:
+        0 8px 24px rgba(251, 191, 36, 0.2),
+        0 0 0 2px rgba(251, 191, 36, 0.3);
+    }
+
+    .unit-slot.empty {
+      border: 2px dashed rgba(71, 85, 105, 0.6);
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.4), rgba(30, 41, 59, 0.2));
+      backdrop-filter: blur(10px);
+    }
+
+    .unit-slot.empty:hover {
+      border-color: rgba(251, 191, 36, 0.5);
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.05), rgba(245, 158, 11, 0.02));
+    }
+
+    .unit-slot.filled {
+      border: 2px solid rgba(251, 191, 36, 0.6);
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.08));
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 12px rgba(251, 191, 36, 0.15);
+    }
+
+    .unit-slot.filled:hover {
+      border-color: rgba(251, 191, 36, 0.9);
+      box-shadow:
+        0 8px 24px rgba(251, 191, 36, 0.25),
+        0 0 0 2px rgba(251, 191, 36, 0.4);
+    }
+
+    /* Cards melhorados */
+    .unit-card {
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .unit-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), transparent);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .unit-card:hover::before {
+      opacity: 1;
+    }
+
+    .unit-card:hover {
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.12), rgba(245, 158, 11, 0.06)) !important;
+      border-color: #fbbf24 !important;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(251, 191, 36, 0.2);
+    }
+
+    /* Modal melhorado */
+    .modal-backdrop {
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(12px);
+    }
+
+    /* Scrollbar moderna */
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(30, 41, 59, 0.4);
+      border-radius: 5px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #475569, #334155);
+      border-radius: 5px;
+      border: 2px solid rgba(30, 41, 59, 0.4);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, #64748b, #475569);
+    }
+
+    /* Stats panel melhorado */
+    .stat-value {
+      font-variant-numeric: tabular-nums;
+      transition: all 0.3s ease;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    @keyframes statUpdate {
+      0% {
+        transform: scale(1);
+        filter: brightness(1);
+      }
+      50% {
+        transform: scale(1.15);
+        color: #fbbf24;
+        filter: brightness(1.4) drop-shadow(0 0 8px rgba(251, 191, 36, 0.6));
+      }
+      100% {
+        transform: scale(1);
+        filter: brightness(1);
+      }
+    }
+
+    .stat-updating {
+      animation: statUpdate 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Training level badges melhorados */
+    .training-badge {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .training-badge::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .training-badge:hover::before {
+      opacity: 1;
+    }
+
+    .training-badge:hover {
+      transform: translateY(-2px) scale(1.05);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    .training-badge:active {
+      transform: translateY(0) scale(0.98);
+    }
+
+    /* Grid animations melhoradas */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .grid-item {
+      animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Botões melhorados */
+    button:not(:disabled) {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(0) scale(0.98);
+    }
+
+    /* Notification animations */
+    @keyframes slideInRight {
+      from {
+        transform: translateX(120%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    .notification-enter {
+      animation: slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Loading spinner */
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .animate-spin {
+      animation: spin 1s linear infinite;
+    }
+
+    /* Pulse glow melhorado */
+    @keyframes pulse-glow {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(251, 191, 36, 0);
+      }
+      50% {
+        box-shadow:
+          0 0 0 6px rgba(251, 191, 36, 0.15),
+          0 0 20px rgba(251, 191, 36, 0.2);
+      }
+    }
+
+    .unit-slot.empty:hover {
+      animation: pulse-glow 2s ease infinite;
+    }
+
+    /* Cards de seção melhorados */
+    .section-card {
+      background: linear-gradient(135deg, rgba(16, 23, 42, 0.6), rgba(30, 41, 59, 0.4));
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(71, 85, 105, 0.3);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .section-card:hover {
+      border-color: rgba(251, 191, 36, 0.3);
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Inputs melhorados */
+    input:focus, select:focus, textarea:focus {
+      box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.2);
+    }
+  </style>
+</head>
+
+<body class="min-h-screen">
+  <!-- Loading Screen -->
+  <div id="initial-loading" class="fixed inset-0 bg-bg z-50 flex items-center justify-center">
+    <div class="text-center">
+      <div class="text-6xl mb-4">🎖️</div>
+      <div class="text-xl font-bold text-brand-500 mb-2">Division Designer</div>
+      <div id="loading-status" class="text-sm text-slate-400">Carregando componentes...</div>
+      <div class="mt-4">
+        <div class="w-48 h-1 bg-bg-ring rounded-full overflow-hidden">
+          <div class="h-full bg-brand-500 animate-pulse" style="width: 60%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="bg-bg-soft/80 backdrop-blur-xl border-b border-bg-ring/50 sticky top-0 z-40 shadow-lg">
+    <div class="container mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center text-2xl shadow-lg shadow-brand-900/30">
+          🎖️
+        </div>
+        <div>
+          <h1 class="text-2xl font-extrabold bg-gradient-to-r from-brand-400 to-brand-500 bg-clip-text text-transparent">
+            Division Designer
+          </h1>
+          <p class="text-xs text-slate-400 font-medium tracking-wide">WAR Era 1954</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <button
+          onclick="window.showKeyboardShortcutsHelp?.()"
+          class="px-4 py-2 bg-bg/60 hover:bg-bg border border-bg-ring/50 rounded-lg text-sm text-slate-300 font-medium transition-all shadow-md hover:shadow-lg"
+          title="Atalhos de Teclado (?)">
+          ⌨️ Atalhos
+        </button>
+        <a href="divisoes.html" class="px-4 py-2 bg-bg/60 hover:bg-bg border border-bg-ring/50 rounded-lg text-sm text-slate-300 font-medium transition-all shadow-md hover:shadow-lg">
+          📋 Minhas Divisões
+        </a>
+        <a href="dashboard.html" class="px-4 py-2 bg-brand-500/10 hover:bg-brand-500/20 border border-brand-500/30 rounded-lg text-sm text-brand-400 font-medium transition-all shadow-md hover:shadow-lg">
+          ← Dashboard
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container mx-auto px-6 py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- Left Panel: Division Builder -->
+      <div class="lg:col-span-2 space-y-6">
+
+        <!-- Division Header -->
+        <div class="section-card rounded-xl p-6 transition-all">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Nome -->
+            <div>
+              <label class="block text-sm font-semibold text-slate-300 mb-3">📝 Nome da Divisão</label>
+              <input
+                type="text"
+                id="division-name"
+                class="w-full px-4 py-3 bg-bg/60 border-2 border-bg-ring rounded-lg text-slate-100 focus:outline-none focus:border-brand-500 transition-all placeholder:text-slate-500"
+                placeholder="Ex: Divisão Motostrelski"
+                maxlength="50"
+              />
+            </div>
+
+            <!-- Training Level -->
+            <div>
+              <label class="block text-sm font-semibold text-slate-300 mb-3">🎖️ Nível de Treinamento</label>
+              <div id="training-selector" class="flex gap-2">
+                <!-- Preenchido via JS -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Support Units Grid -->
+        <div class="section-card rounded-xl p-6 transition-all">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold text-orange-400 flex items-center gap-2">
+              <span>🛠️</span>
+              <span>Unidades de Suporte</span>
+              <span class="text-xs text-slate-500">(Máx: 5)</span>
+            </h3>
+            <span id="support-count" class="text-sm text-slate-400">0/5</span>
+          </div>
+          <div id="support-grid" class="grid grid-cols-5 gap-2">
+            <!-- Preenchido via JS -->
+          </div>
+        </div>
+
+        <!-- Combat Units Grid -->
+        <div class="section-card rounded-xl p-6 transition-all">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold text-green-400 flex items-center gap-2">
+              <span>⚔️</span>
+              <span>Unidades de Combate</span>
+              <span class="text-xs text-slate-500">(Máx: 25)</span>
+            </h3>
+            <span id="combat-count" class="text-sm text-slate-400">0/25</span>
+          </div>
+          <div id="combat-grid" class="grid grid-cols-5 gap-2">
+            <!-- Preenchido via JS -->
+          </div>
+        </div>
+
+        <!-- Templates Section -->
+        <div class="section-card rounded-xl p-6 transition-all">
+          <h3 class="text-lg font-bold text-slate-200 mb-4 flex items-center gap-2">
+            <span>📋</span>
+            <span>Templates</span>
+          </h3>
+          <div class="space-y-3">
+            <select id="templates-dropdown" class="w-full px-4 py-3 bg-bg/60 border-2 border-bg-ring rounded-lg text-slate-200 focus:border-brand-500 focus:outline-none transition-all">
+              <option value="">Carregando templates...</option>
+            </select>
+            <div class="flex gap-3">
+              <button id="btn-save-template" class="flex-1 px-4 py-2.5 bg-purple-600/90 hover:bg-purple-600 rounded-lg text-sm font-semibold transition-all shadow-lg shadow-purple-900/30">
+                💾 Salvar Template
+              </button>
+              <button id="btn-duplicate" class="flex-1 px-4 py-2.5 bg-cyan-600/90 hover:bg-cyan-600 rounded-lg text-sm font-semibold transition-all shadow-lg shadow-cyan-900/30">
+                📋 Duplicar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex gap-3">
+          <button id="btn-reset" class="px-6 py-3 bg-slate-700/80 hover:bg-slate-700 rounded-lg font-semibold transition-all shadow-lg">
+            🔄 Resetar
+          </button>
+          <button id="btn-validate" class="px-6 py-3 bg-blue-600/90 hover:bg-blue-600 rounded-lg font-semibold transition-all shadow-lg shadow-blue-900/30">
+            ✓ Validar
+          </button>
+          <button id="btn-save" class="flex-1 px-6 py-3 bg-brand-500 hover:bg-brand-600 text-bg font-bold rounded-lg transition-all shadow-xl shadow-brand-900/40">
+            💾 Salvar Divisão
+          </button>
+        </div>
+      </div>
+
+      <!-- Right Panel: Stats -->
+      <div class="space-y-6">
+
+        <!-- Combat Stats (Simplificado - Opção 1) -->
+        <div class="section-card rounded-xl p-6 transition-all">
+          <h3 class="text-xl font-bold text-brand-400 mb-5 flex items-center gap-2">
+            <span>📊</span>
+            <span>Estatísticas de Combate</span>
+          </h3>
+          <div class="space-y-4">
+            <div class="flex justify-between items-center p-3 rounded-lg bg-bg/40 hover:bg-bg/60 transition-all">
+              <span class="text-slate-300 font-medium">🔥 Poder de Fogo</span>
+              <span id="stat-firepower" class="stat-value font-bold text-red-400 text-xl">0</span>
+            </div>
+            <div class="flex justify-between items-center p-3 rounded-lg bg-bg/40 hover:bg-bg/60 transition-all">
+              <span class="text-slate-300 font-medium">🛡️ Defesa</span>
+              <span id="stat-defense" class="stat-value font-bold text-blue-400 text-xl">0</span>
+            </div>
+            <div class="flex justify-between items-center p-3 rounded-lg bg-bg/40 hover:bg-bg/60 transition-all">
+              <span class="text-slate-300 font-medium">⚡ Organização</span>
+              <span id="stat-organization" class="stat-value font-bold text-cyan-400 text-xl">0</span>
+            </div>
+            <div class="flex justify-between items-center p-3 rounded-lg bg-bg/40 hover:bg-bg/60 transition-all">
+              <span class="text-slate-300 font-medium">❤️ HP</span>
+              <span id="stat-hp" class="stat-value font-bold text-pink-400 text-xl">0</span>
+            </div>
+            <div class="flex justify-between items-center p-3 rounded-lg bg-bg/40 hover:bg-bg/60 transition-all">
+              <span class="text-slate-300 font-medium">📏 Largura</span>
+              <span id="stat-width" class="stat-value font-bold text-slate-200 text-xl">0</span>
+            </div>
+            <div class="flex justify-between items-center p-3 rounded-lg bg-bg/40 hover:bg-bg/60 transition-all border-t-2 border-brand-500/20 pt-4 mt-2">
+              <span class="text-slate-200 font-semibold">👥 Manpower</span>
+              <span id="stat-manpower" class="stat-value font-bold text-brand-400 text-xl">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Equipment -->
+        <div class="section-card rounded-xl p-6 transition-all">
+          <h3 class="text-xl font-bold text-brand-400 mb-4 flex items-center gap-2">
+            <span>🔧</span>
+            <span>Equipamentos</span>
+          </h3>
+          <div id="equipment-list" class="space-y-1 text-sm max-h-48 overflow-y-auto">
+            <p class="text-slate-500 text-center py-6 text-base">Nenhuma unidade adicionada</p>
+          </div>
+        </div>
+
+        <!-- Costs -->
+        <div class="section-card rounded-xl p-6 transition-all">
+          <h3 class="text-xl font-bold text-brand-400 mb-5 flex items-center gap-2">
+            <span>💰</span>
+            <span>Custos</span>
+          </h3>
+          <div class="space-y-4">
+            <div class="flex justify-between items-center p-3 rounded-lg bg-bg/40 hover:bg-bg/60 transition-all">
+              <span class="text-slate-300 font-medium">Produção</span>
+              <span id="cost-production" class="stat-value font-bold text-green-400 text-lg">$0</span>
+            </div>
+            <div class="flex justify-between items-center p-3 rounded-lg bg-bg/40 hover:bg-bg/60 transition-all">
+              <span class="text-slate-300 font-medium">Manutenção/turno</span>
+              <span id="cost-maintenance" class="stat-value font-bold text-yellow-400 text-lg">$0</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal Container -->
+  <div id="modal-container"></div>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+    import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBd-cQsmXqgU9wVDtxYdaeLFQIfIUxv6GE",
+      authDomain: "war-1954-1799c.firebaseapp.com",
+      projectId: "war-1954-1799c",
+      storageBucket: "war-1954-1799c.firebasestorage.app",
+      messagingSenderId: "147967902110",
+      appId: "1:147967902110:web:2e2a54b98ef9474d7a968f"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    window.auth = getAuth(app);
+    window.db = getFirestore(app);
+
+    // Aguardar autenticação
+    onAuthStateChanged(window.auth, async (user) => {
+      if (user) {
+        // Importar e inicializar Division Creator
+        const { initDivisionCreator } = await import('./js/divisionCreator.js');
+        await initDivisionCreator(user);
+      } else {
+        window.location.href = 'index.html';
+      }
+    });
+  </script>
+</body>
+</html>
