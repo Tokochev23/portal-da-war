@@ -721,7 +721,7 @@ function updateQuantityInfo(quantity) {
   const infoElement = document.getElementById('quantity-info');
   if (!infoElement) return;
 
-  const clamped = Math.max(1, Math.min(50, quantity));
+  const clamped = Math.max(1, quantity);
 
   if (clamped === 1) {
     infoElement.textContent = '1 divisão será criada';
@@ -1108,7 +1108,8 @@ async function saveDivision() {
 
     // Obter quantidade de divisões a serem criadas
     const quantityInput = document.getElementById('division-quantity');
-    const quantity = quantityInput ? Math.max(1, Math.min(50, parseInt(quantityInput.value) || 1)) : 1;
+    const quantity = quantityInput ? Math.max(1, parseInt(quantityInput.value) || 1) : 1;
+    console.log(`🔢 Quantidade selecionada: ${quantity}`);
 
     if (!inventoryDoc.exists) {
       // Se não existe inventário, criar um novo
@@ -1145,14 +1146,18 @@ async function saveDivision() {
         // Adicionar nova(s) divisão(ões)
         if (quantity > 1) {
           console.log(`➕ Adicionando ${quantity} novas divisões`);
+          console.log('📋 divisionData.id:', divisionData.id);
+          console.log('📋 divisionData.name:', divisionData.name);
           for (let i = 0; i < quantity; i++) {
             const divisionCopy = {
               ...divisionData,
               id: `${divisionData.id}_${i + 1}`,
               name: `${divisionData.name} #${i + 1}`
             };
+            console.log(`  └─ Divisão ${i + 1}: ${divisionCopy.id} - ${divisionCopy.name}`);
             divisions.push(divisionCopy);
           }
+          console.log(`✅ Total de divisões no array: ${divisions.length}`);
         } else {
           console.log('➕ Adicionando 1 nova divisão');
           divisions.push(divisionData);
@@ -1160,7 +1165,9 @@ async function saveDivision() {
       } else {
         // Atualizar divisão existente (não multiplica ao editar)
         console.log('🔄 Atualizando divisão existente');
+        console.log('📋 currentDivision.id:', currentDivision.id);
         const index = divisions.findIndex(d => d.id === currentDivision.id);
+        console.log('📌 Index encontrado:', index);
         if (index !== -1) {
           divisions[index] = divisionData;
         } else {
@@ -1199,6 +1206,12 @@ async function saveDivision() {
       }
     }
     showNotification('success', successMessage);
+
+    // Se foi uma nova divisão, limpar o ID para permitir criar outra
+    if (isNewDivision) {
+      currentDivision.id = null;
+      console.log('🔄 ID resetado para permitir criar nova divisão');
+    }
 
     // Reset button após 2 segundos
     setTimeout(() => {
