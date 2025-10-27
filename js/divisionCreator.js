@@ -641,9 +641,23 @@ function updateStats() {
   document.getElementById('stat-width').textContent = stats.combatStats.combatWidth.toFixed(0);
   document.getElementById('stat-manpower').textContent = stats.manpower.total.toLocaleString();
 
-  // Costs
-  document.getElementById('cost-production').textContent = '$' + (stats.costs.production / 1000000).toFixed(2) + 'M';
-  document.getElementById('cost-maintenance').textContent = '$' + (stats.costs.maintenance / 1000).toFixed(0) + 'k';
+  // Costs - com multiplicador de quantidade
+  const quantityInput = document.getElementById('division-quantity');
+  const quantity = quantityInput ? Math.max(1, Math.min(50, parseInt(quantityInput.value) || 1)) : 1;
+
+  const productionCost = stats.costs.production * quantity;
+  const maintenanceCost = stats.costs.maintenance * quantity;
+
+  let productionText = '$' + (productionCost / 1000000).toFixed(2) + 'M';
+  let maintenanceText = '$' + (maintenanceCost / 1000).toFixed(0) + 'k';
+
+  if (quantity > 1) {
+    productionText += ` (${quantity}x)`;
+    maintenanceText += ` (${quantity}x)`;
+  }
+
+  document.getElementById('cost-production').textContent = productionText;
+  document.getElementById('cost-maintenance').textContent = maintenanceText;
 
   // Equipment
   renderEquipmentList(stats.equipment);
@@ -701,6 +715,29 @@ function formatEquipmentName(type) {
 }
 
 /**
+ * Atualiza a informação visual da quantidade de divisões
+ */
+function updateQuantityInfo(quantity) {
+  const infoElement = document.getElementById('quantity-info');
+  if (!infoElement) return;
+
+  const clamped = Math.max(1, Math.min(50, quantity));
+
+  if (clamped === 1) {
+    infoElement.textContent = '1 divisão será criada';
+    infoElement.className = 'text-xs text-slate-400 mt-1';
+  } else {
+    infoElement.textContent = `${clamped} divisões serão criadas`;
+    infoElement.className = 'text-xs text-brand-400 mt-1 font-semibold';
+  }
+
+  // Atualizar também o custo total se houver stats calculadas
+  if (currentDivision.calculatedStats) {
+    updateStats();
+  }
+}
+
+/**
  * Setup event listeners
  */
 function setupEventListeners() {
@@ -710,6 +747,15 @@ function setupEventListeners() {
   nameInput.addEventListener('input', (e) => {
     currentDivision.name = e.target.value;
   });
+
+  // Quantidade de divisões
+  const quantityInput = document.getElementById('division-quantity');
+  if (quantityInput) {
+    quantityInput.addEventListener('input', (e) => {
+      const quantity = parseInt(e.target.value) || 1;
+      updateQuantityInfo(quantity);
+    });
+  }
 
   // Resetar
   document.getElementById('btn-reset').addEventListener('click', resetDivision);
@@ -1039,12 +1085,33 @@ async function saveDivision() {
     const inventoryDoc = await inventoryRef.get();
     console.log('✅ inventoryDoc obtido, exists:', inventoryDoc.exists);
 
+    // Obter quantidade de divisões a serem criadas
+    const quantityInput = document.getElementById('division-quantity');
+    const quantity = quantityInput ? Math.max(1, Math.min(50, parseInt(quantityInput.value) || 1)) : 1;
+
     if (!inventoryDoc.exists) {
       // Se não existe inventário, criar um novo
       console.log('➕ Criando novo inventário com .set()');
+
+      const newDivisions = [];
+      if (isNewDivision && quantity > 1) {
+        // Criar múltiplas divisões
+        for (let i = 0; i < quantity; i++) {
+          const divisionCopy = {
+            ...divisionData,
+            id: `${divisionData.id}_${i + 1}`,
+            name: quantity > 1 ? `${divisionData.name} #${i + 1}` : divisionData.name
+          };
+          newDivisions.push(divisionCopy);
+        }
+        console.log(`✅ Criando ${quantity} divisões`);
+      } else {
+        newDivisions.push(divisionData);
+      }
+
       await inventoryRef.set({
         country_id: targetCountryId,
-        divisions: [divisionData]
+        divisions: newDivisions
       });
       console.log('✅ Inventário criado com sucesso');
     } else {
@@ -1054,11 +1121,23 @@ async function saveDivision() {
       let divisions = inventoryData.divisions || [];
 
       if (isNewDivision) {
-        // Adicionar nova divisão
-        console.log('➕ Adicionando nova divisão');
-        divisions.push(divisionData);
+        // Adicionar nova(s) divisão(ões)
+        if (quantity > 1) {
+          console.log(`➕ Adicionando ${quantity} novas divisões`);
+          for (let i = 0; i < quantity; i++) {
+            const divisionCopy = {
+              ...divisionData,
+              id: `${divisionData.id}_${i + 1}`,
+              name: `${divisionData.name} #${i + 1}`
+            };
+            divisions.push(divisionCopy);
+          }
+        } else {
+          console.log('➕ Adicionando 1 nova divisão');
+          divisions.push(divisionData);
+        }
       } else {
-        // Atualizar divisão existente
+        // Atualizar divisão existente (não multiplica ao editar)
         console.log('🔄 Atualizando divisão existente');
         const index = divisions.findIndex(d => d.id === currentDivision.id);
         if (index !== -1) {
@@ -1083,11 +1162,20 @@ async function saveDivision() {
       Salvo!
     `;
 
-    // Mensagem de sucesso com informação do país
-    let successMessage = '✅ Divisão salva com sucesso!';
-    if (userPermissions?.isNarrator || userPermissions?.isAdmin) {
-      const countryName = allCountries.find(c => c.id === targetCountryId)?.name || targetCountryId;
-      successMessage = `✅ Divisão salva para ${countryName}!`;
+    // Mensagem de sucesso com informação do país e quantidade
+    let successMessage;
+    if (isNewDivision && quantity > 1) {
+      successMessage = `✅ ${quantity} divisões criadas com sucesso!`;
+      if (userPermissions?.isNarrator || userPermissions?.isAdmin) {
+        const countryName = allCountries.find(c => c.id === targetCountryId)?.name || targetCountryId;
+        successMessage = `✅ ${quantity} divisões criadas para ${countryName}!`;
+      }
+    } else {
+      successMessage = '✅ Divisão salva com sucesso!';
+      if (userPermissions?.isNarrator || userPermissions?.isAdmin) {
+        const countryName = allCountries.find(c => c.id === targetCountryId)?.name || targetCountryId;
+        successMessage = `✅ Divisão salva para ${countryName}!`;
+      }
     }
     showNotification('success', successMessage);
 
