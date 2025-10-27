@@ -14,6 +14,7 @@ import { runAdvancedEconomyMigration } from '../../scripts/migrate-advanced-econ
 import { initTabSystem } from "../utils/tabSystem.js";
 import { WorldMap } from "../components/worldMap.js";
 import { MapControls } from "../components/mapControls.js";
+import { initDivisionsApprovalSystem } from "../systems/divisionsApprovalSystem.js";
 
 // Catálogo local (fallback). Pode ser salvo no Firestore em configuracoes/campos
 const localCatalog = {
@@ -339,6 +340,21 @@ document.addEventListener('DOMContentLoaded', () => {
       // Só inicializar uma vez
       if (!worldMap) {
         await initWorldMap();
+      }
+    });
+  }
+
+  // Inicializar sistema de aprovação de divisões quando a aba for clicada
+  const divisionsApprovalTab = document.getElementById('tab-divisions-approval');
+  let divisionsApprovalInitialized = false;
+  if (divisionsApprovalTab) {
+    divisionsApprovalTab.addEventListener('click', async () => {
+      if (!divisionsApprovalInitialized) {
+        divisionsApprovalInitialized = true;
+        const user = auth.currentUser;
+        if (user) {
+          await initDivisionsApprovalSystem(user);
+        }
       }
     });
   }

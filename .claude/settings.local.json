@@ -108,7 +108,8 @@
       "Read(//c//**)",
       "Bash(xcopy:*)",
       "Bash(cmd /c xcopy:*)",
-      "Bash(powershell -Command:*)"
+      "Bash(powershell -Command:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []

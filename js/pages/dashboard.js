@@ -1594,6 +1594,50 @@ function renderDivisionCard(division, count = 1, ids = []) {
           <span class="ml-2 font-medium">Suporte:</span> ${division.supportUnits?.length || 0}/5
         </div>
       </div>
+
+      ${renderDivisionActions(division, count, ids)}
+    </div>
+  `;
+}
+
+function renderDivisionActions(division, count, ids) {
+  const approvalStatus = division.approvalStatus || 'approved';
+
+  // Badge de status de aprovação
+  let statusBadge = '';
+  if (approvalStatus === 'pending') {
+    statusBadge = `
+      <div class="mb-3 px-3 py-2 bg-yellow-500/20 border border-yellow-500/50 rounded-lg text-center">
+        <span class="text-yellow-400 text-xs font-semibold">⏳ Aguardando Aprovação</span>
+      </div>
+    `;
+  } else if (approvalStatus === 'rejected') {
+    statusBadge = `
+      <div class="mb-3 px-3 py-2 bg-red-500/20 border border-red-500/50 rounded-lg text-center">
+        <span class="text-red-400 text-xs font-semibold">❌ Rejeitada</span>
+        ${division.rejectionReason ? `<p class="text-xs text-slate-400 mt-1">${division.rejectionReason}</p>` : ''}
+      </div>
+    `;
+  }
+
+  // Botão de editar (apenas para divisões únicas)
+  const editButton = count === 1 ? `
+    <a href="criador-divisoes.html?id=${division.id}"
+       class="flex-1 px-3 py-2 bg-blue-600/90 hover:bg-blue-600 rounded-lg text-xs font-semibold transition-all text-center">
+      ✏️ Editar
+    </a>
+  ` : '';
+
+  return `
+    ${statusBadge}
+    <div class="border-t border-slate-700/50 pt-3 flex gap-2">
+      ${editButton}
+      ${count > 1 ? `
+        <button onclick="window.viewDivisionGroup('${division.id}')"
+                class="flex-1 px-3 py-2 bg-slate-700/50 hover:bg-slate-700 rounded-lg text-xs font-semibold transition-all">
+          👁️ Ver Todas (${count})
+        </button>
+      ` : ''}
     </div>
   `;
 }

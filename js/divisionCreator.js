@@ -1048,6 +1048,17 @@ async function saveDivision() {
     const recruitmentTurns = trainingLevel.modifiers.recruitmentTurns;
     const progressPerTurn = trainingLevel.modifiers.recruitmentProgress;
 
+    // Determinar status de aprovação
+    let approvalStatus;
+    if (isNewDivision) {
+      // Novas divisões criadas por narradores/admins são auto-aprovadas
+      // Jogadores normais precisam de aprovação
+      approvalStatus = (userPermissions?.isNarrator || userPermissions?.isAdmin) ? 'approved' : 'pending';
+    } else {
+      // Ao editar, manter status atual ou requerer nova aprovação se foi rejeitada
+      approvalStatus = currentDivision.approvalStatus === 'rejected' ? 'pending' : (currentDivision.approvalStatus || 'approved');
+    }
+
     const divisionData = {
       id: currentDivision.id,
       name: currentDivision.name,
@@ -1057,6 +1068,10 @@ async function saveDivision() {
       supportUnits: currentDivision.supportUnits,
       calculatedStats: currentDivision.calculatedStats,
       updatedAt: new Date().toISOString(),
+
+      // Status de aprovação
+      approvalStatus: approvalStatus,
+      createdBy: currentUser.uid,
 
       // Dados de recrutamento
       recruitmentStatus: currentDivision.recruitmentStatus || 'recruiting',
@@ -1074,6 +1089,12 @@ async function saveDivision() {
       divisionData.createdAt = new Date().toISOString();
     } else {
       divisionData.createdAt = currentDivision.createdAt;
+      // Preservar dados de aprovação/rejeição se existirem
+      if (currentDivision.approvedBy) divisionData.approvedBy = currentDivision.approvedBy;
+      if (currentDivision.approvedAt) divisionData.approvedAt = currentDivision.approvedAt;
+      if (currentDivision.rejectedBy) divisionData.rejectedBy = currentDivision.rejectedBy;
+      if (currentDivision.rejectedAt) divisionData.rejectedAt = currentDivision.rejectedAt;
+      if (currentDivision.rejectionReason) divisionData.rejectionReason = currentDivision.rejectionReason;
     }
 
     // Salvar no inventário do país (usando sintaxe de compatibilidade)
