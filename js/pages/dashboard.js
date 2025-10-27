@@ -1628,6 +1628,19 @@ function renderDivisionActions(division, count, ids) {
     </a>
   ` : '';
 
+  // Botão de deletar
+  const deleteButton = count === 1 ? `
+    <button onclick="window.deleteDivision('${division.id}')"
+            class="px-3 py-2 bg-red-600/90 hover:bg-red-600 rounded-lg text-xs font-semibold transition-all">
+      🗑️
+    </button>
+  ` : `
+    <button onclick="window.deleteDivisionGroup(${JSON.stringify(ids).replace(/"/g, '&quot;')})"
+            class="px-3 py-2 bg-red-600/90 hover:bg-red-600 rounded-lg text-xs font-semibold transition-all">
+      🗑️ (${count})
+    </button>
+  `;
+
   return `
     ${statusBadge}
     <div class="border-t border-slate-700/50 pt-3 flex gap-2">
@@ -1638,6 +1651,7 @@ function renderDivisionActions(division, count, ids) {
           👁️ Ver Todas (${count})
         </button>
       ` : ''}
+      ${deleteButton}
     </div>
   `;
 }
@@ -6345,6 +6359,97 @@ Prazo de entrega: ${new Date(transaction.delivery_deadline?.toDate ? transaction
 window.loadTradeRelations = loadTradeRelations;
 window.cancelTransaction = cancelTransaction;
 window.viewTransactionDetails = viewTransactionDetails;
+
+/**
+ * Deleta uma divisão única
+ */
+async function deleteDivision(divisionId) {
+  try {
+    const confirmed = confirm('⚠️ Tem certeza que deseja deletar esta divisão?\n\nEsta ação não pode ser desfeita!');
+    if (!confirmed) return;
+
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const paisId = await checkPlayerCountry(user.uid);
+    if (!paisId) return;
+
+    // Buscar inventário
+    const inventoryRef = db.collection('inventory').doc(paisId);
+    const inventoryDoc = await inventoryRef.get();
+
+    if (!inventoryDoc.exists) {
+      alert('❌ Inventário não encontrado');
+      return;
+    }
+
+    let divisions = inventoryDoc.data().divisions || [];
+
+    // Remover a divisão
+    divisions = divisions.filter(d => d.id !== divisionId);
+
+    // Atualizar Firebase
+    await inventoryRef.update({ divisions });
+
+    // Mostrar mensagem de sucesso
+    showNotification('success', '✅ Divisão deletada com sucesso!');
+
+    // Recarregar lista de divisões
+    await loadArmyDivisions();
+
+  } catch (error) {
+    console.error('Erro ao deletar divisão:', error);
+    showNotification('error', '❌ Erro ao deletar divisão: ' + error.message);
+  }
+}
+
+/**
+ * Deleta um grupo de divisões idênticas
+ */
+async function deleteDivisionGroup(divisionIds) {
+  try {
+    const count = divisionIds.length;
+    const confirmed = confirm(`⚠️ Tem certeza que deseja deletar ${count} divisões?\n\nEsta ação não pode ser desfeita!`);
+    if (!confirmed) return;
+
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const paisId = await checkPlayerCountry(user.uid);
+    if (!paisId) return;
+
+    // Buscar inventário
+    const inventoryRef = db.collection('inventory').doc(paisId);
+    const inventoryDoc = await inventoryRef.get();
+
+    if (!inventoryDoc.exists) {
+      alert('❌ Inventário não encontrado');
+      return;
+    }
+
+    let divisions = inventoryDoc.data().divisions || [];
+
+    // Remover todas as divisões do grupo
+    divisions = divisions.filter(d => !divisionIds.includes(d.id));
+
+    // Atualizar Firebase
+    await inventoryRef.update({ divisions });
+
+    // Mostrar mensagem de sucesso
+    showNotification('success', `✅ ${count} divisões deletadas com sucesso!`);
+
+    // Recarregar lista de divisões
+    await loadArmyDivisions();
+
+  } catch (error) {
+    console.error('Erro ao deletar grupo de divisões:', error);
+    showNotification('error', '❌ Erro ao deletar divisões: ' + error.message);
+  }
+}
+
+// Expor funções globalmente
+window.deleteDivision = deleteDivision;
+window.deleteDivisionGroup = deleteDivisionGroup;
 
 // Initialize dashboard when DOM is ready
 if (document.readyState === 'loading') {
