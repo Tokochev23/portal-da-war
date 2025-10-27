@@ -29,6 +29,10 @@ export default defineConfig({
         {
           src: 'assets/flags/**/*',
           dest: 'assets/flags'
+        },
+        {
+          src: 'assets/division-icons/**/*',
+          dest: 'assets/division-icons'
         }
       ]
     })
