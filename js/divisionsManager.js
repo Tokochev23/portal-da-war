@@ -65,21 +65,20 @@ async function loadUserCountry() {
  */
 async function loadDivisions() {
   try {
-    const { collection, query, where, getDocs, orderBy } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+    console.log("Carregando divisões do inventário para o país:", currentUserCountry.id);
+    const inventoryRef = window.db.collection('inventory').doc(currentUserCountry.id);
+    const inventoryDoc = await inventoryRef.get();
 
-    const divisionsRef = collection(window.db, 'divisions');
-    const q = query(
-      divisionsRef,
-      where('countryId', '==', currentUserCountry.id),
-      orderBy('updatedAt', 'desc')
-    );
+    if (inventoryDoc.exists) {
+      allDivisions = inventoryDoc.data().divisions || [];
+      console.log(`${allDivisions.length} divisões carregadas.`);
+    } else {
+      allDivisions = [];
+      console.log("Nenhum inventário encontrado para o país.");
+    }
 
-    const snapshot = await getDocs(q);
-    allDivisions = [];
-
-    snapshot.forEach(doc => {
-      allDivisions.push({ id: doc.id, ...doc.data() });
-    });
+    // Ordenar por data de atualização, mais recente primeiro
+    allDivisions.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
 
     renderDivisions(allDivisions);
 
@@ -207,28 +206,32 @@ window.editDivision = function(divisionId) {
  */
 window.duplicateDivision = async function(divisionId) {
   try {
-    const { doc, getDoc, collection, setDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+    const inventoryRef = window.db.collection('inventory').doc(currentUserCountry.id);
+    const inventoryDoc = await inventoryRef.get();
 
-    const divisionRef = doc(window.db, 'divisions', divisionId);
-    const divisionDoc = await getDoc(divisionRef);
+    if (!inventoryDoc.exists) {
+      throw new Error("Inventário do país não encontrado.");
+    }
 
-    if (!divisionDoc.exists()) {
-      showNotification('error', 'Divisão não encontrada');
+    const currentDivisions = inventoryDoc.data().divisions || [];
+    const divisionToDuplicate = currentDivisions.find(d => d.id === divisionId);
+
+    if (!divisionToDuplicate) {
+      showNotification('error', 'Divisão não encontrada para duplicar.');
       return;
     }
 
-    const division = divisionDoc.data();
+    const newDivision = {
+      ...divisionToDuplicate,
+      id: `div_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: divisionToDuplicate.name + ' (Cópia)',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
 
-    // Criar nova divisão
-    const newDivisionRef = doc(collection(window.db, 'divisions'));
+    const newDivisions = [...currentDivisions, newDivision];
 
-    await setDoc(newDivisionRef, {
-      ...division,
-      id: newDivisionRef.id,
-      name: division.name + ' (Cópia)',
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
+    await inventoryRef.update({ divisions: newDivisions });
 
     showNotification('success', '✅ Divisão duplicada!');
     await loadDivisions();
@@ -253,13 +256,20 @@ window.deleteDivision = async function(divisionId) {
 
     if (!confirmed) return;
 
-    const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+    const inventoryRef = window.db.collection('inventory').doc(currentUserCountry.id);
+    const inventoryDoc = await inventoryRef.get();
 
-    const divisionRef = doc(window.db, 'divisions', divisionId);
-    await deleteDoc(divisionRef);
+    if (!inventoryDoc.exists) {
+      throw new Error("Inventário do país não encontrado.");
+    }
+
+    const currentDivisions = inventoryDoc.data().divisions || [];
+    const newDivisions = currentDivisions.filter(d => d.id !== divisionId);
+
+    await inventoryRef.update({ divisions: newDivisions });
 
     showNotification('success', '✅ Divisão deletada!');
-    await loadDivisions();
+    await loadDivisions(); // Recarrega a lista
 
   } catch (error) {
     console.error('Erro ao deletar divisão:', error);

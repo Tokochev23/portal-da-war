@@ -6,6 +6,7 @@
 import { db } from '../services/firebase.js';
 import { TECHNOLOGIES } from './agencyTechnologies.js';
 import intelligenceAgencySystem from './intelligenceAgencySystem.js';
+import BudgetTracker from './budgetTracker.js';
 
 // Resultados possíveis do D12
 const RESEARCH_RESULTS = {
@@ -248,11 +249,21 @@ class ResearchSystem {
         currentResearch: research
       });
 
-      // Descontar custo da pesquisa do orçamento nacional do país
-      const currentNationalBudget = parseFloat(country.OrcamentoGasto || 0);
-      await db.collection('paises').doc(country.id).update({
-        OrcamentoGasto: currentNationalBudget + cost
-      });
+      // O custo agora é descontado exclusivamente via BudgetTracker para evitar contagem dupla.
+
+      // Registrar despesa no Budget Tracker
+      try {
+        await BudgetTracker.addExpense(
+          country.id,
+          BudgetTracker.EXPENSE_CATEGORIES.AGENCY_RESEARCH,
+          cost,
+          `Pesquisa iniciada: ${tech.name}`
+        );
+        console.log(`💰 Despesa de pesquisa registrada: ${tech.name} - ${(cost / 1000000).toFixed(2)}M`);
+      } catch (budgetError) {
+        console.error('⚠️ Erro ao registrar despesa de pesquisa no budget tracker:', budgetError);
+        // Não falhar a pesquisa por causa do budget tracker
+      }
 
       return {
         success: true,
@@ -311,6 +322,21 @@ class ResearchSystem {
       // Calcular custo desta tentativa
       const attemptCost = research.cost * (result.costLoss || 0);
 
+      // Registrar despesa de falha no Budget Tracker, se houver
+      if (attemptCost > 0) {
+        try {
+          await BudgetTracker.addExpense(
+            country.id,
+            BudgetTracker.EXPENSE_CATEGORIES.AGENCY_RESEARCH,
+            attemptCost,
+            `Custo de falha na pesquisa: ${tech.name}`
+          );
+          console.log(`💸 Despesa de falha em pesquisa registrada: ${(attemptCost / 1000000).toFixed(2)}M`);
+        } catch (budgetError) {
+          console.error('⚠️ Erro ao registrar despesa de falha no budget tracker:', budgetError);
+        }
+      }
+
       // Atualizar pesquisa baseado no resultado
       let updates = {
         'currentResearch.rollsAttempted': research.rollsAttempted + 1,
@@ -357,7 +383,7 @@ class ResearchSystem {
         }
       }
 
-      await updateDoc(agencyRef, updates);
+      await db.collection('agencies').doc(agencyId).update(updates);
 
       return {
         success: true,
@@ -382,7 +408,6 @@ class ResearchSystem {
    */
   async cancelResearch(agencyId) {
     try {
-      const agencyRef = doc(db, 'agencies', agencyId);
       await db.collection('agencies').doc(agencyId).update({
         currentResearch: null
       });

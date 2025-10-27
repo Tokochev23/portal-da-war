@@ -104,7 +104,11 @@
       "Bash(xargs sed:*)",
       "Bash(timeout:*)",
       "Bash(echo:*)",
-      "Bash(npx http-server:*)"
+      "Bash(npx http-server:*)",
+      "Read(//c//**)",
+      "Bash(xcopy:*)",
+      "Bash(cmd /c xcopy:*)",
+      "Bash(powershell -Command:*)"
     ],
     "deny": [],
     "ask": []

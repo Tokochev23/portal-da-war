@@ -6,9 +6,19 @@
 import { combat_units } from './data/division-components/combat_units.js';
 import { support_units } from './data/division-components/support_units.js';
 import { training_levels } from './data/division-components/training_levels.js';
+import { basicTemplates } from './data/division-templates/basic_templates.js';
 import { DivisionStatsCalculator } from './systems/divisionStatsCalculator.js';
 import { DivisionValidator } from './utils/divisionValidator.js';
 import { showNotification, showConfirmBox } from './utils.js';
+
+// Usar funções do Firestore exportadas globalmente do HTML
+// (garantindo que usamos a mesma instância e versão)
+const getFirestoreFunctions = () => {
+  if (!window.firestoreFunctions) {
+    throw new Error('Firebase Firestore functions não foram inicializadas. Recarregue a página.');
+  }
+  return window.firestoreFunctions;
+};
 
 // Estado global da divisão
 let currentDivision = {
@@ -25,6 +35,13 @@ let currentDivision = {
 
 let currentUser = null;
 let currentUserCountry = null;
+let userPermissions = null;
+let allCountries = [];
+
+// Helper para obter a instância do Firestore
+function getDb() {
+  return window.db;
+}
 
 /**
  * Inicializa o Division Creator
@@ -34,6 +51,16 @@ export async function initDivisionCreator(user) {
     console.log('🎖️ Inicializando Division Designer...');
 
     currentUser = user;
+
+    // Verificar permissões do usuário
+    const { checkUserPermissions } = await import('./services/firebase.js');
+    userPermissions = await checkUserPermissions(currentUser.uid);
+    console.log('🔑 Permissões do usuário:', userPermissions);
+
+    // Se for narrador/admin, carregar todos os países
+    if (userPermissions.isNarrator || userPermissions.isAdmin) {
+      await loadAllCountries();
+    }
 
     // Carregar dados do país do jogador
     await loadUserCountry();
@@ -63,6 +90,25 @@ export async function initDivisionCreator(user) {
 }
 
 /**
+ * Carrega todos os países (apenas para narradores/admins)
+ */
+async function loadAllCountries() {
+  try {
+    const { getAllCountries } = await import('./services/firebase.js');
+    const countries = await getAllCountries();
+
+    allCountries = countries
+      .map(c => ({ id: c.id, name: c.Pais, flag: c.Flag }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    console.log(`✅ ${allCountries.length} países carregados para seleção`);
+  } catch (error) {
+    console.error('Erro ao carregar países:', error);
+    throw error;
+  }
+}
+
+/**
  * Carrega dados do país do usuário
  */
 async function loadUserCountry() {
@@ -71,6 +117,11 @@ async function loadUserCountry() {
     const paisId = await checkPlayerCountry(currentUser.uid);
 
     if (!paisId) {
+      // Se for narrador/admin e não tiver país vinculado, não é erro
+      if (userPermissions?.isNarrator || userPermissions?.isAdmin) {
+        console.log('⚠️ Narrador/Admin sem país vinculado - poderá selecionar país manualmente');
+        return;
+      }
       throw new Error('Usuário não está vinculado a um país');
     }
 
@@ -90,16 +141,23 @@ async function loadUserCountry() {
  */
 async function loadExistingDivision(divisionId) {
   try {
-    const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+    if (!currentUserCountry || !currentUserCountry.id) {
+        throw new Error("País do usuário não carregado. Não é possível carregar a divisão.");
+    }
+    
+    const inventoryRef = getDb().collection('inventory').doc(currentUserCountry.id);
+    const inventoryDoc = await inventoryRef.get();
 
-    const divisionRef = doc(window.db, 'divisions', divisionId);
-    const divisionDoc = await getDoc(divisionRef);
-
-    if (!divisionDoc.exists()) {
-      throw new Error('Divisão não encontrada');
+    if (!inventoryDoc.exists) {
+      throw new Error('Inventário do país não encontrado.');
     }
 
-    const division = divisionDoc.data();
+    const divisions = inventoryDoc.data().divisions || [];
+    const division = divisions.find(d => d.id === divisionId);
+
+    if (!division) {
+      throw new Error('Divisão não encontrada no inventário.');
+    }
 
     // Aplicar dados à divisão atual
     currentDivision = {
@@ -119,6 +177,11 @@ async function loadExistingDivision(divisionId) {
  * Inicializa a interface
  */
 async function initializeUI() {
+  // Country selector (for narrators/admins)
+  if (userPermissions?.isNarrator || userPermissions?.isAdmin) {
+    renderCountrySelector();
+  }
+
   // Training selector
   renderTrainingSelector();
 
@@ -131,6 +194,40 @@ async function initializeUI() {
 
   // Carregar templates
   await loadTemplates();
+}
+
+/**
+ * Renderiza o seletor de país (apenas para narradores/admins)
+ */
+function renderCountrySelector() {
+  const container = document.getElementById('country-selector-container');
+  const select = document.getElementById('country-selector');
+
+  if (!container || !select) return;
+
+  // Mostrar container
+  container.classList.remove('hidden');
+
+  // Popular select com países
+  select.innerHTML = `
+    <option value="">Selecione um país...</option>
+    ${allCountries.map(country => `
+      <option value="${country.id}" ${currentDivision.countryId === country.id ? 'selected' : ''}>
+        ${country.flag || '🏳️'} ${country.name}
+      </option>
+    `).join('')}
+  `;
+
+  // Event listener para mudança de país
+  select.addEventListener('change', (e) => {
+    const selectedCountryId = e.target.value;
+    if (selectedCountryId) {
+      currentDivision.countryId = selectedCountryId;
+      console.log(`🌍 País selecionado: ${selectedCountryId}`);
+    }
+  });
+
+  console.log('✅ Seletor de país renderizado');
 }
 
 /**
@@ -151,11 +248,7 @@ function renderTrainingSelector() {
 
     return `
       <button
-        class="training-badge flex-1 px-4 py-3 rounded-lg border-2 transition-all ${
-          isSelected
-            ? 'border-brand-500 bg-brand-500/20 text-brand-400'
-            : 'border-bg-ring bg-bg hover:border-slate-600'
-        }"
+        class="training-badge flex-1 px-4 py-3 rounded-lg border-2 transition-all ${isSelected ? 'border-brand-500 bg-brand-500/20 text-brand-400' : 'border-bg-ring bg-bg hover:border-slate-600'}"
         data-training="${level.id}"
         onclick="window.selectTrainingLevel('${level.id}')"
         title="${getTrainingTooltip(level)}"
@@ -249,8 +342,15 @@ function createUnitSlot(index, slotType, unit) {
     const unitData = slotType === 'combat' ? combat_units[unit.unitType] : support_units[unit.unitType];
 
     div.className = 'unit-slot filled rounded-lg p-2 cursor-pointer flex flex-col items-center justify-center relative group';
+
+    // Verificar se o ícone é um caminho de arquivo PNG ou um emoji
+    const isImageIcon = unitData.icon.endsWith('.png');
+    const iconHTML = isImageIcon
+      ? `<img src="${unitData.icon}" alt="${unitData.name}" class="w-12 h-12 object-contain mb-1" />`
+      : `<div class="text-3xl mb-1">${unitData.icon}</div>`;
+
     div.innerHTML = `
-      <div class="text-3xl mb-1">${unitData.icon}</div>
+      ${iconHTML}
       <div class="text-[10px] font-medium text-center line-clamp-2 text-slate-300">${unitData.name.split(' ')[0]}</div>
       <div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
@@ -343,6 +443,47 @@ function openUnitSelectionModal(slotIndex, slotType) {
 
   // Setup filter handlers
   setupCategoryFilters(units, slotIndex, slotType);
+
+  // Adicionar listener para remover tooltip ao rolar
+  const modalContent = container.querySelector('.modal-backdrop > div > div');
+  if (modalContent) {
+    modalContent.addEventListener('scroll', () => {
+      hideUnitTooltip(true);
+    });
+  }
+
+  // Adicionar listener para remover tooltip ao mover o mouse fora do modal
+  const backdrop = container.querySelector('.modal-backdrop');
+  if (backdrop) {
+    backdrop.addEventListener('mousemove', (e) => {
+      // Se o mouse estiver fora do conteúdo do modal, esconder tooltip
+      const modalBox = backdrop.querySelector('.modal-backdrop > div');
+      if (modalBox && !modalBox.contains(e.target)) {
+        hideUnitTooltip(true);
+      }
+    });
+  }
+}
+
+/**
+ * Traduz e formata nomes de categorias
+ */
+function formatCategoryName(category) {
+  const categoryNames = {
+    'air_support': 'Suporte Aéreo',
+    'airborne_support': 'Aerotransportado',
+    'fire_support': 'Suporte de Fogo',
+    'reconnaissance': 'Reconhecimento',
+    'logistics': 'Logística',
+    'infantry': 'Infantaria',
+    'motorized': 'Motorizada',
+    'mechanized': 'Mecanizada',
+    'armor': 'Blindados',
+    'artillery': 'Artilharia',
+    'special': 'Forças Especiais',
+    'amphibious': 'Anfíbios'
+  };
+  return categoryNames[category] || category.charAt(0).toUpperCase() + category.slice(1);
 }
 
 /**
@@ -356,14 +497,10 @@ function generateCategoryFilters(units, slotType) {
 
   return filters.map(filter => `
     <button
-      class="category-filter px-4 py-2 rounded-lg border transition-colors ${
-        filter === 'Todas'
-          ? 'border-brand-500 bg-brand-500/20 text-brand-400'
-          : 'border-bg-ring bg-bg hover:border-slate-600'
-      }"
+      class="category-filter px-4 py-2 rounded-lg border transition-colors ${filter === 'Todas' ? 'border-brand-500 bg-brand-500/20 text-brand-400' : 'border-bg-ring bg-bg hover:border-slate-600'}"
       data-category="${filter}"
     >
-      ${filter.charAt(0).toUpperCase() + filter.slice(1)}
+      ${filter === 'Todas' ? 'Todas' : formatCategoryName(filter)}
     </button>
   `).join('');
 }
@@ -403,26 +540,34 @@ function setupCategoryFilters(units, slotIndex, slotType) {
  * Gera lista de unidades
  */
 function generateUnitsList(units, slotIndex, slotType) {
-  return Object.entries(units).map(([unitId, unit]) => `
-    <div
-      class="unit-card bg-bg border border-bg-ring rounded-lg p-4 hover:shadow-lg transition-all"
-      onclick="window.selectUnit('${unitId}', ${slotIndex}, '${slotType}')"
-    >
-      <div class="flex items-start gap-3">
-        <div class="text-4xl">${unit.icon}</div>
-        <div class="flex-1 min-w-0">
-          <h3 class="font-bold text-slate-100 mb-1">${unit.name}</h3>
-          <div class="text-xs text-slate-400 space-y-1">
-            <div>${unit.composition.manpower} MP</div>
-            <div class="text-green-400">$${(unit.costs.production / 1000000).toFixed(1)}M</div>
+  return Object.entries(units).map(([unitId, unit]) => {
+    // Verificar se o ícone é um caminho de arquivo PNG ou um emoji
+    const isImageIcon = unit.icon.endsWith('.png');
+    const iconHTML = isImageIcon
+      ? `<img src="${unit.icon}" alt="${unit.name}" class="w-16 h-16 object-contain" />`
+      : `<div class="text-4xl">${unit.icon}</div>`;
+
+    return `
+      <div
+        class="unit-card bg-bg border border-bg-ring rounded-lg p-4 hover:shadow-lg transition-all"
+        onclick="window.selectUnit('${unitId}', ${slotIndex}, '${slotType}')"
+      >
+        <div class="flex items-start gap-3">
+          ${iconHTML}
+          <div class="flex-1 min-w-0">
+            <h3 class="font-bold text-slate-100 mb-1">${unit.name}</h3>
+            <div class="text-xs text-slate-400 space-y-1">
+              <div>${unit.composition.manpower} MP</div>
+              <div class="text-green-400">$${(unit.costs.production / 1000000).toFixed(1)}M</div>
+            </div>
+          </div>
+          <div class="text-right text-xs text-slate-500">
+            <div>${unit.category}</div>
           </div>
         </div>
-        <div class="text-right text-xs text-slate-500">
-          <div>${unit.category}</div>
-        </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 /**
@@ -452,6 +597,8 @@ window.selectUnit = function(unitId, slotIndex, slotType) {
  */
 window.closeModal = function(event) {
   if (!event || event.target.classList.contains('modal-backdrop')) {
+    // Remover qualquer tooltip ativo
+    hideUnitTooltip(true);
     document.getElementById('modal-container').innerHTML = '';
   }
 };
@@ -822,12 +969,33 @@ async function saveDivision() {
       Salvando...
     `;
 
-    // Salvar no Firestore
-    const { collection, doc, setDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+    // Verificar se o Firestore está disponível
+    if (!window.db) {
+      throw new Error('Firestore não está inicializado. Recarregue a página.');
+    }
 
-    const divisionRef = currentDivision.id
-      ? doc(window.db, 'divisions', currentDivision.id)
-      : doc(collection(window.db, 'divisions'));
+    // Verificar país alvo (para narradores) ou país do usuário
+    let targetCountryId;
+    if (userPermissions?.isNarrator || userPermissions?.isAdmin) {
+      // Narradores podem selecionar o país
+      targetCountryId = currentDivision.countryId;
+      if (!targetCountryId) {
+        throw new Error('Selecione um país para salvar a divisão.');
+      }
+    } else {
+      // Jogadores normais salvam no próprio país
+      if (!currentUserCountry || !currentUserCountry.id) {
+        throw new Error('País do usuário não está carregado. Recarregue a página.');
+      }
+      targetCountryId = currentUserCountry.id;
+    }
+
+    const isNewDivision = !currentDivision.id;
+
+    // Gerar ID único para a divisão se não existir
+    if (isNewDivision) {
+      currentDivision.id = `div_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
 
     // Obter dados de recrutamento do training level
     const trainingLevel = training_levels[currentDivision.trainingLevel];
@@ -835,29 +1003,77 @@ async function saveDivision() {
     const progressPerTurn = trainingLevel.modifiers.recruitmentProgress;
 
     const divisionData = {
-      ...currentDivision,
-      id: divisionRef.id,
-      updatedAt: serverTimestamp(),
+      id: currentDivision.id,
+      name: currentDivision.name,
+      countryId: currentDivision.countryId,
+      trainingLevel: currentDivision.trainingLevel,
+      combatUnits: currentDivision.combatUnits,
+      supportUnits: currentDivision.supportUnits,
+      calculatedStats: currentDivision.calculatedStats,
+      updatedAt: new Date().toISOString(),
 
       // Dados de recrutamento
-      recruitmentStatus: 'recruiting', // Status: recruiting, ready, deployed
-      recruitment: {
+      recruitmentStatus: currentDivision.recruitmentStatus || 'recruiting',
+      recruitment: currentDivision.recruitment || {
         totalTurns: recruitmentTurns,
         currentTurn: 0,
         progressPerTurn: progressPerTurn,
         progress: 0,
-        startedAt: serverTimestamp(),
+        startedAt: new Date().toISOString(),
         trainingLevel: currentDivision.trainingLevel
       }
     };
 
-    if (!currentDivision.id) {
-      divisionData.createdAt = serverTimestamp();
+    if (isNewDivision) {
+      divisionData.createdAt = new Date().toISOString();
+    } else {
+      divisionData.createdAt = currentDivision.createdAt;
     }
 
-    await setDoc(divisionRef, divisionData);
+    // Salvar no inventário do país (usando sintaxe de compatibilidade)
+    console.log('📦 Salvando divisão no inventário (compat):', targetCountryId);
 
-    currentDivision.id = divisionRef.id;
+    const inventoryRef = getDb().collection('inventory').doc(targetCountryId);
+
+    console.log('📖 Tentando obter inventoryDoc com .get()...');
+    const inventoryDoc = await inventoryRef.get();
+    console.log('✅ inventoryDoc obtido, exists:', inventoryDoc.exists);
+
+    if (!inventoryDoc.exists) {
+      // Se não existe inventário, criar um novo
+      console.log('➕ Criando novo inventário com .set()');
+      await inventoryRef.set({
+        country_id: targetCountryId,
+        divisions: [divisionData]
+      });
+      console.log('✅ Inventário criado com sucesso');
+    } else {
+      // Se existe inventário
+      console.log('🔄 Atualizando inventário existente');
+      const inventoryData = inventoryDoc.data();
+      let divisions = inventoryData.divisions || [];
+
+      if (isNewDivision) {
+        // Adicionar nova divisão
+        console.log('➕ Adicionando nova divisão');
+        divisions.push(divisionData);
+      } else {
+        // Atualizar divisão existente
+        console.log('🔄 Atualizando divisão existente');
+        const index = divisions.findIndex(d => d.id === currentDivision.id);
+        if (index !== -1) {
+          divisions[index] = divisionData;
+        } else {
+          divisions.push(divisionData);
+        }
+      }
+
+      console.log('💾 Tentando atualizar com .update()...');
+      await inventoryRef.update({
+        divisions: divisions
+      });
+      console.log('✅ Inventário atualizado com sucesso');
+    }
 
     // Success animation
     saveButton.innerHTML = `
@@ -867,7 +1083,13 @@ async function saveDivision() {
       Salvo!
     `;
 
-    showNotification('success', '✅ Divisão salva com sucesso!');
+    // Mensagem de sucesso com informação do país
+    let successMessage = '✅ Divisão salva com sucesso!';
+    if (userPermissions?.isNarrator || userPermissions?.isAdmin) {
+      const countryName = allCountries.find(c => c.id === targetCountryId)?.name || targetCountryId;
+      successMessage = `✅ Divisão salva para ${countryName}!`;
+    }
+    showNotification('success', successMessage);
 
     // Reset button após 2 segundos
     setTimeout(() => {
@@ -906,21 +1128,20 @@ async function saveAsTemplate() {
     const templateName = prompt('Nome do template:', currentDivision.name + ' (Template)');
     if (!templateName) return;
 
-    // Salvar no Firestore
-    const { collection, doc, setDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+    // Salvar no Firestore (usando sintaxe de compatibilidade)
+    const templatesCollectionRef = getDb().collection('division_templates');
 
-    const templateRef = doc(collection(window.db, 'division_templates'));
-
-    await setDoc(templateRef, {
-      id: templateRef.id,
+    const templateData = {
       name: templateName,
       countryId: currentUserCountry.id,
       isPublic: false,
       trainingLevel: currentDivision.trainingLevel,
       combatUnits: currentDivision.combatUnits.map(u => ({ unitType: u.unitType })),
       supportUnits: currentDivision.supportUnits.map(u => ({ unitType: u.unitType })),
-      createdAt: serverTimestamp()
-    });
+      createdAt: new Date().toISOString()
+    };
+
+    const templateRef = await templatesCollectionRef.add(templateData);
 
     showNotification('success', '✅ Template salvo com sucesso!');
     await loadTemplates();
@@ -936,30 +1157,44 @@ async function saveAsTemplate() {
  */
 async function loadTemplates() {
   try {
-    const { collection, query, where, getDocs, orderBy } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+    // Começar com templates básicos
+    const allTemplates = Object.values(basicTemplates);
 
-    const templatesRef = collection(window.db, 'division_templates');
+    // Se o país do usuário foi carregado, buscar templates customizados
+    if (currentUserCountry && currentUserCountry.id) {
+      try {
+        // Usar sintaxe de compatibilidade para consistência
+        const templatesRef = getDb().collection('division_templates');
 
-    // Buscar templates do país ou públicos
-    const q = query(
-      templatesRef,
-      where('countryId', '==', currentUserCountry.id),
-      orderBy('createdAt', 'desc')
-    );
+        // Buscar templates do país
+        const q = templatesRef
+          .where('countryId', '==', currentUserCountry.id)
+          .orderBy('createdAt', 'desc');
 
-    const snapshot = await getDocs(q);
-    const templates = [];
+        const snapshot = await q.get();
 
-    snapshot.forEach(doc => {
-      templates.push({ id: doc.id, ...doc.data() });
-    });
+        snapshot.forEach(doc => {
+          allTemplates.push({
+            id: doc.id,
+            ...doc.data(),
+            isCustom: true // Marcar como template customizado
+          });
+        });
+      } catch (error) {
+        console.warn('Erro ao carregar templates customizados:', error);
+        // Continuar com apenas os templates básicos
+      }
+    }
 
-    renderTemplatesDropdown(templates);
-    return templates;
+    renderTemplatesDropdown(allTemplates);
+    return allTemplates;
 
   } catch (error) {
     console.error('Erro ao carregar templates:', error);
-    return [];
+    // Em caso de erro, renderizar pelo menos os templates básicos
+    const basicTemplatesList = Object.values(basicTemplates);
+    renderTemplatesDropdown(basicTemplatesList);
+    return basicTemplatesList;
   }
 }
 
@@ -968,17 +1203,41 @@ async function loadTemplates() {
  */
 function renderTemplatesDropdown(templates) {
   const container = document.getElementById('templates-dropdown');
-  if (!container) return;
-
-  if (templates.length === 0) {
-    container.innerHTML = '<option value="">Nenhum template salvo</option>';
+  if (!container) {
+    console.warn('Elemento templates-dropdown não encontrado');
     return;
   }
 
-  container.innerHTML = `
-    <option value="">Selecione um template...</option>
-    ${templates.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
-  `;
+  if (!templates || templates.length === 0) {
+    container.innerHTML = '<option value="">Nenhum template disponível</option>';
+    return;
+  }
+
+  // Separar templates básicos e customizados
+  const basicTemplatesList = templates.filter(t => !t.isCustom);
+  const customTemplates = templates.filter(t => t.isCustom);
+
+  let optionsHTML = '<option value="">Selecione um template...</option>';
+
+  // Templates Básicos
+  if (basicTemplatesList.length > 0) {
+    optionsHTML += '<optgroup label="📋 Templates Básicos">';
+    optionsHTML += basicTemplatesList.map(t =>
+      `<option value="${t.id}">${t.name}</option>`
+    ).join('');
+    optionsHTML += '</optgroup>';
+  }
+
+  // Templates Customizados
+  if (customTemplates.length > 0) {
+    optionsHTML += '<optgroup label="⭐ Meus Templates">';
+    optionsHTML += customTemplates.map(t =>
+      `<option value="${t.id}">${t.name}</option>`
+    ).join('');
+    optionsHTML += '</optgroup>';
+  }
+
+  container.innerHTML = optionsHTML;
 }
 
 /**
@@ -988,17 +1247,25 @@ window.loadTemplate = async function(templateId) {
   if (!templateId) return;
 
   try {
-    const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+    let template = null;
 
-    const templateRef = doc(window.db, 'division_templates', templateId);
-    const templateDoc = await getDoc(templateRef);
+    // Primeiro, verificar se é um template básico
+    if (basicTemplates[templateId]) {
+      template = basicTemplates[templateId];
+      console.log('Carregando template básico:', template.name);
+    } else {
+      // Se não for básico, buscar no Firestore (usando sintaxe de compatibilidade)
+      const templateRef = getDb().collection('division_templates').doc(templateId);
+      const templateDoc = await templateRef.get();
 
-    if (!templateDoc.exists()) {
-      showNotification('error', 'Template não encontrado');
-      return;
+      if (!templateDoc.exists) {
+        showNotification('error', 'Template não encontrado');
+        return;
+      }
+
+      template = templateDoc.data();
+      console.log('Carregando template customizado:', template.name);
     }
-
-    const template = templateDoc.data();
 
     // Aplicar template à divisão atual
     currentDivision.name = template.name.replace(' (Template)', '');
@@ -1021,7 +1288,7 @@ window.loadTemplate = async function(templateId) {
     renderSupportGrid();
     updateStats();
 
-    showNotification('success', '✅ Template carregado!');
+    showNotification('success', `✅ Template "${template.name}" carregado!`);
 
   } catch (error) {
     console.error('Erro ao carregar template:', error);
@@ -1029,25 +1296,43 @@ window.loadTemplate = async function(templateId) {
   }
 };
 
-/**
- * Duplica a divisão atual
- */
-async function duplicateDivision() {
-  if (currentDivision.combatUnits.length === 0) {
-    showNotification('warning', 'Adicione unidades antes de duplicar');
-    return;
+window.duplicateDivision = async function(divisionId) {
+  try {
+    const inventoryRef = window.db.collection('inventory').doc(currentUserCountry.id);
+    const inventoryDoc = await inventoryRef.get();
+
+    if (!inventoryDoc.exists) {
+      throw new Error("Inventário do país não encontrado.");
+    }
+
+    const currentDivisions = inventoryDoc.data().divisions || [];
+    const divisionToDuplicate = currentDivisions.find(d => d.id === divisionId);
+
+    if (!divisionToDuplicate) {
+      showNotification('error', 'Divisão não encontrada para duplicar.');
+      return;
+    }
+
+    const newDivision = {
+      ...divisionToDuplicate,
+      id: `div_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: divisionToDuplicate.name + ' (Cópia)',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const newDivisions = [...currentDivisions, newDivision];
+
+    await inventoryRef.update({ divisions: newDivisions });
+
+    showNotification('success', '✅ Divisão duplicada!');
+    await loadDivisions();
+
+  } catch (error) {
+    console.error('Erro ao duplicar divisão:', error);
+    showNotification('error', 'Erro ao duplicar: ' + error.message);
   }
-
-  // Criar nova divisão com mesmos dados
-  currentDivision.id = null;
-  currentDivision.name = currentDivision.name + ' (Cópia)';
-  currentDivision.createdAt = null;
-  currentDivision.updatedAt = null;
-
-  document.getElementById('division-name').value = currentDivision.name;
-
-  showNotification('success', 'Divisão duplicada! Clique em Salvar para criar uma nova cópia.');
-}
+};
 
 /**
  * Gera ID único
@@ -1067,22 +1352,38 @@ function hideLoadingScreen() {
   }
 }
 
+// Variável global para controlar o tooltip atual
+let currentTooltip = null;
+let tooltipTimeout = null;
+
 /**
  * Mostra tooltip detalhado da unidade
  */
 function showUnitTooltip(event, unitData, slotType) {
+  // Cancelar qualquer timeout pendente
+  if (tooltipTimeout) {
+    clearTimeout(tooltipTimeout);
+    tooltipTimeout = null;
+  }
+
   // Remove tooltip existente primeiro (remoção imediata)
   hideUnitTooltip(true);
 
   const tooltip = document.createElement('div');
   tooltip.id = 'unit-tooltip';
-  tooltip.className = 'fixed z-[100] bg-bg-soft border-2 border-brand-500 rounded-lg p-4 shadow-2xl max-w-sm';
+  tooltip.className = 'fixed z-[100] bg-bg-soft border-2 border-brand-500 rounded-lg p-4 shadow-2xl max-w-sm pointer-events-none';
+
+  // Verificar se o ícone é um caminho de arquivo PNG ou um emoji
+  const isImageIcon = unitData.icon.endsWith('.png');
+  const iconHTML = isImageIcon
+    ? `<img src="${unitData.icon}" alt="${unitData.name}" class="w-16 h-16 object-contain" />`
+    : `<div class="text-4xl">${unitData.icon}</div>`;
 
   // Conteúdo do tooltip
   let content = `
     <div class="space-y-3">
       <div class="flex items-center gap-3 border-b border-bg-ring pb-2">
-        <div class="text-4xl">${unitData.icon}</div>
+        ${iconHTML}
         <div>
           <h3 class="font-bold text-brand-400 text-lg">${unitData.name}</h3>
           <p class="text-xs text-slate-400">${unitData.category}</p>
@@ -1151,8 +1452,9 @@ function showUnitTooltip(event, unitData, slotType) {
 
   // Posicionar tooltip
   document.body.appendChild(tooltip);
+  currentTooltip = tooltip;
 
-  const rect = event.target.getBoundingClientRect();
+  const rect = event.currentTarget.getBoundingClientRect();
   const tooltipRect = tooltip.getBoundingClientRect();
 
   let left = rect.right + 10;
@@ -1171,26 +1473,39 @@ function showUnitTooltip(event, unitData, slotType) {
   tooltip.style.top = top + 'px';
   tooltip.style.opacity = '0';
 
-  setTimeout(() => {
-    tooltip.style.transition = 'opacity 0.2s';
-    tooltip.style.opacity = '1';
-  }, 10);
+  // Pequeno delay para mostrar o tooltip
+  tooltipTimeout = setTimeout(() => {
+    if (tooltip.parentElement) {
+      tooltip.style.transition = 'opacity 0.2s';
+      tooltip.style.opacity = '1';
+    }
+  }, 100);
 }
 
 /**
  * Esconde tooltip da unidade
  */
 function hideUnitTooltip(immediate = false) {
+  // Cancelar timeout se existir
+  if (tooltipTimeout) {
+    clearTimeout(tooltipTimeout);
+    tooltipTimeout = null;
+  }
+
   const tooltip = document.getElementById('unit-tooltip');
   if (tooltip) {
     if (immediate) {
       // Remoção imediata (usado quando criando novo tooltip)
       tooltip.remove();
+      currentTooltip = null;
     } else {
       // Remoção animada (usado no mouseleave normal)
       tooltip.style.opacity = '0';
-      setTimeout(() => {
-        if (tooltip.parentElement) tooltip.remove();
+      tooltipTimeout = setTimeout(() => {
+        if (tooltip.parentElement) {
+          tooltip.remove();
+          currentTooltip = null;
+        }
       }, 200);
     }
   }

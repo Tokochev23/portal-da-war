@@ -4,7 +4,6 @@
  */
 
 import { db } from '../services/firebase.js';
-import { collection, addDoc, query, where, getDocs, updateDoc, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import intelligenceAgencySystem from './intelligenceAgencySystem.js';
 
 // Níveis de gravidade de alertas
@@ -104,7 +103,7 @@ class SecurityAlertsSystem {
         createdAt: new Date().toISOString()
       };
 
-      const docRef = await addDoc(collection(db, 'security_alerts'), alert);
+      const docRef = await db.collection('security_alerts').add(alert);
 
       return {
         success: true,
@@ -266,10 +265,10 @@ class SecurityAlertsSystem {
    */
   async investigateAlert(alertId, agency, country, currentTurn) {
     try {
-      const alertRef = doc(db, 'security_alerts', alertId);
-      const alertSnap = await getDoc(alertRef);
+      const alertRef = db.collection('security_alerts').doc(alertId);
+      const alertSnap = await alertRef.get();
 
-      if (!alertSnap.exists()) {
+      if (!alertSnap.exists) {
         return {
           success: false,
           error: 'Alerta não encontrado!'
@@ -300,8 +299,8 @@ class SecurityAlertsSystem {
       // Buscar operação original (se disponível)
       let operation = null;
       if (alert.operationId) {
-        const opSnap = await getDoc(doc(db, 'espionage_operations', alert.operationId));
-        if (opSnap.exists()) {
+        const opSnap = await db.collection('espionage_operations').doc(alert.operationId).get();
+        if (opSnap.exists) {
           operation = opSnap.data();
         }
       }
@@ -316,7 +315,7 @@ class SecurityAlertsSystem {
       const result = this.determineInvestigationResult(roll, alert, operation);
 
       // Atualizar alerta
-      await updateDoc(alertRef, {
+      await alertRef.update({
         'investigation.started': true,
         'investigation.startedTurn': currentTurn,
         'investigation.cost': cost,
@@ -347,13 +346,11 @@ class SecurityAlertsSystem {
    */
   async getCountryAlerts(countryId, status = 'pending') {
     try {
-      const q = query(
-        collection(db, 'security_alerts'),
-        where('targetCountryId', '==', countryId),
-        where('status', '==', status)
-      );
+      const snapshot = await db.collection('security_alerts')
+        .where('targetCountryId', '==', countryId)
+        .where('status', '==', status)
+        .get();
 
-      const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -370,12 +367,10 @@ class SecurityAlertsSystem {
    */
   async getAllCountryAlerts(countryId) {
     try {
-      const q = query(
-        collection(db, 'security_alerts'),
-        where('targetCountryId', '==', countryId)
-      );
+      const snapshot = await db.collection('security_alerts')
+        .where('targetCountryId', '==', countryId)
+        .get();
 
-      const snapshot = await getDocs(q);
       const alerts = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()

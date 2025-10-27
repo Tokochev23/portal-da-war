@@ -2,6 +2,7 @@
 
 import { db, auth } from '../services/firebase.js';
 import { checkPlayerCountry } from '../services/firebase.js';
+import BudgetTracker from './budgetTracker.js';
 
 /**
  * Fetches all countries and calculates the average GDP.
@@ -275,37 +276,43 @@ export class ShipyardSystem {
                 const estabilidade = (parseFloat(countryData.Estabilidade) || 0) / 100;
                 const budget = pibBruto * 0.25 * burocracia * (estabilidade * 1.5);
 
-                const maintenanceCost = this.calculateMaintenanceCost(shipyardLevel, budget);
-                const maintenancePercent = (maintenanceCost / budget) * 100;
+      const maintenanceCost = this.calculateMaintenanceCost(shipyardLevel, budget);
+      const maintenancePercent = (maintenanceCost / budget) * 100;
 
-                // Aplicar impacto na estabilidade se manutenção for muito alta
-                let stabilityImpact = 0;
-                if (maintenancePercent > 10) { // Mais de 10% do orçamento
-                    stabilityImpact = -Math.min(5, Math.floor((maintenancePercent - 10) / 2));
-                }
+      // Aplicar penalidade de estabilidade se a manutenção for muito cara
+      let stabilityImpact = 0;
+      if (maintenancePercent > 10) { // Mais de 10% do orçamento
+        stabilityImpact = -Math.min(5, Math.floor((maintenancePercent - 10) / 2));
+      }
 
-                const newStability = Math.max(0, (parseFloat(countryData.Estabilidade) || 0) + stabilityImpact);
+      const finalStability = Math.max(0, (parseFloat(countryData.Estabilidade) || 0) + stabilityImpact);
 
-                // Atualizar país
-                const updates = {
-                    lastShipyardMaintenance: new Date(),
-                    shipyardMaintenanceCost: maintenanceCost
-                };
+      const updates = {
+        lastShipyardMaintenance: new Date(),
+      };
 
-                if (stabilityImpact !== 0) {
-                    updates.Estabilidade = newStability;
-                }
+      if (stabilityImpact !== 0) {
+        updates.Estabilidade = finalStability;
+      }
 
-                await db.collection('paises').doc(doc.id).update(updates);
+      await l.collection("paises").doc(o.id).update(updates);
 
-                results.push({
-                    countryId: doc.id,
-                    countryName: countryData.Pais,
-                    shipyardLevel,
-                    maintenanceCost,
-                    maintenancePercent: maintenancePercent.toFixed(2),
-                    stabilityImpact
-                });
+      // Registrar no BudgetTracker
+      await BudgetTracker.addExpense(
+        o.id,
+        BudgetTracker.EXPENSE_CATEGORIES.SHIPYARD_MAINTENANCE,
+        maintenanceCost,
+        `Manutenção de Estaleiros (Nível ${shipyardLevel})`
+      );
+
+      t.push({
+        countryId: o.id,
+        countryName: a.Pais,
+        shipyardLevel: n,
+        maintenanceCost: s,
+        maintenancePercent: r.toFixed(2),
+        stabilityImpact: i,
+      });
             }
 
             console.log(`✅ Manutenção aplicada a ${results.length} países com estaleiros`);

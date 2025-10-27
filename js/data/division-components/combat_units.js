@@ -49,7 +49,7 @@ export const combat_units = {
       incompatibleWith: []
     },
 
-    icon: '🎖️',
+    icon: 'assets/division-icons/unit_militia_icon.png',
     color: '#78716c'
   },
 
@@ -94,7 +94,7 @@ export const combat_units = {
       minTechLevel: 1
     },
 
-    icon: '🪖',
+    icon: 'assets/division-icons/unit_infantry_icon.png',
     color: '#4a7c59'
   },
 
@@ -139,7 +139,7 @@ export const combat_units = {
       minTechLevel: 1
     },
 
-    icon: '🎯',
+    icon: 'assets/division-icons/unit_marine_commando_icon.png',
     color: '#6b8e23'
   },
 
@@ -185,7 +185,7 @@ export const combat_units = {
       minTechLevel: 2
     },
 
-    icon: '💥',
+    icon: 'assets/division-icons/unit_heavy_infantry_icon.png',
     color: '#dc2626'
   },
 
@@ -231,7 +231,7 @@ export const combat_units = {
       minTechLevel: 2
     },
 
-    icon: '⛰️',
+    icon: 'assets/division-icons/unit_mountain_icon.png',
     color: '#8b7355'
   },
 
@@ -277,7 +277,7 @@ export const combat_units = {
       minTechLevel: 2
     },
 
-    icon: '🪂',
+    icon: 'assets/division-icons/unit_paratroop_icon.png',
     color: '#1e40af'
   },
 
@@ -323,7 +323,7 @@ export const combat_units = {
       minTechLevel: 2
     },
 
-    icon: '⚓',
+    icon: 'assets/division-icons/unit_marine_icon.png',
     color: '#1e3a8a'
   },
 
@@ -371,7 +371,7 @@ export const combat_units = {
       minTechLevel: 2
     },
 
-    icon: '🚛',
+    icon: 'assets/division-icons/unit_motorized_icon.png',
     color: '#92400e'
   },
 
@@ -417,7 +417,7 @@ export const combat_units = {
       minTechLevel: 1
     },
 
-    icon: '🚙',
+    icon: 'assets/division-icons/unit_mot_militia_icon.png',
     color: '#78350f'
   },
 
@@ -464,7 +464,7 @@ export const combat_units = {
       minTechLevel: 2
     },
 
-    icon: '🛻',
+    icon: 'assets/division-icons/unit_armored_car_icon.png',
     color: '#a16207'
   },
 
@@ -511,7 +511,7 @@ export const combat_units = {
       minTechLevel: 3
     },
 
-    icon: '🚜',
+    icon: 'assets/division-icons/unit_apc_company_icon.png',
     color: '#15803d'
   },
 
@@ -557,7 +557,7 @@ export const combat_units = {
       minTechLevel: 4
     },
 
-    icon: '🛡️',
+    icon: 'assets/division-icons/unit_mechanized_icon.png',
     color: '#166534'
   },
 
@@ -602,7 +602,7 @@ export const combat_units = {
       minTechLevel: 3
     },
 
-    icon: '🚗',
+    icon: 'assets/division-icons/unit_light_tank_icon.png',
     color: '#713f12'
   },
 
@@ -645,7 +645,7 @@ export const combat_units = {
       minTechLevel: 3
     },
 
-    icon: '🚙',
+    icon: 'assets/division-icons/unit_medium_tank_icon.png',
     color: '#854d0e'
   },
 
@@ -688,7 +688,7 @@ export const combat_units = {
       minTechLevel: 4
     },
 
-    icon: '🛡️',
+    icon: 'assets/division-icons/unit_mbt_company_icon.png',
     color: '#a16207'
   },
 
@@ -731,7 +731,7 @@ export const combat_units = {
       minTechLevel: 3
     },
 
-    icon: '🛶',
+    icon: 'assets/division-icons/unit_amphibious_tank_icon.png',
     color: '#0c4a6e'
   },
 
@@ -777,7 +777,7 @@ export const combat_units = {
       minTechLevel: 2
     },
 
-    icon: '🎯',
+    icon: 'assets/division-icons/unit_anti_air_icon.png',
     color: '#713f12'
   },
 
@@ -821,7 +821,7 @@ export const combat_units = {
       minTechLevel: 2
     },
 
-    icon: '🎯',
+    icon: 'assets/division-icons/unit_art_icon.png',
     color: '#92400e'
   },
 
@@ -865,7 +865,7 @@ export const combat_units = {
       minTechLevel: 3
     },
 
-    icon: '🚀',
+    icon: 'assets/division-icons/unit_rocket_art_icon.png',
     color: '#b45309'
   },
 
@@ -909,7 +909,7 @@ export const combat_units = {
       minTechLevel: 4
     },
 
-    icon: '🎯',
+    icon: 'assets/division-icons/unit_at_icon.png',
     color: '#dc2626'
   },
 
@@ -953,7 +953,7 @@ export const combat_units = {
       minTechLevel: 4
     },
 
-    icon: '🎯',
+    icon: 'assets/division-icons/unit_mot_anti_air_icon.png',
     color: '#ef4444'
   },
 
@@ -996,7 +996,7 @@ export const combat_units = {
       minTechLevel: 5
     },
 
-    icon: '🚀',
+    icon: 'assets/division-icons/unit_mlrs_icon.png',
     color: '#991b1b'
   },
 
@@ -1039,7 +1039,7 @@ export const combat_units = {
       minTechLevel: 4
     },
 
-    icon: '🚜',
+    icon: 'assets/division-icons/unit_spa_company_icon.png',
     color: '#a16207'
   },
 
@@ -1082,7 +1082,7 @@ export const combat_units = {
       minTechLevel: 4
     },
 
-    icon: '🎯',
+    icon: 'assets/division-icons/unit_spaa_company_icon.png',
     color: '#ca8a04'
   },
 
@@ -1130,7 +1130,7 @@ export const combat_units = {
       minTechLevel: 4
     },
 
-    icon: '🚁',
+    icon: 'assets/division-icons/unit_category_helicopter_icon_small.png',
     color: '#0369a1'
   },
 
@@ -1173,7 +1173,7 @@ export const combat_units = {
       minTechLevel: 5
     },
 
-    icon: '🚁',
+    icon: 'assets/division-icons/unit_attack_helicopter_icon_small.png',
     color: '#be123c'
   },
 
@@ -1220,7 +1220,7 @@ export const combat_units = {
       minTechLevel: 3
     },
 
-    icon: '🛶',
+    icon: 'assets/division-icons/unit_amphibious_mechanized_icon.png',
     color: '#0891b2'
   }
 };

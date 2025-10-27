@@ -4,6 +4,7 @@
  */
 
 import { db } from '../services/firebase.js';
+import BudgetTracker from './budgetTracker.js';
 
 // Tiers de agências baseado em % do orçamento
 const AGENCY_TIERS = {
@@ -120,13 +121,7 @@ class IntelligenceAgencySystem {
     const pibBruto = parseFloat(country.PIB) || 0;
     const burocracia = (parseFloat(country.Burocracia) || 0) / 100;
     const estabilidade = (parseFloat(country.Estabilidade) || 0) / 100;
-    const orcamentoTotal = pibBruto * 0.25 * burocracia * estabilidade * 1.5;
-
-    // Descontar orçamento já gasto (agência + pesquisas + outros gastos)
-    const orcamentoGasto = parseFloat(country.OrcamentoGasto || 0);
-    const agencyBudget = parseFloat(country.AgencyBudgetSpent || 0);
-
-    return Math.max(0, orcamentoTotal - orcamentoGasto - agencyBudget);
+    return pibBruto * 0.25 * burocracia * estabilidade * 1.5;
   }
 
   /**
@@ -239,10 +234,31 @@ class IntelligenceAgencySystem {
       // Atualizar país para indicar que tem agência e descontar orçamento
       await db.collection('paises').doc(country.id).update({
         hasAgency: true,
-        agencyId: docRef.id,
-        OrcamentoGasto: currentNationalBudget + totalCostThisTurn,
-        AgencyBudgetSpent: agencyBudget // Rastrear quanto a agência gasta por turno
+        agencyId: docRef.id
       });
+
+      // Registrar despesas no Budget Tracker
+      try {
+        // Custo de fundação (one-time)
+        await BudgetTracker.addExpense(
+          country.id,
+          BudgetTracker.EXPENSE_CATEGORIES.AGENCY_BUDGET,
+          foundationCost,
+          `Fundação da agência: ${agencyName}`
+        );
+
+        // Orçamento anual da agência
+        await BudgetTracker.addExpense(
+          country.id,
+          BudgetTracker.EXPENSE_CATEGORIES.AGENCY_BUDGET,
+          agencyBudget,
+          `Orçamento anual da agência: ${agencyName} (${validBudgetPercent}% do orçamento nacional)`
+        );
+
+        console.log(`💰 Budget atualizado: -$${(totalCostThisTurn / 1000000).toFixed(2)}M (Fundação + Orçamento Anual)`);
+      } catch (budgetError) {
+        console.error('⚠️ Erro ao atualizar budget tracker (agência já foi criada):', budgetError);
+      }
 
       return {
         success: true,
@@ -272,6 +288,10 @@ class IntelligenceAgencySystem {
       const agencyBudget = Math.round(nationalBudget * (validBudgetPercent / 100));
       const tier = this.determineTier(validBudgetPercent);
 
+      const agencyDoc = await db.collection('agencies').doc(agencyId).get();
+      const agencyData = agencyDoc.data();
+      const oldBudget = agencyData.budget || 0;
+
       await db.collection('agencies').doc(agencyId).update({
         budgetPercent: validBudgetPercent,
         budget: agencyBudget,
@@ -279,10 +299,29 @@ class IntelligenceAgencySystem {
         tierName: AGENCY_TIERS[tier].name
       });
 
-      // Atualizar gasto da agência no país (para rastreamento)
-      await db.collection('paises').doc(country.id).update({
-        AgencyBudgetSpent: agencyBudget
-      });
+      // Registrar mudança de orçamento no Budget Tracker
+      try {
+        const budgetDiff = agencyBudget - oldBudget;
+        if (budgetDiff > 0) {
+          // Aumento de orçamento
+          await BudgetTracker.addExpense(
+            country.id,
+            BudgetTracker.EXPENSE_CATEGORIES.AGENCY_BUDGET,
+            budgetDiff,
+            `Aumento do orçamento da agência ${agencyData.name} (${validBudgetPercent}%)`
+          );
+        } else if (budgetDiff < 0) {
+          // Redução de orçamento (registrar como "income" negativo/ajuste)
+          await BudgetTracker.addIncome(
+            country.id,
+            BudgetTracker.INCOME_CATEGORIES.OTHER_INCOME,
+            Math.abs(budgetDiff),
+            `Redução do orçamento da agência ${agencyData.name} (${validBudgetPercent}%)`
+          );
+        }
+      } catch (budgetError) {
+        console.error('⚠️ Erro ao atualizar budget tracker:', budgetError);
+      }
 
       return {
         success: true,

@@ -2,6 +2,7 @@
 
 import { db } from '../services/firebase.js';
 import { getMarketTypeConfig, getGameResourceKey } from '../data/resourceMapping.js';
+import BudgetTracker from './budgetTracker.js';
 
 /**
  * Sistema de Ordens Recorrentes
@@ -381,19 +382,17 @@ export class RecurringOrdersSystem {
       // 3. EXECUTAR TRANSFERÊNCIAS (BATCH TRANSACTION)
       const batch = db.batch();
 
-      // 3a. VENDEDOR: -recurso, +dinheiro (via redução de OrcamentoGasto)
+      // 3a. VENDEDOR: -recurso
       const sellerCurrentStock = parseFloat(sellerData[gameResourceKey] || 0);
       batch.update(db.collection('paises').doc(sellOrder.country_id), {
         [gameResourceKey]: sellerCurrentStock - match.quantity,
-        OrcamentoGasto: Math.max(0, parseFloat(sellerData.OrcamentoGasto || 0) - totalValue), // ✅ RECEBE dinheiro
         updated_at: new Date()
       });
 
-      // 3b. COMPRADOR: +recurso, -dinheiro (via aumento de OrcamentoGasto)
+      // 3b. COMPRADOR: +recurso
       const buyerCurrentStock = parseFloat(buyerData[gameResourceKey] || 0);
       batch.update(db.collection('paises').doc(buyOrder.country_id), {
         [gameResourceKey]: buyerCurrentStock + match.quantity,
-        OrcamentoGasto: parseFloat(buyerData.OrcamentoGasto || 0) + totalValue, // ✅ GASTA dinheiro
         updated_at: new Date()
       });
 
@@ -452,6 +451,30 @@ export class RecurringOrdersSystem {
 
       // 4. COMMIT TUDO DE UMA VEZ (TRANSAÇÃO ATÔMICA)
       await batch.commit();
+
+      // 5. REGISTRAR NO BUDGET TRACKER (após commit bem-sucedido)
+      try {
+        // Registrar receita do vendedor
+        await BudgetTracker.addIncome(
+          sellOrder.country_id,
+          BudgetTracker.INCOME_CATEGORIES.MARKETPLACE_SALES,
+          totalValue,
+          `Venda de ${match.quantity} ${sellOrder.unit} de ${sellOrder.item_name} para ${buyOrder.country_name}`
+        );
+
+        // Registrar despesa do comprador
+        await BudgetTracker.addExpense(
+          buyOrder.country_id,
+          BudgetTracker.EXPENSE_CATEGORIES.MARKETPLACE_PURCHASES,
+          totalValue,
+          `Compra de ${match.quantity} ${sellOrder.unit} de ${sellOrder.item_name} de ${sellOrder.country_name}`
+        );
+
+        console.log(`💰 Budget atualizado: Vendedor +$${(totalValue / 1000000).toFixed(2)}M, Comprador -$${(totalValue / 1000000).toFixed(2)}M`);
+      } catch (budgetError) {
+        console.error('⚠️ Erro ao atualizar budget tracker (transação já foi executada):', budgetError);
+        // Não falhar a transação por causa do budget tracker
+      }
 
       console.log(`✅ Transação executada: ${sellOrder.country_name} vendeu ${match.quantity} ${sellOrder.unit} de ${sellOrder.item_name} para ${buyOrder.country_name} por $${totalValue.toLocaleString()}`);
 

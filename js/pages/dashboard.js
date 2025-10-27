@@ -8,8 +8,9 @@ import ResourceProductionCalculator from '../systems/resourceProductionCalculato
 import { ShipyardSystem } from '../systems/shipyardSystem.js';
 import MarketplaceSystem from '../systems/marketplaceSystem.js';
 import { OfferModalManager } from '../components/offerModalManager.js';
-import { LawChangeModalManager } from '../components/lawChangeModalManager.js'; // <-- NOVA IMPORTAÇÃO
+import { LawChangeModalManager } from '../components/lawChangeModalManager.js';
 import { getFlagHTML } from '../ui/renderer.js';
+import BudgetTracker from '../systems/budgetTracker.js';
 
 function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
 
@@ -281,6 +282,9 @@ async function renderDashboard(country) {
             <button class="dashboard-tab border-b-2 border-transparent py-4 px-1 text-sm font-medium text-slate-400 hover:text-slate-300" data-tab="aircraft">
               ✈️ Aeronáutica
             </button>
+            <button class="dashboard-tab border-b-2 border-transparent py-4 px-1 text-sm font-medium text-slate-400 hover:text-slate-300" data-tab="army">
+              🎖️ Exército
+            </button>
             <button class="dashboard-tab border-b-2 border-transparent py-4 px-1 text-sm font-medium text-slate-400 hover:text-slate-300" data-tab="naval">
               🚢 Marinha
             </button>
@@ -310,7 +314,7 @@ async function renderDashboard(country) {
                     <div class="text-xs text-slate-400 uppercase tracking-wide">PIB Total</div>
                     <div class="text-xl font-bold text-slate-100">${formatCurrencyBrazil(country.PIB)}</div>
                   </div>
-                  <div>
+                  <div id="budget-box" class="relative cursor-help">
                     <div class="text-xs text-slate-400 uppercase tracking-wide">Orçamento</div>
                     <div class="text-xl font-bold text-emerald-400">${formatCurrencyBrazil(budget)}</div>
                   </div>
@@ -699,6 +703,13 @@ async function renderDashboard(country) {
           </div>
         </div>
 
+        <!-- Army Tab -->
+        <div id="tab-army" class="dashboard-tab-content hidden">
+          <div id="army-divisions-container">
+            <!-- Army divisions will be loaded here -->
+          </div>
+        </div>
+
         <!-- Naval Tab -->
         <div id="tab-naval" class="dashboard-tab-content hidden">
           <div id="naval-content-container">
@@ -757,6 +768,11 @@ function setupDashboardTabs() {
       // Load aircraft inventory when aircraft tab is selected
       if (tabId === 'aircraft') {
         loadAircraftInventory();
+      }
+
+      // Load army divisions when army tab is selected
+      if (tabId === 'army') {
+        loadArmyDivisions();
       }
 
       // Load naval system when naval tab is selected
@@ -1405,6 +1421,128 @@ function showEquipmentSheet(equipmentName, imageUrl) {
   document.body.appendChild(modal);
 }
 
+async function loadArmyDivisions() {
+  try {
+    const container = document.getElementById('army-divisions-container');
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="flex items-center justify-center py-8">
+        <div class="text-slate-400">🔄 Carregando divisões...</div>
+      </div>
+    `;
+
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const paisId = await checkPlayerCountry(user.uid);
+    if (!paisId) return;
+
+    // Get inventory from Firebase
+    const inventoryDoc = await db.collection('inventory').doc(paisId).get();
+    const divisions = inventoryDoc.exists ? (inventoryDoc.data().divisions || []) : [];
+
+    if (divisions.length === 0) {
+      container.innerHTML = `
+        <div class="bg-slate-900/50 border border-slate-800/50 rounded-xl p-8 text-center">
+          <div class="text-6xl mb-4">🎖️</div>
+          <h3 class="text-xl font-semibold text-slate-200 mb-2">Nenhuma Divisão Criada</h3>
+          <p class="text-slate-400 mb-6">Crie suas primeiras divisões para começar a montar seu exército</p>
+          <a href="criador-divisoes.html" class="inline-block px-6 py-3 bg-brand-500 text-white font-semibold rounded-lg hover:bg-brand-600 transition-colors">
+            ➕ Criar Nova Divisão
+          </a>
+        </div>
+      `;
+      return;
+    }
+
+    // Sort divisions by updated date
+    divisions.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+    // Render divisions grid
+    container.innerHTML = `
+      <div class="mb-6 flex items-center justify-between">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-100">Divisões do Exército</h2>
+          <p class="text-slate-400 text-sm">Gerencie suas divisões militares</p>
+        </div>
+        <a href="criador-divisoes.html" class="px-4 py-2 bg-brand-500 text-white font-semibold rounded-lg hover:bg-brand-600 transition-colors">
+          ➕ Nova Divisão
+        </a>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        ${divisions.map(division => renderDivisionCard(division)).join('')}
+      </div>
+    `;
+
+  } catch (error) {
+    console.error('Erro ao carregar divisões:', error);
+    const container = document.getElementById('army-divisions-container');
+    if (container) {
+      container.innerHTML = `
+        <div class="bg-red-900/20 border border-red-500/50 rounded-xl p-6 text-center">
+          <div class="text-4xl mb-3">⚠️</div>
+          <h3 class="text-lg font-semibold text-red-400 mb-2">Erro ao Carregar Divisões</h3>
+          <p class="text-slate-400 text-sm">${error.message}</p>
+        </div>
+      `;
+    }
+  }
+}
+
+function renderDivisionCard(division) {
+  const trainingLevelColors = {
+    'trained': 'bg-green-500/20 text-green-400',
+    'regular': 'bg-blue-500/20 text-blue-400',
+    'seasoned': 'bg-purple-500/20 text-purple-400',
+    'veteran': 'bg-orange-500/20 text-orange-400',
+    'elite': 'bg-red-500/20 text-red-400'
+  };
+
+  const trainingColor = trainingLevelColors[division.trainingLevel] || 'bg-gray-500/20 text-gray-400';
+  const stats = division.calculatedStats || {};
+  const combatStats = stats.combatStats || {};
+  const manpower = stats.manpower || { total: 0 };
+
+  return `
+    <div class="bg-slate-900/50 border border-slate-800/50 rounded-xl p-5 hover:border-brand-500/50 transition-colors">
+      <div class="flex items-start justify-between mb-3">
+        <div class="flex-1">
+          <h3 class="text-lg font-bold text-slate-100 mb-1">${division.name}</h3>
+          <span class="text-xs px-2 py-1 rounded ${trainingColor}">
+            ${division.trainingLevel || 'trained'}
+          </span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 text-sm mb-3">
+        <div class="bg-slate-800/50 rounded p-2">
+          <p class="text-slate-500 text-xs">Manpower</p>
+          <p class="font-bold text-slate-100">${manpower.total?.toLocaleString() || '0'}</p>
+        </div>
+        <div class="bg-slate-800/50 rounded p-2">
+          <p class="text-slate-500 text-xs">Combat Width</p>
+          <p class="font-bold text-slate-100">${combatStats.combatWidth || '0'}</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 text-xs mb-3 text-slate-400">
+        <div><span class="text-slate-500">Soft Attack:</span> <span class="text-red-400 font-semibold">${(combatStats.softAttack || 0).toFixed(1)}</span></div>
+        <div><span class="text-slate-500">Hard Attack:</span> <span class="text-orange-400 font-semibold">${(combatStats.hardAttack || 0).toFixed(1)}</span></div>
+        <div><span class="text-slate-500">Defense:</span> <span class="text-blue-400 font-semibold">${(combatStats.defense || 0).toFixed(1)}</span></div>
+        <div><span class="text-slate-500">Organization:</span> <span class="text-cyan-400 font-semibold">${(combatStats.organization || 0).toFixed(1)}</span></div>
+      </div>
+
+      <div class="border-t border-slate-700/50 pt-3 flex items-center justify-between text-xs text-slate-500">
+        <div>
+          <span class="font-medium">Combate:</span> ${division.combatUnits?.length || 0}/25
+          <span class="ml-2 font-medium">Suporte:</span> ${division.supportUnits?.length || 0}/5
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 async function loadNavalSystem() {
   try {
     const container = document.getElementById('naval-content-container');
@@ -1869,6 +2007,152 @@ async function reloadCurrentCountry() {
 // Tornar função global para ser usada pelos sistemas
 window.reloadCurrentCountry = reloadCurrentCountry;
 
+/**
+ * Setup budget breakdown tooltip
+ */
+async function setupBudgetTooltip(country) {
+  const budgetBox = document.getElementById('budget-box');
+  if (!budgetBox) {
+    console.error('❌ Elemento budget-box não encontrado!');
+    return;
+  }
+
+  console.log('✅ Budget tooltip configurado para', country.Pais || country.id);
+  let tooltip = null;
+
+  budgetBox.addEventListener('mouseenter', async () => {
+    console.log('🖱️ Mouse entrou no budget-box');
+
+    // Remove tooltip existente se houver
+    if (tooltip) {
+      tooltip.remove();
+      tooltip = null;
+    }
+
+    try {
+      // Fetch budget breakdown data
+      console.log('📊 Buscando breakdown para', country.id);
+      const breakdown = await BudgetTracker.getBreakdown(country.id);
+
+      if (!breakdown) {
+        console.warn('⚠️ Budget breakdown não encontrado - mostrando dados base');
+        // Se não existe, mostrar tooltip com apenas base budget
+        const baseCalc = BudgetTracker.calculateBase(country);
+        const emptyReport = {
+          base: baseCalc.calculated,
+          baseFormatted: BudgetTracker.formatCurrency(baseCalc.calculated),
+          additions: [],
+          additionsTotal: 0,
+          additionsTotalFormatted: BudgetTracker.formatCurrency(0),
+          subtractions: [],
+          subtractionsTotal: 0,
+          subtractionsTotalFormatted: BudgetTracker.formatCurrency(0),
+          available: baseCalc.calculated,
+          availableFormatted: BudgetTracker.formatCurrency(baseCalc.calculated)
+        };
+
+        createTooltipElement(emptyReport, new Date().toISOString());
+        return;
+      }
+
+      console.log('✅ Breakdown encontrado:', breakdown);
+
+      // Generate report
+      const report = BudgetTracker.generateReport(breakdown);
+      console.log('📋 Report gerado:', report);
+
+      createTooltipElement(report, breakdown.lastUpdated);
+    } catch (error) {
+      console.error('❌ Erro ao carregar budget breakdown:', error);
+    }
+  });
+
+  function createTooltipElement(report, lastUpdated) {
+    console.log('🎨 Criando elemento do tooltip');
+
+    // Create tooltip HTML
+    const tooltipHTML = `
+      <div id="budget-tooltip" class="absolute z-50 top-full left-0 mt-2 w-96 rounded-xl border border-slate-700/50 bg-slate-900/95 shadow-2xl p-4" style="backdrop-filter: blur(10px);">
+        <div class="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
+          <span>💰</span>
+          <span>Breakdown do Orçamento</span>
+        </div>
+
+        <!-- Base Budget -->
+        <div class="mb-3 pb-3 border-b border-slate-700/50">
+          <div class="flex justify-between items-center">
+            <span class="text-xs text-slate-400">Orçamento Base</span>
+            <span class="text-sm font-bold text-slate-200">${report.baseFormatted}</span>
+          </div>
+          <div class="text-xs text-slate-500 mt-1">
+            PIB × 0.25 × Burocracia × (Estabilidade × 1.5)
+          </div>
+        </div>
+
+        <!-- Additions -->
+        ${report.additions.length > 0 ? `
+          <div class="mb-3 pb-3 border-b border-slate-700/50">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-xs font-semibold text-green-400">+ Receitas</span>
+              <span class="text-sm font-bold text-green-400">${report.additionsTotalFormatted}</span>
+            </div>
+            <div class="space-y-1 max-h-48 overflow-y-auto">
+              ${report.additions.map(item => `
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400">${item.label}</span>
+                  <span class="text-green-400">+${item.formatted}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Subtractions -->
+        ${report.subtractions.length > 0 ? `
+          <div class="mb-3 pb-3 border-b border-slate-700/50">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-xs font-semibold text-red-400">- Despesas</span>
+              <span class="text-sm font-bold text-red-400">${report.subtractionsTotalFormatted}</span>
+            </div>
+            <div class="space-y-1 max-h-48 overflow-y-auto">
+              ${report.subtractions.map(item => `
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400">${item.label}</span>
+                  <span class="text-red-400">-${item.formatted}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Available Budget -->
+        <div class="flex justify-between items-center">
+          <span class="text-xs font-bold text-slate-300">Disponível</span>
+          <span class="text-lg font-bold ${report.available >= 0 ? 'text-emerald-400' : 'text-red-400'}">${report.availableFormatted}</span>
+        </div>
+
+        <div class="mt-2 text-xs text-slate-500 text-center">
+          Atualizado: ${new Date(lastUpdated).toLocaleString('pt-BR')}
+        </div>
+      </div>
+    `;
+
+    // Insert tooltip
+    budgetBox.style.position = 'relative';
+    budgetBox.insertAdjacentHTML('beforeend', tooltipHTML);
+    tooltip = document.getElementById('budget-tooltip');
+
+    console.log('✅ Tooltip criado:', tooltip ? 'Sucesso' : 'Falhou');
+  }
+
+  budgetBox.addEventListener('mouseleave', () => {
+    if (tooltip) {
+      tooltip.remove();
+      tooltip = null;
+    }
+  });
+}
+
 async function initDashboard() {
   try {
     // Aguardar autenticação e obter usuário
@@ -1928,6 +2212,7 @@ async function initDashboard() {
 
     document.getElementById('dashboard-content').innerHTML = await renderDashboard(country);
     setupDashboardTabs();
+    setupBudgetTooltip(country);
 
   } catch (error) {
     console.error('Erro ao carregar dashboard:', error);

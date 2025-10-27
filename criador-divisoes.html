@@ -295,6 +295,25 @@
     input:focus, select:focus, textarea:focus {
       box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.2);
     }
+
+    /* Ícones de unidades (imagens PNG) */
+    .unit-slot img {
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+      transition: all 0.3s ease;
+    }
+
+    .unit-slot:hover img {
+      filter: drop-shadow(0 4px 8px rgba(251, 191, 36, 0.4)) brightness(1.1);
+      transform: scale(1.05);
+    }
+
+    .unit-card img {
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    }
+
+    .unit-card:hover img {
+      filter: drop-shadow(0 4px 8px rgba(251, 191, 36, 0.3));
+    }
   </style>
 </head>
 
@@ -364,6 +383,18 @@
                 placeholder="Ex: Divisão Motostrelski"
                 maxlength="50"
               />
+            </div>
+
+            <!-- Seletor de País (apenas para narradores/admins) -->
+            <div id="country-selector-container" class="hidden">
+              <label class="block text-sm font-semibold text-slate-300 mb-3">🌍 País (Narrador)</label>
+              <select
+                id="country-selector"
+                class="w-full px-4 py-3 bg-bg/60 border-2 border-brand-500/50 rounded-lg text-slate-100 focus:outline-none focus:border-brand-500 transition-all"
+              >
+                <option value="">Selecione um país...</option>
+              </select>
+              <p class="text-xs text-brand-400 mt-2">⚠️ Como narrador, você pode criar divisões para qualquer país</p>
             </div>
 
             <!-- Training Level -->
@@ -518,7 +549,19 @@
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-    import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+    import {
+      getFirestore,
+      collection,
+      doc,
+      getDoc,
+      getDocs,
+      setDoc,
+      addDoc,
+      updateDoc,
+      query,
+      where,
+      orderBy
+    } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
     const firebaseConfig = {
       apiKey: "AIzaSyBd-cQsmXqgU9wVDtxYdaeLFQIfIUxv6GE",
@@ -532,6 +575,20 @@
     const app = initializeApp(firebaseConfig);
     window.auth = getAuth(app);
     window.db = getFirestore(app);
+
+    // Exportar funções do Firestore globalmente para garantir compatibilidade
+    window.firestoreFunctions = {
+      collection,
+      doc,
+      getDoc,
+      getDocs,
+      setDoc,
+      addDoc,
+      updateDoc,
+      query,
+      where,
+      orderBy
+    };
 
     // Aguardar autenticação
     onAuthStateChanged(window.auth, async (user) => {

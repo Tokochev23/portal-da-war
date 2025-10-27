@@ -38,7 +38,7 @@ export const support_units = {
       minTechLevel: 5
     },
 
-    icon: '🚁',
+    icon: 'assets/division-icons/unit_attack_helicopter_icon_small.png',
     color: '#dc2626'
   },
 
@@ -70,7 +70,7 @@ export const support_units = {
       minTechLevel: 4
     },
 
-    icon: '🚁',
+    icon: 'assets/division-icons/unit_category_helicopter_icon_small.png',
     color: '#0891b2'
   },
 
@@ -101,7 +101,7 @@ export const support_units = {
       minTechLevel: 4
     },
 
-    icon: '🔍',
+    icon: 'assets/division-icons/support_unit_helicopter_recon.png',
     color: '#0369a1'
   },
 
@@ -133,7 +133,7 @@ export const support_units = {
       minTechLevel: 4
     },
 
-    icon: '⚕️',
+    icon: 'assets/division-icons/support_unit_field_hospital_icon.png',
     color: '#dc2626'
   },
 
@@ -168,7 +168,7 @@ export const support_units = {
       minTechLevel: 4
     },
 
-    icon: '🪂',
+    icon: 'assets/division-icons/support_unit_air_mechanized_icon.png',
     color: '#16a34a'
   },
 
@@ -201,7 +201,7 @@ export const support_units = {
       minTechLevel: 4
     },
 
-    icon: '🪂',
+    icon: 'assets/division-icons/support_unit_airborne_armored_recon_icon.png',
     color: '#ca8a04'
   },
 
@@ -235,7 +235,7 @@ export const support_units = {
       minTechLevel: 2
     },
 
-    icon: '🎯',
+    icon: 'assets/division-icons/support_unit_anti_air_icon.png',
     color: '#92400e'
   },
 
@@ -269,7 +269,7 @@ export const support_units = {
       minTechLevel: 2
     },
 
-    icon: '💥',
+    icon: 'assets/division-icons/support_unit_art_icon.png',
     color: '#b45309'
   },
 
@@ -301,7 +301,7 @@ export const support_units = {
       minTechLevel: 4
     },
 
-    icon: '🎯',
+    icon: 'assets/division-icons/support_unit_at_icon.png',
     color: '#dc2626'
   },
 
@@ -332,7 +332,7 @@ export const support_units = {
       minTechLevel: 4
     },
 
-    icon: '🚀',
+    icon: 'assets/division-icons/support_unit_at_icon.png',
     color: '#ef4444'
   },
 
@@ -366,7 +366,7 @@ export const support_units = {
       minTechLevel: 3
     },
 
-    icon: '🚀',
+    icon: 'assets/division-icons/support_unit_rocket_art_icon.png',
     color: '#ea580c'
   },
 
@@ -399,7 +399,7 @@ export const support_units = {
       minTechLevel: 4
     },
 
-    icon: '🚜',
+    icon: 'assets/division-icons/unit_spa_company_icon.png',
     color: '#a16207'
   },
 
@@ -431,7 +431,7 @@ export const support_units = {
       minTechLevel: 4
     },
 
-    icon: '🎯',
+    icon: 'assets/division-icons/unit_spaa_company_icon.png',
     color: '#eab308'
   },
 
@@ -465,7 +465,7 @@ export const support_units = {
       minTechLevel: 3
     },
 
-    icon: '🔍',
+    icon: 'assets/division-icons/support_unit_armored_recon_icon.png',
     color: '#15803d'
   },
 
@@ -498,7 +498,7 @@ export const support_units = {
       minTechLevel: 3
     },
 
-    icon: '🔭',
+    icon: 'assets/division-icons/support_unit_armored_car_recon_icon.png',
     color: '#ca8a04'
   },
 
@@ -528,7 +528,7 @@ export const support_units = {
       minTechLevel: 2
     },
 
-    icon: '🔍',
+    icon: 'assets/division-icons/support_unit_motorized_recon_icon.png',
     color: '#92400e'
   },
 
@@ -559,7 +559,7 @@ export const support_units = {
       minTechLevel: 1
     },
 
-    icon: '👁️',
+    icon: 'assets/division-icons/support_unit_rangers_icon.png',
     color: '#65a30d'
   },
 
@@ -594,7 +594,7 @@ export const support_units = {
       minTechLevel: 2
     },
 
-    icon: '🔧',
+    icon: 'assets/division-icons/unit_engineer_icon.png',
     color: '#f59e0b'
   },
 
@@ -627,7 +627,7 @@ export const support_units = {
       minTechLevel: 2
     },
 
-    icon: '⚕️',
+    icon: 'assets/division-icons/support_unit_field_hospital_icon.png',
     color: '#dc2626'
   },
 
@@ -661,7 +661,7 @@ export const support_units = {
       minTechLevel: 2
     },
 
-    icon: '📋',
+    icon: 'assets/division-icons/support_unit_logistics_company_icon.png',
     color: '#3b82f6'
   },
 
@@ -694,7 +694,7 @@ export const support_units = {
       minTechLevel: 3
     },
 
-    icon: '🔧',
+    icon: 'assets/division-icons/support_unit_maintenance_company_icon.png',
     color: '#ea580c'
   },
 
@@ -728,7 +728,7 @@ export const support_units = {
       minTechLevel: 2
     },
 
-    icon: '👮',
+    icon: 'assets/division-icons/support_unit_military_police_icon.png',
     color: '#1e40af'
   },
 
@@ -762,7 +762,7 @@ export const support_units = {
       minTechLevel: 2
     },
 
-    icon: '📡',
+    icon: 'assets/division-icons/support_unit_signal_company_icon.png',
     color: '#059669'
   }
 };

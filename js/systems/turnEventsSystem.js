@@ -6,6 +6,10 @@
 import { db } from '../services/firebase.js';
 import espionageOperationsSystem from './espionageOperationsSystem.js';
 import intelligenceAgencySystem from './intelligenceAgencySystem.js';
+import BudgetTracker from './budgetTracker.js';
+import { ShipyardSystem } from './shipyardSystem.js';
+
+const shipyardSystem = new ShipyardSystem();
 
 class TurnEventsSystem {
   constructor() {
@@ -27,7 +31,10 @@ class TurnEventsSystem {
       // 1. Progredir todas as operações de espionagem ativas
       await this.progressAllEspionageOperations(currentTurn);
 
-      // 2. Atualizar orçamentos das agências (cobrar custos anuais)
+      // 2. Aplicar todos os custos de manutenção
+      await this.applyAllMaintenanceCosts(currentTurn);
+
+      // 3. Atualizar orçamentos das agências (cobrar custos anuais)
       // await this.updateAgencyBudgets(currentTurn);
 
       this.lastProcessedTurn = currentTurn;
@@ -36,6 +43,111 @@ class TurnEventsSystem {
     } catch (error) {
       console.error('[TurnEvents] Erro ao processar eventos do turno:', error);
     }
+  }
+
+  /**
+   * Aplica custos de manutenção para todas as entidades do jogo.
+   */
+  async applyAllMaintenanceCosts(currentTurn) {
+    console.log(`[TurnEvents] Aplicando custos de manutenção para o turno #${currentTurn}`);
+    try {
+      const countriesSnapshot = await db.collection('paises').get();
+      if (countriesSnapshot.empty) {
+        console.log('[TurnEvents] Nenhum país encontrado para aplicar manutenção.');
+        return;
+      }
+
+      // 1. Custo de manutenção de Estaleiros
+      await shipyardSystem.applyMaintenanceCosts();
+
+      // 2. Custo de manutenção de inventário e divisões
+      for (const countryDoc of countriesSnapshot.docs) {
+        const countryId = countryDoc.id;
+        
+        const { vehicleMaintenance, fleetMaintenance } = await this.calculateInventoryMaintenance(countryId);
+        const divisionMaintenance = await this.calculateDivisionMaintenance(countryId);
+
+        if (vehicleMaintenance > 0) {
+          await BudgetTracker.addExpense(countryId, BudgetTracker.EXPENSE_CATEGORIES.VEHICLE_MAINTENANCE, vehicleMaintenance, `Manutenção de veículos terrestres`);
+        }
+        if (fleetMaintenance > 0) {
+          await BudgetTracker.addExpense(countryId, BudgetTracker.EXPENSE_CATEGORIES.FLEET_MAINTENANCE, fleetMaintenance, `Manutenção da frota naval`);
+        }
+        if (divisionMaintenance > 0) {
+          await BudgetTracker.addExpense(countryId, BudgetTracker.EXPENSE_CATEGORIES.DIVISION_MAINTENANCE, divisionMaintenance, `Manutenção de divisões`);
+        }
+      }
+
+      console.log('[TurnEvents] Custos de manutenção aplicados com sucesso.');
+
+    } catch (error) {
+      console.error('[TurnEvents] Erro ao aplicar custos de manutenção:', error);
+    }
+  }
+
+  /**
+   * Calcula o custo de manutenção do inventário de um país.
+   */
+  async calculateInventoryMaintenance(countryId) {
+    let vehicleMaintenance = 0;
+    let fleetMaintenance = 0;
+
+    try {
+      const inventorySnap = await db.collection('inventory').doc(countryId).get();
+      if (!inventorySnap.exists) {
+        return { vehicleMaintenance, fleetMaintenance };
+      }
+
+      const inventory = inventorySnap.data();
+      for (const category in inventory) {
+        const items = inventory[category];
+        for (const itemName in items) {
+          const item = items[itemName];
+          const unitCost = item.cost || 0;
+          const quantity = item.quantity || 0;
+          const maintenanceCost = unitCost * 0.05 * quantity; // 5% do custo total
+
+          const navalCategories = ['Couraçados', 'Cruzadores', 'Destróieres', 'Fragatas', 'Corvetas', 'Submarinos', 'Porta-aviões'];
+          if (navalCategories.includes(category)) {
+            fleetMaintenance += maintenanceCost;
+          } else {
+            vehicleMaintenance += maintenanceCost;
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`[TurnEvents] Erro ao calcular manutenção de inventário para ${countryId}:`, error);
+    }
+
+    return { vehicleMaintenance, fleetMaintenance };
+  }
+
+  /**
+   * Calcula o custo de manutenção de todas as divisões de um país.
+   */
+  async calculateDivisionMaintenance(countryId) {
+    let totalMaintenance = 0;
+    try {
+      const divisionsSnap = await db.collection('divisions')
+        .where('countryId', '==', countryId)
+        .where('recruitmentStatus', '==', 'ready')
+        .get();
+
+      if (divisionsSnap.empty) {
+        return 0;
+      }
+
+      divisionsSnap.forEach(doc => {
+        const division = doc.data();
+        const maintenanceCost = division.calculatedStats?.costs?.maintenance || 0;
+        if (maintenanceCost > 0) {
+          totalMaintenance += maintenanceCost;
+        }
+      });
+    } catch (error) {
+      console.error(`[TurnEvents] Erro ao calcular manutenção de divisões para ${countryId}:`, error);
+    }
+    return totalMaintenance;
   }
 
   /**

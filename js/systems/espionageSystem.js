@@ -4,6 +4,7 @@
  */
 
 import { db } from '../services/firebase.js';
+import BudgetTracker from './budgetTracker.js';
 
 // Níveis de espionagem e seus custos base
 const ESPIONAGE_LEVELS = {
@@ -169,6 +170,18 @@ class EspionageSystem {
       // Se foi detectada, criar notificação para o alvo
       if (detected) {
         await this.createDetectionNotification(targetCountry.id, spyCountry.Pais, succeeded);
+      }
+
+      // Registrar despesa no Budget Tracker
+      try {
+        await BudgetTracker.addExpense(
+          spyCountry.id,
+          BudgetTracker.EXPENSE_CATEGORIES.AGENCY_BUDGET, // Usar uma categoria genérica de orçamento da agência
+          cost,
+          `Operação de espionagem contra ${targetCountry.Pais}`
+        );
+      } catch (budgetError) {
+        console.error('⚠️ Erro ao registrar despesa de espionagem no budget tracker:', budgetError);
       }
 
       return {

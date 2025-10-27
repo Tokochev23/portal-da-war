@@ -8,6 +8,7 @@ import { Logger } from '../utils.js';
 import ConsumerGoodsCalculator from './consumerGoodsCalculator.js';
 import turnEventsSystem from './turnEventsSystem.js';
 import { calculateEffectiveModifiers } from './lawAndExhaustionCalculator.js';
+import BudgetTracker from './budgetTracker.js';
 
 class TurnProcessor {
 
@@ -21,6 +22,9 @@ class TurnProcessor {
 
       const startTime = Date.now();
       let processedCount = 0;
+
+      // 0. INICIALIZAR BUDGET BREAKDOWN PARA TODOS OS PAÍSES
+      await this.initializeBudgetBreakdowns(turnNumber);
 
       // 1. PROCESSAR EVENTOS DE TURNO (Espionagem, etc)
       await turnEventsSystem.processTurnEvents(turnNumber);
@@ -348,6 +352,57 @@ class TurnProcessor {
     } catch (error) {
       Logger.error('Erro ao verificar processamento do turno:', error);
       return false;
+    }
+  }
+
+  /**
+   * Inicializar budget breakdown para todos os países no início do turno
+   */
+  static async initializeBudgetBreakdowns(turnNumber) {
+    try {
+      console.log(`💰 Inicializando budget breakdowns (Turno ${turnNumber})...`);
+
+      const paisesSnapshot = await db.collection('paises').get();
+      const batch = db.batch();
+      let initializedCount = 0;
+
+      for (const doc of paisesSnapshot.docs) {
+        const country = doc.data();
+        const countryId = doc.id;
+
+        // Só inicializar se ainda não foi inicializado neste turno
+        const currentBreakdown = country.budgetBreakdown;
+        if (!currentBreakdown || !currentBreakdown.turnInitialized) {
+          const base = BudgetTracker.calculateBase(country);
+
+          const breakdown = {
+            base,
+            additions: {},
+            subtractions: {},
+            available: base.calculated,
+            lastUpdated: new Date().toISOString(),
+            turnInitialized: true,
+            turnNumber: turnNumber
+          };
+
+          batch.update(doc.ref, { budgetBreakdown: breakdown });
+          initializedCount++;
+        }
+      }
+
+      if (initializedCount > 0) {
+        await batch.commit();
+        console.log(`✅ ${initializedCount} budget breakdowns inicializados.`);
+      } else {
+        console.log(`✅ Todos os budget breakdowns já estavam inicializados.`);
+      }
+
+      return { initialized: initializedCount };
+
+    } catch (error) {
+      Logger.error(`Erro ao inicializar budget breakdowns no turno ${turnNumber}:`, error);
+      console.error(`❌ Erro ao inicializar budget breakdowns:`, error);
+      return { initialized: 0, error: error.message };
     }
   }
 
