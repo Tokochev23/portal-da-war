@@ -1421,6 +1421,46 @@ function showEquipmentSheet(equipmentName, imageUrl) {
   document.body.appendChild(modal);
 }
 
+/**
+ * Agrupa divisões idênticas (mesma composição e treinamento)
+ */
+function groupIdenticalDivisions(divisions) {
+  const groups = new Map();
+
+  divisions.forEach(division => {
+    // Criar chave única baseada na composição da divisão
+    const key = createDivisionKey(division);
+
+    if (groups.has(key)) {
+      const group = groups.get(key);
+      group.count++;
+      group.ids.push(division.id);
+    } else {
+      groups.set(key, {
+        division: division,
+        count: 1,
+        ids: [division.id]
+      });
+    }
+  });
+
+  return Array.from(groups.values());
+}
+
+/**
+ * Cria uma chave única para identificar divisões idênticas
+ */
+function createDivisionKey(division) {
+  // Remove o sufixo numérico do nome (ex: "Infantaria #1" -> "Infantaria")
+  const baseName = division.name.replace(/\s*#\d+$/, '');
+
+  // Criar chave baseada em: nome base, treinamento, unidades de combate, unidades de suporte
+  const combatUnits = JSON.stringify((division.combatUnits || []).sort());
+  const supportUnits = JSON.stringify((division.supportUnits || []).sort());
+
+  return `${baseName}|${division.trainingLevel}|${combatUnits}|${supportUnits}`;
+}
+
 async function loadArmyDivisions() {
   try {
     const container = document.getElementById('army-divisions-container');
@@ -1456,22 +1496,25 @@ async function loadArmyDivisions() {
       return;
     }
 
+    // Agrupar divisões idênticas
+    const groupedDivisions = groupIdenticalDivisions(divisions);
+
     // Sort divisions by updated date
-    divisions.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    groupedDivisions.sort((a, b) => new Date(b.division.updatedAt) - new Date(a.division.updatedAt));
 
     // Render divisions grid
     container.innerHTML = `
       <div class="mb-6 flex items-center justify-between">
         <div>
           <h2 class="text-2xl font-bold text-slate-100">Divisões do Exército</h2>
-          <p class="text-slate-400 text-sm">Gerencie suas divisões militares</p>
+          <p class="text-slate-400 text-sm">Gerencie suas divisões militares (${divisions.length} total)</p>
         </div>
         <a href="criador-divisoes.html" class="px-4 py-2 bg-brand-500 text-white font-semibold rounded-lg hover:bg-brand-600 transition-colors">
           ➕ Nova Divisão
         </a>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        ${divisions.map(division => renderDivisionCard(division)).join('')}
+        ${groupedDivisions.map(group => renderDivisionCard(group.division, group.count, group.ids)).join('')}
       </div>
     `;
 
@@ -1490,7 +1533,7 @@ async function loadArmyDivisions() {
   }
 }
 
-function renderDivisionCard(division) {
+function renderDivisionCard(division, count = 1, ids = []) {
   const trainingLevelColors = {
     'trained': 'bg-green-500/20 text-green-400',
     'regular': 'bg-blue-500/20 text-blue-400',
@@ -1504,21 +1547,33 @@ function renderDivisionCard(division) {
   const combatStats = stats.combatStats || {};
   const manpower = stats.manpower || { total: 0 };
 
+  // Remove sufixo numérico do nome para exibição
+  const displayName = division.name.replace(/\s*#\d+$/, '');
+
   return `
-    <div class="bg-slate-900/50 border border-slate-800/50 rounded-xl p-5 hover:border-brand-500/50 transition-colors">
+    <div class="bg-slate-900/50 border border-slate-800/50 rounded-xl p-5 hover:border-brand-500/50 transition-colors relative">
+      ${count > 1 ? `
+        <div class="absolute top-3 right-3 bg-brand-500 text-slate-900 text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+          ${count}x
+        </div>
+      ` : ''}
       <div class="flex items-start justify-between mb-3">
-        <div class="flex-1">
-          <h3 class="text-lg font-bold text-slate-100 mb-1">${division.name}</h3>
-          <span class="text-xs px-2 py-1 rounded ${trainingColor}">
-            ${division.trainingLevel || 'trained'}
-          </span>
+        <div class="flex-1 ${count > 1 ? 'pr-12' : ''}">
+          <h3 class="text-lg font-bold text-slate-100 mb-1">${displayName}</h3>
+          <div class="flex items-center gap-2">
+            <span class="text-xs px-2 py-1 rounded ${trainingColor}">
+              ${division.trainingLevel || 'trained'}
+            </span>
+            ${count > 1 ? `<span class="text-xs text-slate-500">(${count} divisões)</span>` : ''}
+          </div>
         </div>
       </div>
 
       <div class="grid grid-cols-2 gap-3 text-sm mb-3">
         <div class="bg-slate-800/50 rounded p-2">
-          <p class="text-slate-500 text-xs">Manpower</p>
-          <p class="font-bold text-slate-100">${manpower.total?.toLocaleString() || '0'}</p>
+          <p class="text-slate-500 text-xs">Manpower ${count > 1 ? 'Total' : ''}</p>
+          <p class="font-bold text-slate-100">${((manpower.total || 0) * count).toLocaleString()}</p>
+          ${count > 1 ? `<p class="text-xs text-slate-500">${manpower.total?.toLocaleString() || '0'} cada</p>` : ''}
         </div>
         <div class="bg-slate-800/50 rounded p-2">
           <p class="text-slate-500 text-xs">Combat Width</p>
