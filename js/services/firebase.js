@@ -474,8 +474,14 @@ export async function getCountryData(paisId, useCache = true) {
         const sanitizedData = {
             ...data,
             Pais: ValidationUtils.sanitizeInput(data.Pais || '', { maxLength: 100 }),
+            // Normaliza números conforme dashboard
             PIB: Math.max(0, Formatter.parseNumber(data.PIB) || 0),
-            Estabilidade: Math.max(0, Math.min(100, Formatter.parseNumber(data.Estabilidade) || 0))
+            Estabilidade: Math.max(0, Math.min(100, Formatter.parseNumber(data.Estabilidade) || 0)),
+            // Techs do dashboard (podem vir como string com % ou número)
+            Tecnologia: Math.max(0, Formatter.parseNumber(data.Tecnologia) || 0),
+            Aeronautica: Math.max(0, Formatter.parseNumber(data.Aeronautica) || 0),
+            Veiculos: Math.max(0, Formatter.parseNumber(data.Veiculos) || 0),
+            Marinha: Math.max(0, Formatter.parseNumber(data.Marinha) || 0)
         };
         
         globalCache.set(cacheKey, sanitizedData, 180000); // Cache por 3 minutos

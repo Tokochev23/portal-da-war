@@ -29,13 +29,15 @@ export class TabLoaders {
 
   // Update current tech level from the globally available user country data
   updateTechLevel() {
-    if (window.currentUserCountry && typeof window.currentUserCountry.aircraftTech !== 'undefined') {
-        this.currentTechLevel = window.currentUserCountry.aircraftTech;
-        console.log(`✅ Tech level successfully set to: ${this.currentTechLevel} for country: ${window.currentUserCountry.Pais}`);
+    if (window.currentUserCountry) {
+      const area = Number(window.currentUserCountry.aircraftTech ?? 0);
+      const civil = Number(window.currentUserCountry.civilTech ?? window.currentUserCountry.Tecnologia ?? 0);
+      // Política: não ultrapassar o teto da tecnologia civil
+      this.currentTechLevel = civil > 0 ? Math.min(area, civil) : area;
+      console.log(`✅ Aircraft tech set: ${this.currentTechLevel} (civil=${civil}, area=${area})`);
     } else {
-        // This case should ideally not be reached if the new initialization flow works correctly.
-        this.currentTechLevel = 50; // Fallback to default
-        console.warn(`⚠️ Could not determine user country tech level. Using default: ${this.currentTechLevel}`);
+      this.currentTechLevel = 50; // Fallback
+      console.warn(`⚠️ Could not determine user country tech level. Using default: ${this.currentTechLevel}`);
     }
   }
 
@@ -81,14 +83,24 @@ export class TabLoaders {
 
   // Get component availability info
   getComponentAvailabilityInfo(component) {
-    const requiredTech = component.tech_level || 0;
-    const isAvailable = this.currentTechLevel >= requiredTech;
+    const requiredTech = Number(component.tech_level || 0);
+    const requiredYear = Number(component.year_introduced || 1945);
+    const currentYear = window.currentUserCountry?.year || 1954;
+    
+    const techOk = this.currentTechLevel >= requiredTech;
+    const yearOk = currentYear >= requiredYear;
+
+    const isAvailable = techOk && yearOk;
     
     return {
       isAvailable,
       requiredTech,
       currentTech: this.currentTechLevel,
-      missingTech: Math.max(0, requiredTech - this.currentTechLevel)
+      missingTech: Math.max(0, requiredTech - this.currentTechLevel),
+      requiredYear,
+      currentYear,
+      techOk,
+      yearOk
     };
   }
 
@@ -1919,33 +1931,47 @@ export class TabLoaders {
           </div>
         </div>
 
-        <!-- Performance Calculator -->
+        <!-- Engine Tuning & Speed Meter -->
         <div class="mb-8 p-6 bg-slate-800/30 rounded-lg border border-slate-600/30">
           <h3 class="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
-            <span>📊</span>
-            <span>Calculadora de Performance</span>
+            <span>⚙️</span>
+            <span>Ajuste de Potência/Empuxo</span>
           </h3>
 
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label class="block text-sm text-slate-400 mb-2">Velocidade Desejada (km/h)</label>
-              <input type="number" id="target-speed" min="100" max="3000" step="10" value="400"
-                     class="w-full bg-slate-700 border border-slate-600 rounded-lg p-2 text-white focus:ring-2 focus:ring-cyan-500">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <!-- Power scale -->
+            <div class="col-span-2">
+              <label class="block text-sm text-slate-400 mb-2">Nível de Potência/Empuxo</label>
+              <input type="range" id="engine-power-scale" min="80" max="120" step="1" value="100"
+                     class="w-full">
+              <div class="mt-1 text-xs text-slate-400">
+                <span>Escala:</span> <span id="engine-power-scale-display" class="text-cyan-300 font-medium">100%</span>
+                <span class="ml-2 text-slate-500">(impacta custo, consumo e confiabilidade)</span>
+              </div>
             </div>
+
+            <!-- Altitude for prediction -->
             <div>
-              <label class="block text-sm text-slate-400 mb-2">Altitude (m)</label>
-              <input type="number" id="target-altitude" min="0" max="20000" step="100" value="0"
-                     class="w-full bg-slate-700 border border-slate-600 rounded-lg p-2 text-white focus:ring-2 focus:ring-cyan-500">
-            </div>
-            <div class="flex items-end">
-              <button id="calculate-power-btn" class="w-full px-4 py-2 bg-cyan-600 text-white font-semibold rounded-lg hover:bg-cyan-700 transition-colors">
-                Calcular
-              </button>
+              <label class="block text-sm text-slate-400 mb-2">Altitude p/ previsão (m)</label>
+              <input type="range" id="speed-altitude" min="0" max="15000" step="500" value="0" class="w-full">
+              <div class="mt-1 text-xs text-slate-400">Altitude: <span id="speed-altitude-display" class="text-cyan-300 font-medium">0 m</span></div>
             </div>
           </div>
 
-          <div id="power-calculation-result" class="p-4 bg-slate-700/50 rounded-lg text-center">
-            <span class="text-slate-400">Configure velocidade e altitude, depois clique em calcular</span>
+          <!-- Predicted speed & trade-offs -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div class="p-3 bg-slate-900/40 rounded border border-slate-700/40 text-center">
+              <div class="text-xs text-slate-400">Velocidade Prevista</div>
+              <div id="predicted-speed-display" class="text-2xl font-bold text-cyan-300">— km/h</div>
+            </div>
+            <div class="p-3 bg-slate-900/40 rounded border border-slate-700/40 text-center">
+              <div class="text-xs text-slate-400">Consumo</div>
+              <div id="tuning-consumption-display" class="text-lg text-slate-200">—</div>
+            </div>
+            <div class="p-3 bg-slate-900/40 rounded border border-slate-700/40 text-center">
+              <div class="text-xs text-slate-400">Confiabilidade</div>
+              <div id="tuning-reliability-display" class="text-lg text-slate-200">—</div>
+            </div>
           </div>
         </div>
 
@@ -2100,10 +2126,8 @@ export class TabLoaders {
       });
     });
 
-    // Set up power calculator
-    document.getElementById('calculate-power-btn').addEventListener('click', () => {
-      this.calculateRequiredPower();
-    });
+    // Attach tuning listeners (delegated, elements exist in this tab)
+    this.attachTuningListeners();
 
     // Set default filter to 'all'
     this.currentFilter = 'all';
@@ -2112,6 +2136,146 @@ export class TabLoaders {
     // Show recommendations based on aircraft category
     this.updateEngineRecommendations(allData);
 
+  }
+
+  // --- Tuning system ---
+  attachTuningListeners() {
+    const powerEl = document.getElementById('engine-power-scale');
+    const powerOut = document.getElementById('engine-power-scale-display');
+    const altEl = document.getElementById('speed-altitude');
+    const altOut = document.getElementById('speed-altitude-display');
+
+    const sync = () => {
+      if (powerEl && powerOut) powerOut.textContent = `${powerEl.value}%`;
+      if (altEl && altOut) altOut.textContent = `${altEl.value} m`;
+      // Persist scale
+      if (!window.currentAircraft) window.currentAircraft = {};
+      window.currentAircraft.enginePowerScale = (parseInt(powerEl?.value || '100', 10)) / 100;
+      window.currentAircraft.predictionAltitude = parseInt(altEl?.value || '0', 10);
+      // Recompute if an engine is selected
+      this.updateTuningImpact();
+    };
+
+    if (powerEl) powerEl.addEventListener('input', sync);
+    if (altEl) altEl.addEventListener('input', sync);
+
+    // Initialize once
+    sync();
+  }
+
+  getTuningRange(engine) {
+    // Conservative ranges by engine family
+    if (!engine) return { min: 0.8, max: 1.2 };
+    const type = engine.type || '';
+    if (type.startsWith('afterburning')) return { min: 0.9, max: 1.15 };
+    if (type.includes('turbofan')) return { min: 0.85, max: 1.15 };
+    if (type.includes('turboprop')) return { min: 0.9, max: 1.2 };
+    if (type.includes('piston')) return { min: 0.8, max: 1.25 };
+    return { min: 0.85, max: 1.2 };
+  }
+
+  tuneEngine(engine, scale) {
+    // Return a shallow copy with tuned thrust/power, consumption and reliability/cost
+    const e = { ...engine };
+    const s = Math.max(0.5, Math.min(1.5, scale || 1));
+
+    // Determine whether engine uses thrust or power_hp
+    const isPiston = typeof e.power_hp === 'number';
+    const baseThrust = e.thrust ?? e.military_thrust ?? e.equivalent_thrust_kgf ?? 0;
+    const basePower = e.power_hp ?? 0;
+
+    if (isPiston) {
+      e.power_hp = Math.round(basePower * s);
+      e.power_kgf = e.power_kgf ? Math.round(e.power_kgf * s) : e.power_kgf;
+      // Fuel scales supra-linear when uprated, sub-linear when derated
+      const f = e.fuel_consumption_full ?? e.fuel_consumption ?? 0.2;
+      const fuelFactor = s >= 1 ? (1 + 0.6 * (s - 1) + 0.6 * (s - 1) * (s - 1)) : (1 - 0.4 * (1 - s));
+      e.fuel_consumption_full = parseFloat((f * fuelFactor).toFixed(3));
+    } else {
+      // Jet/propulsive engines
+      const ab = typeof e.afterburner_thrust === 'number';
+      if (ab) {
+        e.military_thrust = Math.round((e.military_thrust || baseThrust) * s);
+        e.afterburner_thrust = Math.round((e.afterburner_thrust || baseThrust) * s);
+      } else if (typeof baseThrust === 'number') {
+        e.thrust = Math.round(baseThrust * s);
+      }
+      const f = e.fuel_consumption ?? e.sfc_military ?? 1.0;
+      const fuelFactor = s >= 1 ? (1 + 0.5 * (s - 1) + 0.7 * (s - 1) * (s - 1)) : (1 - 0.35 * (1 - s));
+      if (typeof e.fuel_consumption === 'number') e.fuel_consumption = parseFloat((f * fuelFactor).toFixed(3));
+      if (typeof e.sfc_military === 'number') e.sfc_military = parseFloat((f * fuelFactor).toFixed(3));
+      if (typeof e.afterburner_fuel_consumption === 'number') {
+        e.afterburner_fuel_consumption = parseFloat((e.afterburner_fuel_consumption * fuelFactor).toFixed(3));
+      }
+    }
+
+    // Reliability and maintenance trade-off
+    const baseRel = (e.reliability ?? 0.85) * 100;
+    const relPenalty = s >= 1 ? (12 * (s - 1) + 10 * (s - 1) * (s - 1)) : (-6 * (1 - s));
+    e.reliability = Math.max(50, Math.min(98, (baseRel - relPenalty))) / 100;
+
+    // Cost multiplier grows with uprating; small discount for derating
+    const baseCost = e.cost_multiplier ?? 1.0;
+    const costDelta = s >= 1 ? (0.25 * (s - 1) + 0.35 * (s - 1) * (s - 1)) : (-0.1 * (1 - s));
+    e.cost_multiplier = parseFloat((baseCost * (1 + costDelta)).toFixed(2));
+
+    // Maintenance interval impact (hours between overhauls)
+    if (typeof e.maintenance_hours === 'number') {
+      const mh = e.maintenance_hours;
+      const factor = s >= 1 ? (1 - 0.25 * (s - 1)) : (1 + 0.15 * (1 - s));
+      e.maintenance_hours = Math.max(20, Math.round(mh * factor));
+    }
+
+    e.__tunedScale = s;
+    return e;
+  }
+
+  updateTuningImpact() {
+    const engineId = window.currentAircraft?.engine;
+    const engineCount = window.currentAircraft?.engineCount || 1;
+    if (!engineId) return;
+    const base = window.AIRCRAFT_COMPONENTS?.aircraft_engines?.[engineId];
+    if (!base) return;
+    const scale = window.currentAircraft?.enginePowerScale || 1.0;
+    const tuned = this.tuneEngine(base, scale);
+
+    // Update quick trade-off displays
+    const consEl = document.getElementById('tuning-consumption-display');
+    const relEl = document.getElementById('tuning-reliability-display');
+    if (consEl) {
+      const c = tuned.fuel_consumption_full ?? tuned.fuel_consumption ?? tuned.sfc_military ?? 0;
+      consEl.textContent = `${(c).toFixed(2)} ${tuned.power_hp ? 'kg/s (pleno)' : 'kg/s'}`;
+    }
+    if (relEl) relEl.textContent = `${Math.round((tuned.reliability ?? 0.85) * 100)}%`;
+
+    // Predict speed using advanced calculator if available
+    const speedEl = document.getElementById('predicted-speed-display');
+    const altitude = window.currentAircraft?.predictionAltitude || 0;
+    if (window.advancedPerformanceCalculator && window.currentAircraft?.airframe) {
+      try {
+        const airframe = window.AIRCRAFT_COMPONENTS?.airframes?.[window.currentAircraft.airframe];
+        const config = {
+          airframe,
+          engine: tuned,
+          engineCount,
+          wings: window.currentAircraft.wings || {},
+          avionics: window.currentAircraft.avionics || [],
+          weapons: window.currentAircraft.weapons || [],
+          fuel: window.currentAircraft.fuelLevel || 1.0,
+          altitude
+        };
+        const result = window.advancedPerformanceCalculator.calculateCompletePerformance(config);
+        const spd = Math.round(result?.summary?.max_speed_kmh || result?.maxSpeed || 0);
+        if (speedEl && spd > 0) speedEl.textContent = `${spd} km/h`;
+      } catch (e) {
+        if (speedEl) speedEl.textContent = '— km/h';
+      }
+    } else if (speedEl) {
+      speedEl.textContent = '— km/h';
+    }
+
+    // Also refresh existing engine-count impact UI
+    this.updateEngineCountImpact();
   }
 
   populateEnginesGrid(allData) {
@@ -2439,6 +2603,15 @@ export class TabLoaders {
   }
 
   selectEngine(engineId, engineData) {
+    // Bloquear seleção se indisponível por tech/ano
+    const availability = this.getComponentAvailabilityInfo(engineData);
+    if (!availability.isAvailable) {
+      const reasons = [];
+      if (!availability.techOk) reasons.push(`Tech ${availability.requiredTech} (você tem ${availability.currentTech})`);
+      if (!availability.yearOk) reasons.push(`Ano ${availability.requiredYear} (atual ${availability.currentYear})`);
+      try { alert(`Motor indisponível: ${reasons.join(' e ')}`); } catch {}
+      return;
+    }
     this.selectedEngine = engineId;
 
     // Update visual selection
@@ -2790,15 +2963,19 @@ export class TabLoaders {
     if (window.advancedPerformanceCalculator && window.currentAircraft?.airframe) {
       try {
         const airframe = window.AIRCRAFT_COMPONENTS?.airframes?.[window.currentAircraft.airframe];
+        // Apply tuning to the selected engine before calculating
+        const scale = window.currentAircraft?.enginePowerScale || 1.0;
+        const tunedEngine = this.tuneEngine(engine, scale);
+        const altitude = window.currentAircraft?.predictionAltitude || 0;
         if (airframe) {
           const aircraftConfig = {
             airframe: airframe,
-            engine: engine,
+            engine: tunedEngine,
             engineCount: engineCount,
             weapons: window.currentAircraft.weapons || [],
             avionics: window.currentAircraft.avionics || [],
             fuel: window.currentAircraft.fuelLevel || 1.0,
-            altitude: 0
+            altitude: altitude
           };
           
           const advancedResults = window.advancedPerformanceCalculator.calculateCompletePerformance(aircraftConfig);
@@ -2809,21 +2986,21 @@ export class TabLoaders {
             // Converte para formato compatível
             const summary = advancedResults.summary;
             const isPistonEngine = advancedResults.power.type === 'piston';
-            const hasAfterburner = engine.afterburner_thrust > 0;
+            const hasAfterburner = tunedEngine.afterburner_thrust > 0;
             
             let totalThrust;
             if (isPistonEngine) {
-              totalThrust = `${Math.round((engine.power_hp || 0) * engineCount)} HP`;
+              totalThrust = `${Math.round((tunedEngine.power_hp || 0) * engineCount)} HP`;
             } else {
-              totalThrust = `${Math.round((engine.military_thrust || engine.thrust || 0) * engineCount)} kgf`;
+              totalThrust = `${Math.round((tunedEngine.military_thrust || tunedEngine.thrust || 0) * engineCount)} kgf`;
             }
             
             return {
               totalThrust,
-              totalThrustAB: hasAfterburner ? `${Math.round(engine.afterburner_thrust * engineCount)} kgf` : null,
+              totalThrustAB: hasAfterburner ? `${Math.round(tunedEngine.afterburner_thrust * engineCount)} kgf` : null,
               totalEngineWeight: advancedResults.mass.engineWeight,
               fuelConsumption: `${advancedResults.operationalPerformance.fuelFlowRate.toFixed(2)} kg/h`,
-              reliability: Math.round((engine.reliability || 0.8) * 100 * Math.pow(0.96, engineCount - 1)),
+              reliability: Math.round((tunedEngine.reliability || 0.8) * 100 * Math.pow(0.96, engineCount - 1)),
               maxSpeed: summary.maxSpeed,
               thrustToWeight: summary.thrustToWeight.toFixed(2),
               range: summary.maxRange,
@@ -3764,6 +3941,3 @@ export class TabLoaders {
     `).join('');
   }
 }
-
-
-

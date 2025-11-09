@@ -47,16 +47,16 @@
       background-color: rgba(15, 23, 42, 0.95) !important;
     }
   </style>
-  <script type="module" crossorigin src="/portal-da-war/assets/narrador-DugQDq3N.js"></script>
+  <script type="module" crossorigin src="/portal-da-war/assets/narrador-DJR4xXub.js"></script>
   <link rel="modulepreload" crossorigin href="/portal-da-war/assets/preload-helper-f85Crcwt.js">
   <link rel="modulepreload" crossorigin href="/portal-da-war/assets/utils-DLoRv3re.js">
-  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/firebase-ep1w8F7T.js">
-  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/shipyardSystem-CBTksbsh.js">
-  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/navalProduction-D3hVvzmH.js">
-  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/economicCalculations-Dlmo5Lcc.js">
-  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/worldMap-CiuuHBzl.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/firebase-BDV7finj.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/shipyardSystem-B7HEfEsS.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/navalProduction-DS495_qr.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/economicCalculations-BCE1cIKn.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/worldMap-BFOKH5HR.js">
   <link rel="modulepreload" crossorigin href="/portal-da-war/assets/lawAndExhaustionCalculator-COcnTsA2.js">
-  <link rel="stylesheet" crossorigin href="/portal-da-war/assets/main-BGAAb9WC.css">
+  <link rel="stylesheet" crossorigin href="/portal-da-war/assets/main-eyJ07eAt.css">
 </head>
 <body class="bg-bg text-slate-200">
   <header class="border-b border-bg-ring/70 sticky top-0 z-40 bg-bg/90 backdrop-blur">
@@ -164,6 +164,18 @@
           >
             <span class="text-base">⚡</span>
             <span>Energia</span>
+          </button>
+
+          <button
+            id="tab-divisions-approval"
+            class="tab-button flex items-center gap-2 px-1 py-4 border-b-2 border-transparent text-sm font-medium text-slate-400 hover:text-slate-200 hover:border-slate-300 transition-colors"
+            data-tab="divisions-approval"
+            role="tab"
+            aria-controls="panel-divisions-approval"
+          >
+            <span class="text-base">🎖️</span>
+            <span>Aprovação de Divisões</span>
+            <span id="divisions-approval-badge" class="hidden ml-2 px-2 py-0.5 text-xs rounded-full bg-yellow-500 text-slate-900 font-semibold"></span>
           </button>
 
           <button
@@ -702,6 +714,37 @@
         </div>
         <div class="text-center py-16 rounded-xl bg-bg-soft border border-bg-ring/70">
             <span class="text-slate-400 text-sm">🚧 Em desenvolvimento...</span>
+        </div>
+      </div>
+
+      <!-- DIVISIONS APPROVAL TAB -->
+      <div id="panel-divisions-approval" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-divisions-approval">
+        <div class="text-center mb-8">
+          <h2 class="text-2xl font-bold text-slate-200 mb-2">🎖️ Aprovação de Divisões</h2>
+          <p class="text-slate-400">Aprove ou rejeite divisões criadas pelos jogadores</p>
+        </div>
+
+        <!-- Filtros -->
+        <div class="mb-6 flex gap-3 items-center justify-center">
+          <button id="filter-all-divisions" class="px-4 py-2 bg-slate-700/50 hover:bg-slate-700 rounded-lg text-sm font-semibold transition-all">
+            Todas
+          </button>
+          <button id="filter-pending-divisions" class="px-4 py-2 bg-yellow-500/20 text-yellow-400 border border-yellow-500/50 rounded-lg text-sm font-semibold transition-all">
+            Pendentes
+          </button>
+          <button id="filter-approved-divisions" class="px-4 py-2 bg-slate-700/50 hover:bg-slate-700 rounded-lg text-sm font-semibold transition-all">
+            Aprovadas
+          </button>
+          <button id="filter-rejected-divisions" class="px-4 py-2 bg-slate-700/50 hover:bg-slate-700 rounded-lg text-sm font-semibold transition-all">
+            Rejeitadas
+          </button>
+        </div>
+
+        <!-- Container de divisões -->
+        <div id="divisions-approval-container">
+          <div class="text-center py-16 rounded-xl bg-bg-soft border border-bg-ring/70">
+            <span class="text-slate-400 text-sm">🔄 Carregando divisões...</span>
+          </div>
         </div>
       </div>
 

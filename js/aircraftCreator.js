@@ -4,6 +4,8 @@
 import { auth, checkPlayerCountry, getCountryData, getGameConfig } from './services/firebase.js';
 import { legacyBridge } from './aircraft/core/LegacyBridge.js';
 import { TabLoaders } from './components/aircraftTabLoaders.js';
+// Ensure advanced performance system is available for speed predictions
+import './utils/advancedPerformanceCalculator.js';
 
 class AircraftCreatorApp {
     constructor() {
@@ -49,18 +51,33 @@ class AircraftCreatorApp {
 
                 if (countryData) {
                     const currentYear = 1953 + (gameConfig?.turnoAtual || 1);
-                    const aircraftTech = countryData.Aeronautica || 50;
+                    const aircraftTech = Number(countryData.Aeronautica || 0);
+                    const civilTech = Number(countryData.Tecnologia || 0);
+                    const vehiclesTech = Number(countryData.Veiculos || 0);
+                    const navalTech = Number(countryData.Marinha || 0);
 
                     this.currentUserCountry = {
                         ...countryData,
                         id: paisId,
-                        aircraftTech: aircraftTech,
+                        // Expor todas as techs como no dashboard
+                        aircraftTech,         // Aeronáutica
+                        civilTech,            // Tecnologia (civil)
+                        vehiclesTech,         // Veículos
+                        navalTech,            // Marinha
                         name: countryData.Pais,
                         year: currentYear
                     };
 
                     window.currentUserCountry = this.currentUserCountry;
-                    console.log(`✅ User country loaded: ${this.currentUserCountry.name} | Year: ${this.currentUserCountry.year}`, this.currentUserCountry);
+                    console.log(`✅ User country loaded: ${this.currentUserCountry.name} | Year: ${this.currentUserCountry.year}`,
+                        { techs: { civil: civilTech, aircraft: aircraftTech, vehicles: vehiclesTech, naval: navalTech } });
+
+                    // Atualiza cabeçalho e persiste no localStorage
+                    try {
+                        const headerCountryEl = document.getElementById('current-country');
+                        if (headerCountryEl) headerCountryEl.textContent = this.currentUserCountry.name || 'Desconhecido';
+                        localStorage.setItem('loggedCountry', this.currentUserCountry.name || '');
+                    } catch {}
 
                     await this.finishInitialization();
                 } else {

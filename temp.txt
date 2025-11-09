@@ -1,0 +1,17 @@
+calculateAircraftPerformance(engine, engineCount) {
+    console.log('🔧 TabLoaders: Calculando performance...');
+    
+    // Tenta usar o sistema avançado se disponível
+    if (window.advancedPerformanceCalculator && window.currentAircraft?.airframe) {
+      try {
+        const airframe = window.AIRCRAFT_COMPONENTS?.airframes?.[window.currentAircraft.airframe];
+        if (airframe) {
+          const aircraftConfig = {
+            airframe: airframe,
+            engine: engine,
+            engineCount: engineCount,
+            weapons: window.currentAircraft.weapons || [],
+            avionics: window.currentAircraft.avionics || [],
+            fuel: window.currentAircraft.fuelLevel || 1.0,
+            altitude: 0
+          }
