@@ -1,5 +1,5 @@
 import { auth, checkPlayerCountry, getAllCountries, db } from "../services/firebase.js";
-import { formatCurrencyCompact } from "../utils.js";
+import { formatCurrencyCompact, showNotification } from "../utils.js";
 import { InventorySystem } from "../components/inventorySystem.js";
 import EconomicCalculations from '../systems/economicCalculations.js';
 import ConsumerGoodsCalculator from '../systems/consumerGoodsCalculator.js';
