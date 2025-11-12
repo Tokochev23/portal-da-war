@@ -52,6 +52,15 @@
     .leaflet-popup-tip {
       background-color: rgba(15, 23, 42, 0.95) !important;
     }
+
+    /* Ensure the auth modal stays above high z-index Leaflet panes */
+    #auth-modal {
+      z-index: 1200 !important;
+    }
+
+    body.auth-modal-open {
+      overflow: hidden;
+    }
   </style>
 </head>
 <body class="bg-bg text-slate-200">

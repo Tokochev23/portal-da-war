@@ -963,18 +963,576 @@ async function initAdvancedEditor() {
 
 async function initPlayerManagement() {
   try {
-    // playerManager is exported singleton from services/playerManager.js
-    if (playerManager && typeof playerManager.loadPlayers === 'function') {
+    console.log('👥 Carregando jogadores...');
+    await playerManager.loadPlayers();
+    console.log(`✅ ${playerManager.players.length} jogadores carregados`);
+    
+    console.log('🌍 Carregando países...');
+    await playerManager.loadCountries();
+    console.log(`✅ ${playerManager.countries.length} países carregados`);
+    
+    playerManager.setupRealTimeListeners?.();
+    
+    renderPlayersList();
+    renderAvailableCountries();
+    setupPlayerManagementListeners();
+    
+    Logger.info('Sistema de gerenciamento de jogadores inicializado');
+  } catch (error) {
+    console.error('❌ Erro ao inicializar gerenciamento de jogadores:', error);
+    Logger.error('Erro ao inicializar gerenciamento de jogadores:', error);
+    showPlayerManagementError();
+  }
+}
+
+function showPlayerManagementError() {
+  if (el.playersList) {
+    el.playersList.innerHTML = `
+      <div class="text-sm text-red-400 text-center py-8">
+        <div class="mb-2">❌ Erro ao carregar dados de jogadores</div>
+        <div class="text-xs text-slate-500">Verifique as permissões do Firebase</div>
+      </div>
+    `;
+  }
+  
+  if (el.availableCountries) {
+    el.availableCountries.innerHTML = `
+      <div class="text-sm text-red-400 text-center py-8">
+        <div class="mb-2">❌ Erro ao carregar países</div>
+        <div class="text-xs text-slate-500">Usando dados básicos do sistema</div>
+      </div>
+    `;
+  }
+  
+  if (el.playerCount) {
+    el.playerCount.textContent = 'Erro ao carregar';
+  }
+  
+  if (el.availableCount) {
+    el.availableCount.textContent = 'Erro ao carregar';
+  }
+}
+
+function setupPlayerManagementListeners() {
+  if (setupPlayerManagementListeners.initialized) return;
+  
+  if (el.refreshPlayers) {
+    el.refreshPlayers.addEventListener('click', async () => {
       await playerManager.loadPlayers();
       await playerManager.loadCountries();
-      playerManager.setupRealTimeListeners?.();
-      Logger.info('Player management inicializado');
-    } else {
-      Logger.warn('playerManager não disponível para inicialização');
-    }
-  } catch (error) {
-    Logger.error('Erro ao inicializar player management:', error);
+      renderPlayersList();
+      renderAvailableCountries();
+    });
   }
+  
+  if (el.assignRandom) {
+    el.assignRandom.addEventListener('click', async () => {
+      await playerManager.assignRandomCountries();
+      renderPlayersList();
+      renderAvailableCountries();
+    });
+  }
+  
+  if (el.clearAllAssignments) {
+    el.clearAllAssignments.addEventListener('click', async () => {
+      await playerManager.clearAllAssignments();
+      renderPlayersList();
+      renderAvailableCountries();
+    });
+  }
+  
+  if (el.playerAnalytics) {
+    el.playerAnalytics.addEventListener('click', showPlayerAnalytics);
+  }
+  
+  if (el.sendAnnouncement) {
+    el.sendAnnouncement.addEventListener('click', showAnnouncementModal);
+  }
+  
+  window.addEventListener('playerManager:update', (e) => {
+    if (e.detail.type === 'players') {
+      renderPlayersList();
+    } else if (e.detail.type === 'countries') {
+      renderAvailableCountries();
+    }
+  });
+  
+  setupPlayerManagementListeners.initialized = true;
+}
+
+function renderPlayersList() {
+  if (!el.playersList) return;
+  
+  if (!playerManager || !playerManager.players) {
+    el.playersList.innerHTML = `
+      <div class="text-sm text-yellow-400 text-center py-8">
+        <div class="mb-2">🛈 Carregando dados...</div>
+        <div class="text-xs text-slate-500">Aguarde a inicialização</div>
+      </div>
+    `;
+    return;
+  }
+  
+  let players = [];
+  let playersCount = 0;
+  
+  if (playerManager.players.length > 0) {
+    players = playerManager.players.filter(p => p.paisId);
+    playersCount = players.length;
+  } else {
+    playersCount = state.paises ? state.paises.filter(c => c.Player).length : 0;
+  }
+  
+  if (el.playerCount) {
+    el.playerCount.textContent = `${playersCount} jogadores`;
+  }
+  
+  if (playersCount === 0) {
+    el.playersList.innerHTML = `
+      <div class="text-sm text-slate-500 text-center py-4">
+        Nenhum jogador com país atribuído
+      </div>
+    `;
+    return;
+  }
+  
+  if (players.length === 0 && playersCount > 0) {
+    el.playersList.innerHTML = `
+      <div class="text-sm text-yellow-400 text-center py-4">
+        <div class="mb-2">🛈 ${playersCount} jogadores ativos</div>
+        <div class="text-xs text-slate-500">Dados limitados devido às permissões do Firebase</div>
+      </div>
+    `;
+    return;
+  }
+  
+  const playersHtml = players.map(player => {
+    const country = playerManager.countries.find(c => c.id === player.paisId);
+    const lastLoginText = player.lastLogin ? formatTimeAgo(player.lastLogin) : 'Nunca';
+    
+    return `
+      <div class="flex items-center justify-between p-2 rounded-lg border border-bg-ring/30 hover:bg-white/5">
+        <div class="flex-1">
+          <div class="text-sm font-medium text-slate-200">
+            ${player.nome || 'Sem nome'}
+          </div>
+          <div class="text-xs text-slate-400">
+            ${country?.Pais || 'País não encontrado'} • ${lastLoginText}
+          </div>
+        </div>
+        <div class="flex gap-1">
+          <button onclick="openReassignModal('${player.id}')"
+                  class="text-blue-400 hover:text-blue-300 text-xs px-2 py-1 rounded transition-colors"
+                  title="Transferir / Trocar jogador">
+            ⇄
+          </button>
+          <button onclick="unassignPlayer('${player.paisId}')"
+                  class="text-red-400 hover:text-red-300 text-xs px-2 py-1 rounded transition-colors"
+                  title="Remover atribuição">
+            ✖
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  el.playersList.innerHTML = playersHtml;
+}
+
+function renderAvailableCountries() {
+  if (!el.availableCountries) return;
+  
+  if (!playerManager || !playerManager.countries) {
+    el.availableCountries.innerHTML = `
+      <div class="text-sm text-yellow-400 text-center py-8">
+        <div class="mb-2">🛈 Carregando países...</div>
+        <div class="text-xs text-slate-500">Aguarde a inicialização</div>
+      </div>
+    `;
+    return;
+  }
+  
+  const availableCountries = playerManager.countries.filter(c => !c.Player);
+  
+  if (el.availableCount) {
+    el.availableCount.textContent = `${availableCountries.length} países`;
+  }
+  
+  if (availableCountries.length === 0) {
+    el.availableCountries.innerHTML = `
+      <div class="text-sm text-slate-500 text-center py-4">
+        Todos os países estão atribuídos
+      </div>
+    `;
+    return;
+  }
+  
+  const countriesHtml = availableCountries.map(country => {
+    const gdp = country.geral?.PIB;
+    const stability = country.geral?.Estabilidade;
+    
+    return `
+      <div class="flex items-center justify-between p-2 rounded-lg border border-bg-ring/30 hover:bg-white/5">
+        <div class="flex-1">
+          <div class="text-sm font-medium text-slate-200">
+            ${country.Pais || country.id}
+          </div>
+          <div class="text-xs text-slate-400">
+            PIB: ${gdp ? (typeof gdp === 'number' ? gdp.toLocaleString() : gdp) : '-'} • 
+            Est: ${stability || '-'}%
+          </div>
+        </div>
+        <div class="flex gap-1">
+          <button onclick="quickAssignCountry('${country.id}')"
+                  class="text-emerald-400 hover:text-emerald-300 text-xs px-2 py-1 rounded transition-colors"
+                  title="Atribuição rápida">
+            ➕
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  el.availableCountries.innerHTML = countriesHtml;
+}
+
+window.unassignPlayer = async function(countryId) {
+  try {
+    await playerManager.unassignCountry(countryId);
+    renderPlayersList();
+    renderAvailableCountries();
+  } catch (error) {
+    Logger.error('Erro ao remover atribuição:', error);
+  }
+};
+
+window.quickAssignCountry = async function(countryId) {
+  const playersWithoutCountries = playerManager.players.filter(p =>
+    p.papel !== 'admin' && p.papel !== 'narrador' && !p.paisId
+  );
+  
+  if (playersWithoutCountries.length === 0) {
+    showNotification('warning', 'Nenhum jogador disponível para atribuição');
+    return;
+  }
+  
+  showPlayerSelectionModal(countryId, playersWithoutCountries);
+};
+
+function showPlayerSelectionModal(countryId, players) {
+  const country = playerManager.countries.find(c => c.id === countryId);
+  if (!country) return;
+  
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+  
+  const content = document.createElement('div');
+  content.className = 'bg-bg-soft border border-bg-ring/70 rounded-2xl p-6 max-w-md w-full';
+  
+  content.innerHTML = `
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-semibold text-slate-200">Atribuir ${country.Pais}</h3>
+      <button onclick="this.closest('.fixed').remove()" class="text-slate-400 hover:text-slate-200">✖</button>
+    </div>
+    
+    <div class="mb-4">
+      <label class="text-sm text-slate-400 mb-2 block">Selecionar jogador:</label>
+      <select id="player-select" class="w-full rounded-lg bg-bg border border-bg-ring/70 p-2 text-sm">
+        <option value="">-- Escolha um jogador --</option>
+        ${players.map(p => `<option value="${p.id}">${p.nome || p.id}</option>`).join('')}
+      </select>
+    </div>
+    
+    <div class="mb-4">
+      <label class="text-sm text-slate-400 mb-2 block">Motivo (opcional):</label>
+      <input id="assignment-reason" type="text" class="w-full rounded-lg bg-bg border border-bg-ring/70 p-2 text-sm" placeholder="Ex.: Atribuição manual" />
+    </div>
+    
+    <div class="flex gap-3 justify-end">
+      <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 rounded-lg border border-bg-ring/70 text-slate-300 hover:bg-white/5">
+        Cancelar
+      </button>
+      <button onclick="confirmPlayerAssignment('${countryId}', this.closest('.fixed'))" class="px-4 py-2 rounded-lg bg-emerald-500 text-slate-950 font-semibold hover:bg-emerald-400">
+        Atribuir
+      </button>
+    </div>
+  `;
+  
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+}
+
+window.confirmPlayerAssignment = async function(countryId, modal) {
+  const playerSelect = modal.querySelector('#player-select');
+  const reasonInput = modal.querySelector('#assignment-reason');
+  
+  const playerId = playerSelect.value;
+  const reason = reasonInput.value;
+  
+  if (!playerId) {
+    showNotification('warning', 'Selecione um jogador');
+    return;
+  }
+  
+  try {
+    await playerManager.assignCountryToPlayer(playerId, countryId, reason);
+    renderPlayersList();
+    renderAvailableCountries();
+    modal.remove();
+  } catch (error) {
+    Logger.error('Erro na atribuição:', error);
+  }
+};
+
+window.openReassignModal = function(playerId) {
+  const player = playerManager.players.find(p => p.id === playerId);
+  if (!player) {
+    showNotification('warning', 'Jogador não encontrado');
+    return;
+  }
+
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+
+  const content = document.createElement('div');
+  content.className = 'bg-bg-soft border border-bg-ring/70 rounded-2xl p-6 max-w-md w-full';
+
+  const options = playerManager.countries.map(country => {
+    const assignedPlayer = country.Player ? playerManager.players.find(p => p.id === country.Player) : null;
+    const label = `${country.Pais || country.id}${assignedPlayer ? ` — ${assignedPlayer.nome || assignedPlayer.id}` : ' (disponível)'}`;
+    return `<option value="${country.id}" ${country.id === player.paisId ? 'disabled' : ''}>${label}</option>`;
+  }).join('');
+
+  content.innerHTML = `
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="text-lg font-semibold text-slate-200">Reatribuir ${player.nome || player.id}</h3>
+        <p class="text-xs text-slate-500">${player.paisId ? 'País atual: ' + (playerManager.countries.find(c => c.id === player.paisId)?.Pais || player.paisId) : 'Sem país atual'}</p>
+      </div>
+      <button onclick="this.closest('.fixed').remove()" class="text-slate-400 hover:text-slate-200">✖</button>
+    </div>
+
+    <div class="space-y-4">
+      <div>
+        <label class="text-sm text-slate-400 mb-2 block">Selecione o novo país:</label>
+        <select id="reassign-country-select" class="w-full rounded-lg bg-bg border border-bg-ring/70 p-2 text-sm">
+          <option value="">-- Escolha um país --</option>
+          ${options}
+        </select>
+      </div>
+      <div class="flex items-center gap-2 text-sm text-slate-300">
+        <input type="checkbox" id="swap-option" class="rounded border-bg-ring/70 bg-bg">
+        <label for="swap-option">Trocar jogadores entre os países (necessário que o destino tenha jogador)</label>
+      </div>
+      <div class="text-xs text-slate-500">
+        Use "Trocar" para inverter os jogadores entre o país atual e o selecionado.
+        Caso o destino esteja vazio, o jogador apenas será movido.
+      </div>
+    </div>
+
+    <div class="mt-6 flex gap-3 justify-end">
+      <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 rounded-lg border border-bg-ring/70 text-slate-300 hover:bg-white/5">
+        Cancelar
+      </button>
+      <button onclick="confirmReassignPlayer('${playerId}', this.closest('.fixed'))" class="px-4 py-2 rounded-lg bg-blue-500 text-white font-semibold hover:bg-blue-400">
+        Confirmar
+      </button>
+    </div>
+  `;
+
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+};
+
+window.confirmReassignPlayer = async function(playerId, modal) {
+  const select = modal.querySelector('#reassign-country-select');
+  const swap = modal.querySelector('#swap-option').checked;
+  const countryId = select.value;
+
+  if (!countryId) {
+    showNotification('warning', 'Selecione um país');
+    return;
+  }
+
+  const player = playerManager.players.find(p => p.id === playerId);
+  if (!player) {
+    showNotification('error', 'Jogador não encontrado');
+    return;
+  }
+
+  const currentCountryId = player.paisId || null;
+  const targetCountry = playerManager.countries.find(c => c.id === countryId);
+
+  try {
+    if (swap) {
+      if (!targetCountry?.Player) {
+        showNotification('warning', 'O país selecionado não possui jogador para troca');
+        return;
+      }
+      if (!currentCountryId) {
+        showNotification('warning', 'O jogador atual não possui país para realizar a troca');
+        return;
+      }
+      await playerManager.swapCountryPlayers(currentCountryId, countryId);
+    } else {
+      if (currentCountryId && currentCountryId !== countryId) {
+        await playerManager.unassignCountry(currentCountryId, 'Reatribuição manual');
+      }
+      await playerManager.assignCountryToPlayer(playerId, countryId, 'Reatribuição manual');
+    }
+
+    renderPlayersList();
+    renderAvailableCountries();
+    modal.remove();
+  } catch (error) {
+    Logger.error('Erro na reatribuição:', error);
+  }
+};
+
+function showPlayerAnalytics() {
+  const analytics = playerManager.getPlayerAnalytics();
+  
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+  
+  const content = document.createElement('div');
+  content.className = 'bg-bg-soft border border-bg-ring/70 rounded-2xl p-6 max-w-4xl w-full max-h-96 overflow-y-auto';
+  
+  content.innerHTML = `
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-semibold text-slate-200">📊 Analytics de Jogadores</h3>
+      <button onclick="this.closest('.fixed').remove()" class="text-slate-400 hover:text-slate-200">✖</button>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="bg-bg/50 rounded-lg p-4 border border-blue-500/20">
+        <h4 class="text-sm font-semibold text-blue-200 mb-3">👥 Jogadores</h4>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between"><span class="text-slate-400">Total:</span><span class="text-slate-200">${analytics.players.total}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Com país:</span><span class="text-emerald-400">${analytics.players.active}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Sem país:</span><span class="text-red-400">${analytics.players.inactive}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Ativos hoje:</span><span class="text-blue-400">${analytics.players.recentlyActive}</span></div>
+        </div>
+      </div>
+      
+      <div class="bg-bg/50 rounded-lg p-4 border border-green-500/20">
+        <h4 class="text-sm font-semibold text-green-200 mb-3">🌍 Países</h4>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between"><span class="text-slate-400">Total:</span><span class="text-slate-200">${analytics.countries.total}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Atribuídos:</span><span class="text-emerald-400">${analytics.countries.assigned}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Disponíveis:</span><span class="text-red-400">${analytics.countries.available}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Taxa:</span><span class="text-blue-400">${analytics.countries.assignmentRate}%</span></div>
+        </div>
+      </div>
+      
+      <div class="bg-bg/50 rounded-lg p-4 border border-purple-500/20">
+        <h4 class="text-sm font-semibold text-purple-200 mb-3">🛡️ Administração</h4>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between"><span class="text-slate-400">Admins:</span><span class="text-purple-400">${analytics.players.admins}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Narradores:</span><span class="text-purple-400">${analytics.players.narrators}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Semanais:</span><span class="text-purple-400">${analytics.players.weeklyActive}</span></div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="mt-6 flex gap-3 justify-end">
+      <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 rounded-lg bg-slate-600 text-slate-200 hover:bg-slate-500">Fechar</button>
+    </div>
+  `;
+  
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+}
+
+function showAnnouncementModal() {
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+  
+  const content = document.createElement('div');
+  content.className = 'bg-bg-soft border border-bg-ring/70 rounded-2xl p-6 max-w-md w-full';
+  
+  content.innerHTML = `
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-semibold text-slate-200">📢 Enviar Anúncio</h3>
+      <button onclick="this.closest('.fixed').remove()" class="text-slate-400 hover:text-slate-200">✖</button>
+    </div>
+    
+    <div class="space-y-4">
+      <div>
+        <label class="text-sm text-slate-400 mb-2 block">Título:</label>
+        <input id="announcement-title" type="text" class="w-full rounded-lg bg-bg border border-bg-ring/70 p-2 text-sm" placeholder="Título do anúncio" />
+      </div>
+      
+      <div>
+        <label class="text-sm text-slate-400 mb-2 block">Mensagem:</label>
+        <textarea id="announcement-message" rows="4" class="w-full rounded-lg bg-bg border border-bg-ring/70 p-2 text-sm" placeholder="Conteúdo da mensagem..."></textarea>
+      </div>
+      
+      <div>
+        <label class="text-sm text-slate-400 mb-2 block">Destinatários:</label>
+        <select id="announcement-target" class="w-full rounded-lg bg-bg border border-bg-ring/70 p-2 text-sm">
+          <option value="all">Todos os jogadores</option>
+          <option value="active">Apenas jogadores com países</option>
+          <option value="inactive">Apenas jogadores sem países</option>
+        </select>
+      </div>
+      
+      <div>
+        <label class="text-sm text-slate-400 mb-2 block">Prioridade:</label>
+        <select id="announcement-priority" class="w-full rounded-lg bg-bg border border-bg-ring/70 p-2 text-sm">
+          <option value="normal">Normal</option>
+          <option value="high">Alta</option>
+          <option value="urgent">Urgente</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="mt-6 flex gap-3 justify-end">
+      <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 rounded-lg border border-bg-ring/70 text-slate-300 hover:bg-white/5">Cancelar</button>
+      <button onclick="sendAnnouncementConfirm(this.closest('.fixed'))" class="px-4 py-2 rounded-lg bg-blue-500 text-white font-semibold hover:bg-blue-400">Enviar</button>
+    </div>
+  `;
+  
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+}
+
+window.sendAnnouncementConfirm = async function(modal) {
+  const title = modal.querySelector('#announcement-title').value;
+  const message = modal.querySelector('#announcement-message').value;
+  const target = modal.querySelector('#announcement-target').value;
+  const priority = modal.querySelector('#announcement-priority').value;
+  
+  if (!title.trim() || !message.trim()) {
+    showNotification('warning', 'Título e mensagem são obrigatórios');
+    return;
+  }
+  
+  try {
+    await playerManager.sendAnnouncement({
+      title: title.trim(),
+      message: message.trim(),
+      targetPlayers: target,
+      priority
+    });
+    
+    modal.remove();
+  } catch (error) {
+    Logger.error('Erro ao enviar anúncio:', error);
+  }
+};
+
+function formatTimeAgo(date) {
+  if (!date) return 'Nunca';
+  const now = Date.now();
+  const diff = now - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'agora';
+  if (minutes < 60) return `${minutes} min atrás`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h atrás`;
+  const days = Math.floor(hours / 24);
+  return `${days}d atrás`;
 }
 
 let worldMap = null;

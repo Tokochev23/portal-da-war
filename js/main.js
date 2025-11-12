@@ -11,7 +11,8 @@ import {
   signInWithGooglePreserveRole as signInWithGoogle,
   registerWithEmailPassword,
   signInWithEmailPassword,
-  db
+  db,
+  handleGoogleRedirectResult
 } from "./services/firebase.js";
 import {
   renderPublicCountries,
@@ -71,11 +72,16 @@ function showAuthModal(mode = 'login') {
   currentAuthMode = mode;
   updateAuthModalUI();
   authModal.classList.remove('hidden');
+  document.body.classList.add('auth-modal-open');
   clearAuthMessages();
+  if (countryPanelModal && !countryPanelModal.classList.contains('hidden')) {
+    countryPanelModal.classList.add('hidden');
+  }
 }
 
 function hideAuthModal() {
   authModal.classList.add('hidden');
+  document.body.classList.remove('auth-modal-open');
   clearAuthMessages();
   resetAuthForms();
 }
@@ -130,6 +136,21 @@ function showAuthSuccess(message) {
 function resetAuthForms() {
   loginForm.reset();
   registerForm.reset();
+}
+
+async function processGoogleRedirectLogin() {
+  try {
+    const result = await handleGoogleRedirectResult(true);
+    if (result && result.success && result.user) {
+      hideAuthModal();
+      clearAuthMessages();
+      const displayName = result.user.displayName || result.user.email;
+      showNotification('success', `Bem-vindo, ${displayName}!`);
+    }
+  } catch (error) {
+    console.error('Erro ao processar redirect do Google:', error);
+    showAuthError('Não foi possível concluir o login com Google.');
+  }
 }
 
 // Funções de controle
@@ -215,140 +236,6 @@ function filterAndRenderCountries() {
   addCountryEventListeners();
 }
 
-// Event Listeners
-authButton.addEventListener('click', () => {
-  console.log("Botão auth clicado");
-  if (auth.currentUser) {
-    console.log("Fazendo logout");
-    auth.signOut();
-  } else {
-    console.log("Abrindo modal de login");
-    showAuthModal('login');
-  }
-});
-
-mainLoginBtn.addEventListener('click', () => {
-  console.log("Botão main login clicado");
-  showAuthModal('login');
-});
-
-loginTab.addEventListener('click', () => {
-  currentAuthMode = 'login';
-  updateAuthModalUI();
-  clearAuthMessages();
-});
-
-registerTab.addEventListener('click', () => {
-  currentAuthMode = 'register';
-  updateAuthModalUI();
-  clearAuthMessages();
-});
-
-closeAuthModal.addEventListener('click', hideAuthModal);
-
-// Fechar modal do país
-closeCountryPanelBtn.addEventListener('click', () => {
-  countryPanelModal.classList.add('hidden');
-});
-
-// Google Login
-googleLoginBtn.addEventListener('click', async () => {
-  console.log("Tentando login com Google");
-  clearAuthMessages();
-
-  try {
-    const result = await signInWithGoogle();
-    console.log("Resultado do login Google:", result);
-    if (result.success) {
-      hideAuthModal();
-      showNotification('success', `Bem-vindo, ${result.user.displayName}!`);
-    } else {
-      console.error("Erro no login Google:", result.error);
-      showAuthError(result.error ? result.error.message : 'Erro no login com Google.');
-    }
-  } catch (error) {
-    console.error("Erro inesperado no login Google:", error);
-    showAuthError('Erro inesperado no login com Google.');
-  }
-});
-
-// Login Form
-loginForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  console.log("Submetendo form de login");
-  clearAuthMessages();
-
-  const email = document.getElementById('login-email').value;
-  const password = document.getElementById('login-password').value;
-
-  console.log("Tentando login com email:", email);
-
-  try {
-    const result = await signInWithEmailPassword(email, password);
-    console.log("Resultado do login:", result);
-    if (result.success) {
-      hideAuthModal();
-      showNotification('success', 'Login realizado com sucesso!');
-    } else {
-      console.error("Erro no login:", result.error);
-      showAuthError(result.error ? result.error.message : 'Erro no login.');
-    }
-  } catch (error) {
-    console.error("Erro inesperado no login:", error);
-    showAuthError('Erro inesperado no login.');
-  }
-});
-
-// Register Form
-registerForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  console.log("Submetendo form de registro");
-  clearAuthMessages();
-
-  const name = document.getElementById('register-name').value;
-  const email = document.getElementById('register-email').value;
-  const password = document.getElementById('register-password').value;
-  const confirmPassword = document.getElementById('register-confirm-password').value;
-
-  // Validações
-  if (password !== confirmPassword) {
-    showAuthError('As senhas não coincidem.');
-    return;
-  }
-
-  if (password.length < 6) {
-    showAuthError('A senha deve ter pelo menos 6 caracteres.');
-    return;
-  }
-
-  console.log("Tentando registro com email:", email);
-
-  try {
-    const result = await registerWithEmailPassword(email, password, name);
-    console.log("Resultado do registro:", result);
-    if (result.success) {
-      showAuthSuccess('Conta criada com sucesso! Redirecionando...');
-      setTimeout(() => {
-        hideAuthModal();
-        showNotification('success', `Bem-vindo ao WAR, ${name}!`);
-      }, 1500);
-    } else {
-      console.error("Erro no registro:", result.error);
-      showAuthError(result.error ? result.error.message : 'Erro no registro.');
-    }
-  } catch (error) {
-    console.error("Erro inesperado no registro:", error);
-    showAuthError('Erro inesperado no registro.');
-  }
-});
-
-// Fechar modal ao clicar fora
-authModal.addEventListener('click', (e) => {
-  if (e.target === authModal) {
-    hideAuthModal();
-  }
-});
-
 countryPanelModal.addEventListener('click', (e) => {
   if (e.target === countryPanelModal) {
     countryPanelModal.classList.add('hidden');
@@ -422,6 +309,8 @@ async function handleUserLogin(user) {
   console.log("Mudança de estado de autenticação:", user ? "Logado" : "Deslogado");
   
   if (user) {
+    hideAuthModal();
+    clearAuthMessages();
     authButton.querySelector('.btn-text').textContent = 'Sair';
     const hb = getHeroBlurb();
     if (hb) hb.classList.add('hidden');
@@ -588,9 +477,14 @@ googleLoginBtn.addEventListener('click', async () => {
   try {
     const result = await signInWithGoogle();
     console.log("Resultado do login Google:", result);
+    if (result.redirect) {
+      showAuthSuccess('Abrindo login do Google em nova janela...');
+      return;
+    }
     if (result.success) {
       hideAuthModal();
-      showNotification('success', `Bem-vindo, ${result.user.displayName}!`);
+      const displayName = result.user.displayName || result.user.email;
+      showNotification('success', `Bem-vindo, ${displayName}!`);
     } else {
       console.error("Erro no login Google:", result.error);
       showAuthError(result.error ? result.error.message : 'Erro no login com Google.');
@@ -944,6 +838,7 @@ async function initPlayerWorldMap() {
 // Carregamento inicial
 document.addEventListener('DOMContentLoaded', () => {
   console.log("DOM carregado, iniciando aplicação");
+  processGoogleRedirectLogin();
   loadSiteData();
 
   // Inicializar mapa após um pequeno delay para garantir que o Leaflet carregou

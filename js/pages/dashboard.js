@@ -993,7 +993,10 @@ function renderAircraftInventory(inventory) {
 }
 
 function renderInventory(inventory) {
-  const categories = Object.keys(inventory);
+  const categories = Object.keys(inventory).filter(category => {
+    const categoryData = inventory[category];
+    return categoryData && typeof categoryData === 'object' && !Array.isArray(categoryData);
+  });
 
   if (categories.length === 0) {
     return `
@@ -1455,10 +1458,46 @@ function createDivisionKey(division) {
   const baseName = division.name.replace(/\s*#\d+$/, '');
 
   // Criar chave baseada em: nome base, treinamento, unidades de combate, unidades de suporte
-  const combatUnits = JSON.stringify((division.combatUnits || []).sort());
-  const supportUnits = JSON.stringify((division.supportUnits || []).sort());
+  const combatUnits = normalizeUnitSet(division.combatUnits);
+  const supportUnits = normalizeUnitSet(division.supportUnits);
 
   return `${baseName}|${division.trainingLevel}|${combatUnits}|${supportUnits}`;
+}
+
+/**
+ * Normaliza um conjunto de unidades para que a ordem dos itens e das chaves não afete a comparação
+ */
+function normalizeUnitSet(units = []) {
+  if (!Array.isArray(units) || units.length === 0) {
+    return '[]';
+  }
+
+  const normalized = units
+    .map(unit => sortObjectKeys(unit || {}))
+    .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+
+  return JSON.stringify(normalized);
+}
+
+/**
+ * Ordena as chaves de um objeto recursivamente para garantir consistência no stringify
+ */
+function sortObjectKeys(value) {
+  if (Array.isArray(value)) {
+    const normalized = value.map(sortObjectKeys);
+    return normalized.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.keys(value)
+      .sort()
+      .reduce((acc, key) => {
+        acc[key] = sortObjectKeys(value[key]);
+        return acc;
+      }, {});
+  }
+
+  return value;
 }
 
 async function loadArmyDivisions() {

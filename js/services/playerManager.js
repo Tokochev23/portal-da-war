@@ -387,6 +387,85 @@ export class PlayerManagerService {
         }
     }
 
+    async swapCountryPlayers(countryAId, countryBId) {
+        if (countryAId === countryBId) {
+            showNotification('warning', 'Selecione países diferentes para trocar');
+            return false;
+        }
+
+        const countryA = this.countries.find(c => c.id === countryAId);
+        const countryB = this.countries.find(c => c.id === countryBId);
+
+        if (!countryA || !countryB) {
+            throw new Error('País não encontrado para troca');
+        }
+
+        const playerAId = countryA.Player || null;
+        const playerBId = countryB.Player || null;
+
+        if (!playerAId && !playerBId) {
+            showNotification('info', 'Nenhum jogador atribuído aos países selecionados');
+            return false;
+        }
+
+        await db.runTransaction(async (transaction) => {
+            const countriesRef = db.collection('paises');
+            const usersRef = db.collection('usuarios');
+            const timestamp = firebase.firestore.Timestamp.now();
+
+            const updateCountry = (countryId, newPlayerId) => {
+                const ref = countriesRef.doc(countryId);
+                if (newPlayerId) {
+                    transaction.update(ref, {
+                        Player: newPlayerId,
+                        DataVinculacao: timestamp
+                    });
+                } else {
+                    transaction.update(ref, {
+                        Player: firebase.firestore.FieldValue.delete(),
+                        DataVinculacao: firebase.firestore.FieldValue.delete()
+                    });
+                }
+            };
+
+            const updatePlayer = (playerId, newCountryId) => {
+                if (!playerId) return;
+                const ref = usersRef.doc(playerId);
+                const data = { ultimaAtualizacao: timestamp };
+                if (newCountryId) {
+                    data.paisId = newCountryId;
+                } else {
+                    data.paisId = firebase.firestore.FieldValue.delete();
+                }
+                transaction.update(ref, data);
+            };
+
+            updateCountry(countryAId, playerBId);
+            updateCountry(countryBId, playerAId);
+            updatePlayer(playerAId, countryBId);
+            updatePlayer(playerBId, countryAId);
+        });
+
+        const playerA = this.players.find(p => p.id === playerAId);
+        const playerB = this.players.find(p => p.id === playerBId);
+
+        if (playerA) playerA.paisId = countryBId || null;
+        if (playerB) playerB.paisId = countryAId || null;
+
+        if (countryA) {
+            countryA.Player = playerBId || null;
+            countryA.DataVinculacao = playerBId ? new Date() : null;
+        }
+        if (countryB) {
+            countryB.Player = playerAId || null;
+            countryB.DataVinculacao = playerAId ? new Date() : null;
+        }
+
+        showNotification('success', 'Jogadores trocados com sucesso!');
+        Logger.info(`Troca de jogadores realizada entre ${countryAId} e ${countryBId}`);
+        return true;
+    }
+
     /**
      * Gera analytics de jogadores
      */

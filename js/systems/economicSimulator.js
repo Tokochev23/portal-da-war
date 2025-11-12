@@ -1703,11 +1703,6 @@ class EconomicSimulator {
       countryUpdates.Combustivel = newCombustivel;
       countryUpdates.CarvaoSaldo = newCarvao;
 
-      // Registrar produção no histórico (opcional)
-      if (totalCarvaoProduced > 0) {
-        historyData.results.producedCarvao = totalCarvaoProduced;
-      }
-
       // Calcular índice de Bens de Consumo usando o helper
       const resourcesSnapshot = {
         Graos: country.Graos || 0,
@@ -1805,6 +1800,10 @@ class EconomicSimulator {
             historyData.externalInvestments[action.targetCountry] = (parseFloat(action.value) || 0);
           }
         });
+
+        if (totalCarvaoProduced > 0) {
+          historyData.results.producedCarvao = totalCarvaoProduced;
+        }
 
         batch.set(historyRef, historyData);
 

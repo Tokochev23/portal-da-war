@@ -6,6 +6,7 @@ import espionageSystem from "../systems/espionageSystem.js";
 import espionageModal from "../components/espionageModal.js";
 import { renderCounterIntelligencePanel } from "../components/counterIntelligencePanel.js";
 import { renderAgencyDashboard } from "../components/agencyDashboard.js";
+import { formatPlayerName } from "../utils/playerUtils.js";
 
 // Cache de elementos do DOM
 const DOM = {
@@ -435,6 +436,7 @@ export function renderPublicCountries(countries) {
             <div class="min-w-0">
               <div class="truncate text-sm font-semibold text-slate-100">${country.Pais}</div>
               <div class="text-[10px] text-slate-400">PIB pc ${formatCurrency(country.PIBPerCapita || (pib / populacao))}</div>
+              ${country.Player ? `<div class="text-[10px] text-emerald-400 truncate">Jogador: ${country.PlayerName || formatPlayerName(country.Player)}</div>` : ''}
             </div>
           </div>
           <div class="shrink-0 text-center">
