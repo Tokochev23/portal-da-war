@@ -240,6 +240,41 @@ export async function signInWithEmailPassword(email, password) {
     }
 }
 
+export async function requestPasswordReset(email) {
+    try {
+        if (!ValidationUtils.isValidEmail(email)) {
+            throw new Error('invalid-email');
+        }
+
+        const normalizedEmail = email.toLowerCase().trim();
+
+        // Verificar se o email está cadastrado no Auth (não depende de permissão no Firestore)
+        const signInMethods = await auth.fetchSignInMethodsForEmail(normalizedEmail);
+        if (!signInMethods || signInMethods.length === 0) {
+            throw new Error('auth/user-not-found');
+        }
+
+        await auth.sendPasswordResetEmail(normalizedEmail);
+
+        // Registrar o pedido no Firestore para auditoria (ignorar falhas de permissão)
+        try {
+            await db.collection('password_reset_logs').add({
+                email: normalizedEmail,
+                requestedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (logError) {
+            Logger.warn('Não foi possível registrar log de reset de senha:', logError);
+        }
+
+        return {
+            success: true,
+            message: 'Enviamos um email com instruções para redefinir sua senha.'
+        };
+    } catch (error) {
+        return FirebaseErrorHandler.handleError(error, 'recuperação de senha');
+    }
+}
+
 export async function vincularJogadorAoPais(userId, paisId) {
     if (!userId || !paisId) {
         const error = new Error('userId e paisId s├úo obrigat├│rios');
@@ -790,5 +825,6 @@ export async function vincularJogadorAoPaisSemRebaixar(userId, paisId) {
         return FirebaseErrorHandler.handleError(error, 'vincula├º├úo jogador-pa├¡s (preservar papel)');
     }
 }
+
 
 

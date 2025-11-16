@@ -12,7 +12,8 @@ import {
   registerWithEmailPassword,
   signInWithEmailPassword,
   db,
-  handleGoogleRedirectResult
+  handleGoogleRedirectResult,
+  requestPasswordReset
 } from "./services/firebase.js";
 import {
   renderPublicCountries,
@@ -52,6 +53,7 @@ const googleLoginBtn = document.getElementById('google-login-btn');
 const closeAuthModal = document.getElementById('close-auth-modal');
 const authErrorMessage = document.getElementById('auth-error-message');
 const authSuccessMessage = document.getElementById('auth-success-message');
+const forgotPasswordBtn = document.getElementById('forgot-password-btn');
 
 // Estado da aplicação
 let appState = {
@@ -138,6 +140,42 @@ function resetAuthForms() {
   registerForm.reset();
 }
 
+async function handleForgotPasswordRequest(event) {
+  event.preventDefault();
+  if (!forgotPasswordBtn) return;
+
+  clearAuthMessages();
+  const emailInput = document.getElementById('login-email');
+  const email = emailInput.value.trim();
+
+  if (!email) {
+    showAuthError('Informe seu email para recuperar a senha.');
+    emailInput.focus();
+    return;
+  }
+
+  const originalText = forgotPasswordBtn.textContent;
+  forgotPasswordBtn.disabled = true;
+  forgotPasswordBtn.textContent = 'Enviando...';
+
+  try {
+    const result = await requestPasswordReset(email);
+    if (result.success) {
+      showAuthSuccess(result.message || 'Verifique seu email para redefinir a senha.');
+    } else if (result.message) {
+      showAuthError(result.message);
+    } else {
+      showAuthError('Não foi possível enviar o email de recuperação.');
+    }
+  } catch (error) {
+    console.error('Erro inesperado no reset de senha:', error);
+    showAuthError('Erro inesperado ao solicitar recuperação de senha.');
+  } finally {
+    forgotPasswordBtn.disabled = false;
+    forgotPasswordBtn.textContent = originalText;
+  }
+}
+
 async function processGoogleRedirectLogin() {
   try {
     const result = await handleGoogleRedirectResult(true);
@@ -187,6 +225,12 @@ async function loadSiteData() {
       
       // Ativar sincronização em tempo real após carregamento inicial
       setupRealTimeSync();
+
+      // Reprocessar painel do jogador agora que os países estão carregados
+      if (auth.currentUser) {
+        console.log('Revalidando painel do jogador após carregar países');
+        await handleUserLogin(auth.currentUser);
+      }
     } else {
       console.warn("Nenhum país encontrado no Firestore");
       showNotification('warning', 'Nenhum país encontrado. Verifique a configuração do Firestore.');
@@ -468,6 +512,10 @@ closeAuthModal.addEventListener('click', hideAuthModal);
 closeCountryPanelBtn.addEventListener('click', () => {
   countryPanelModal.classList.add('hidden');
 });
+
+if (forgotPasswordBtn) {
+  forgotPasswordBtn.addEventListener('click', handleForgotPasswordRequest);
+}
 
 // Google Login
 googleLoginBtn.addEventListener('click', async () => {

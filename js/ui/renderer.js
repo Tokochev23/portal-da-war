@@ -1353,7 +1353,7 @@ export function fillPlayerPanel(playerData, currentTurn) {
         estabilidadeBar.className = 'h-1.5 rounded-full bg-red-400';
       }
     }
-    
+
     // Atualizar combustível (calcular saldo de produção - consumo)
     if (DOM.playerCombustivel) {
       const resourceConsumption = ResourceConsumptionCalculator.calculateCountryConsumption(playerData);
