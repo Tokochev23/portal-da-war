@@ -248,13 +248,24 @@ export async function requestPasswordReset(email) {
 
         const normalizedEmail = email.toLowerCase().trim();
 
-        // Verificar se o email está cadastrado no Auth (não depende de permissão no Firestore)
-        const signInMethods = await auth.fetchSignInMethodsForEmail(normalizedEmail);
-        if (!signInMethods || signInMethods.length === 0) {
-            throw new Error('auth/user-not-found');
-        }
+        try {
+            await auth.sendPasswordResetEmail(normalizedEmail);
+        } catch (error) {
+            if (error.code === 'auth/user-not-found') {
+                let signInMethods = [];
+                try {
+                    signInMethods = await auth.fetchSignInMethodsForEmail(normalizedEmail);
+                } catch (methodsError) {
+                    Logger.warn('Não foi possível obter métodos de login:', methodsError);
+                }
 
-        await auth.sendPasswordResetEmail(normalizedEmail);
+                if (signInMethods.includes('google.com') && !signInMethods.includes('password')) {
+                    throw new Error('Esta conta usa apenas login com Google. Acesse com o Google ou defina uma senha nas configurações.');
+                }
+            }
+
+            throw error;
+        }
 
         // Registrar o pedido no Firestore para auditoria (ignorar falhas de permissão)
         try {
