@@ -33,6 +33,10 @@ export default defineConfig({
         {
           src: 'assets/division-icons/**/*',
           dest: 'assets/division-icons'
+        },
+        {
+          src: 'templates/vehicle-creator/**/*',
+          dest: 'templates/vehicle-creator'
         }
       ]
     })
