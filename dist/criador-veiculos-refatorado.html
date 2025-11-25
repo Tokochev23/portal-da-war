@@ -260,6 +260,8 @@
       async initializeFeatures() {
         this.updateLoadingStatus('Configurando funcionalidades...');
         
+        await this.waitForCoreSystems();
+        
         // Aguardar DOM estar pronto
         await new Promise(resolve => setTimeout(resolve, 100));
         
@@ -352,7 +354,23 @@
       }
 
       loadComponentTabs() {
+        if (!window.tabLoaders || !window.VEHICLE_COMPONENTS) {
+          this.updateLoadingStatus('Aguardando dados do criador de ve��culos...');
+          setTimeout(() => this.loadComponentTabs(), 150);
+          return;
+        }
         this.loadTabContent(this.currentTab);
+      }
+
+      async waitForCoreSystems() {
+        const start = performance.now();
+        const ready = () => window.tabLoaders && window.VEHICLE_COMPONENTS && document.getElementById('tab-content');
+        while (!ready()) {
+          if (performance.now() - start > 5000) {
+            throw new Error('Componentes principais n��o inicializados (tabLoaders/VEHICLE_COMPONENTS)');
+          }
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
       }
 
       setupPerformanceChart() {
