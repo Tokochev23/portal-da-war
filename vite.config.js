@@ -6,6 +6,7 @@ import { viteStaticCopy } from 'vite-plugin-static-copy';
 // Nomes dos arquivos HTML que servirão como pontos de entrada
 const entryPoints = [
   'index.html',
+  'criador-veiculos-refatorado.html',
   'criador-aeronaves.html',
   'criador-navios.html',
   'criador-divisoes.html',

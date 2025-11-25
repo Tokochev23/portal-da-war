@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🏗️ Criador de Veículos Blindados Avançado • WAR Era 1954</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%23ffb400%22/%3E%3Ctext x=%228%22 y=%2211%22 font-size=%2210%22 text-anchor=%22middle%22 fill=%22%230b1020%22%3EW%3C/text%3E%3C/svg%3E" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- html2canvas for screenshot capture -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg: {
+              DEFAULT: "#0b1020",
+              soft: "#10172a",
+              ring: "#1e293b"
+            },
+            brand: {
+              50:"#fff7e6",100:"#ffefcc",200:"#ffe099",300:"#ffd166",400:"#ffc233",
+              500:"#ffb400",600:"#e09f00",700:"#b37d00",800:"#805900",900:"#4d3600"
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Inter Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Stardos+Stencil:wght@700&display=swap" rel="stylesheet">
+  
+  <!-- Chart.js for performance graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- CSS Refatorado -->
+  
+  <!-- Custom Armor Slider CSS -->
+  <style>
+    .armor-slider {
+      background: linear-gradient(to right, #10b981 0%, #f59e0b 50%, #ef4444 100%);
+      outline: none;
+      border-radius: 8px;
+    }
+    
+    .armor-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+              appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: linear-gradient(45deg, #fbbf24, #f59e0b);
+      cursor: pointer;
+      border: 2px solid #1e293b;
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+      -webkit-transition: all 0.2s ease;
+      transition: all 0.2s ease;
+    }
+    
+    .armor-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(245, 158, 11, 0.6);
+    }
+    
+    .armor-slider::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: linear-gradient(45deg, #fbbf24, #f59e0b);
+      cursor: pointer;
+      border: 2px solid #1e293b;
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+      -moz-transition: all 0.2s ease;
+      transition: all 0.2s ease;
+    }
+    
+    .armor-slider::-moz-range-thumb:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(245, 158, 11, 0.6);
+    }
+    
+    .armor-slider:focus {
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.3);
+    }
+
+    /* Weapon sliders with orange gradient */
+    .slider-thumb {
+      background: linear-gradient(to right, #ea580c 0%, #dc2626 50%, #991b1b 100%);
+      outline: none;
+      border-radius: 8px;
+    }
+    
+    .slider-thumb::-webkit-slider-thumb {
+      -webkit-appearance: none;
+              appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: linear-gradient(45deg, #f97316, #ea580c);
+      cursor: pointer;
+      border: 2px solid #1e293b;
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+      -webkit-transition: all 0.2s ease;
+      transition: all 0.2s ease;
+    }
+    
+    .slider-thumb::-webkit-slider-thumb:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(249, 115, 22, 0.6);
+    }
+    
+    .slider-thumb::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: linear-gradient(45deg, #f97316, #ea580c);
+      cursor: pointer;
+      border: 2px solid #1e293b;
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+      -moz-transition: all 0.2s ease;
+      transition: all 0.2s ease;
+    }
+    
+    .slider-thumb::-moz-range-thumb:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(249, 115, 22, 0.6);
+    }
+  </style>
+  <script type="module" crossorigin src="/portal-da-war/assets/criador-veiculos-refatorado-f7BBJMLt.js"></script>
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/preload-helper-f85Crcwt.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/utils-DLoRv3re.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/firebase-Byc2ZILV.js">
+  <link rel="modulepreload" crossorigin href="/portal-da-war/assets/templateLoader-ClBXDqzG.js">
+  <link rel="stylesheet" crossorigin href="/portal-da-war/assets/templateLoader-BF2Zfidr.css">
+</head>
+
+<body class="gradient-bg min-h-screen">
+  <!-- Loading Screen -->
+  <div id="initial-loading" class="fixed inset-0 bg-bg z-50 flex items-center justify-center">
+    <div class="text-center">
+      <div class="animate-spin w-12 h-12 border-4 border-brand-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+      <p class="text-slate-200 font-medium">Iniciando Criador de Veículos...</p>
+      <p class="text-slate-400 text-sm mt-2" id="loading-status">Carregando templates...</p>
+    </div>
+  </div>
+
+  <!-- HEADER - Carregado dinamicamente -->
+  <div id="header-container"></div>
+
+  <!-- MAIN CONTENT -->
+  <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+    
+    <!-- PROJECT INFO SECTION - Carregado dinamicamente -->
+    <div id="project-info-container"></div>
+
+    <!-- COMPONENT SELECTION TABS - Carregado dinamicamente -->
+    <div id="component-tabs-container"></div>
+
+    <!-- WARNINGS SECTION - Carregado dinamicamente -->
+    <div id="warnings-container"></div>
+
+    <!-- DETAILED ANALYSIS SECTION - Carregado dinamicamente -->
+    <div id="analysis-container"></div>
+
+    <!-- ACTION BUTTONS - Carregado dinamicamente -->
+    <div id="action-buttons-container"></div>
+
+  </main>
+
+  <!-- FOOTER COMPONENTS - Carregado dinamicamente -->
+  <div id="footer-components-container"></div>
+
+
+  <script>
+    // Sistema de inicialização refatorado
+    class VehicleCreatorApp {
+      constructor() {
+        this.currentTab = 'chassis';
+        this.performanceChart = null;
+        this.isInitialized = false;
+        this.loadingElement = document.getElementById('initial-loading');
+        this.statusElement = document.getElementById('loading-status');
+      }
+
+      updateLoadingStatus(message) {
+        if (this.statusElement) {
+          this.statusElement.textContent = message;
+        }
+      }
+
+      async initialize() {
+        try {
+          this.updateLoadingStatus('Iniciando carregamento progressivo...');
+          
+          // Fase 1: Templates críticos
+          await this.loadCriticalComponents();
+          
+          // Fase 2: Templates secundários
+          setTimeout(() => this.loadSecondaryComponents(), 100);
+          
+          // Fase 3: Inicializar funcionalidades
+          setTimeout(() => this.initializeFeatures(), 300);
+          
+          // Fase 4: Templates finais e cleanup
+          setTimeout(() => this.finishInitialization(), 500);
+          
+        } catch (error) {
+          console.error('❌ Initialization failed:', error);
+          this.showInitializationError(error);
+        }
+      }
+
+      async loadCriticalComponents() {
+        this.updateLoadingStatus('Carregando componentes principais...');
+        
+        const criticalInjections = [
+          { containerId: 'header-container', templatePath: 'templates/vehicle-creator/header.html' },
+          { containerId: 'project-info-container', templatePath: 'templates/vehicle-creator/project-info.html' }
+        ];
+
+        await window.templateInjector.injectMultipleTemplates(criticalInjections);
+        console.log('✅ Critical components loaded');
+      }
+
+      async loadSecondaryComponents() {
+        this.updateLoadingStatus('Carregando sistema de abas...');
+        
+        const secondaryInjections = [
+          { containerId: 'component-tabs-container', templatePath: 'templates/vehicle-creator/component-tabs.html' },
+          { containerId: 'warnings-container', templatePath: 'templates/vehicle-creator/warnings-section.html' },
+          { containerId: 'analysis-container', templatePath: 'templates/vehicle-creator/analysis-section.html' }
+        ];
+
+        await window.templateInjector.injectMultipleTemplates(secondaryInjections);
+        console.log('✅ Secondary components loaded');
+      }
+
+      async finishInitialization() {
+        this.updateLoadingStatus('Finalizando configuração...');
+        
+        const tertiaryInjections = [
+          { containerId: 'action-buttons-container', templatePath: 'templates/vehicle-creator/action-buttons.html' },
+          { containerId: 'footer-components-container', templatePath: 'templates/vehicle-creator/footer-components.html' }
+        ];
+
+        await window.templateInjector.injectMultipleTemplates(tertiaryInjections);
+        
+        this.hideLoadingScreen();
+        this.isInitialized = true;
+        console.log('✅ Vehicle Creator fully initialized');
+      }
+
+      async initializeFeatures() {
+        this.updateLoadingStatus('Configurando funcionalidades...');
+        
+        // Aguardar DOM estar pronto
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        this.initializeInterface();
+        this.setupTabNavigation();
+        this.setupPerformanceChart();
+        this.loadComponentTabs();
+      }
+
+      hideLoadingScreen() {
+        if (this.loadingElement) {
+          this.loadingElement.style.opacity = '0';
+          setTimeout(() => {
+            this.loadingElement.style.display = 'none';
+          }, 300);
+        }
+      }
+
+      showInitializationError(error) {
+        if (this.loadingElement) {
+          this.loadingElement.innerHTML = `
+            <div class="text-center text-red-400">
+              <div class="text-4xl mb-4">⚠️</div>
+              <h2 class="text-xl font-bold mb-2">Erro de Inicialização</h2>
+              <p class="text-slate-300 mb-4">Falha ao carregar o aplicativo</p>
+              <p class="text-sm text-slate-500 mb-4">${error.message}</p>
+              <button 
+                onclick="window.location.reload()" 
+                class="px-4 py-2 bg-brand-500 text-bg rounded-lg hover:bg-brand-600 transition-colors"
+              >
+                🔄 Recarregar Página
+              </button>
+            </div>
+          `;
+        }
+      }
+
+      initializeInterface() {
+        const country = localStorage.getItem('loggedCountry') || 'Desconhecido';
+        const countryElement = document.getElementById('current-country');
+        if (countryElement) {
+          countryElement.textContent = country;
+        }
+        this.setActiveTab('chassis');
+      }
+
+      setupTabNavigation() {
+        const tabButtons = document.querySelectorAll('.tab-button');
+        tabButtons.forEach(button => {
+          button.addEventListener('click', () => {
+            const tabId = button.dataset.tab;
+            this.setActiveTab(tabId);
+            this.loadTabContent(tabId);
+          });
+        });
+      }
+
+      setActiveTab(tabId) {
+        this.currentTab = tabId;
+        document.querySelectorAll('.tab-button').forEach(btn => {
+          btn.classList.remove('border-brand-500', 'text-brand-300');
+          btn.classList.add('border-transparent', 'text-slate-400');
+        });
+        const activeBtn = document.querySelector(`[data-tab="${tabId}"]`);
+        if(activeBtn) {
+          activeBtn.classList.add('border-brand-500', 'text-brand-300');
+          activeBtn.classList.remove('border-transparent', 'text-slate-400');
+        }
+      }
+
+      loadTabContent(tabId) {
+        const tabContent = document.getElementById('tab-content');
+        if (!tabContent) return;
+        
+        tabContent.innerHTML = '<div class="text-center py-8"><div class="animate-spin w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full mx-auto"></div></div>';
+        
+        setTimeout(() => {
+          switch(tabId) {
+            case 'chassis': this.loadChassisTab(); break;
+            case 'engine': this.loadEngineTab(); break;
+            case 'transmission': this.loadTransmissionTab(); break;
+            case 'suspension': this.loadSuspensionTab(); break;
+            case 'crew': this.loadCrewTab(); break;
+            case 'armor': this.loadArmorTab(); break;
+            case 'weapons': this.loadWeaponsTab(); break;
+            case 'systems': this.loadSystemsTab(); break;
+            case 'equipment': this.loadEquipmentTab(); break;
+          }
+        }, 200);
+      }
+
+      loadComponentTabs() {
+        this.loadTabContent(this.currentTab);
+      }
+
+      setupPerformanceChart() {
+        const chartElement = document.getElementById('performance-radar');
+        if (!chartElement) {
+          console.warn('Performance chart element not found, skipping chart setup');
+          return;
+        }
+
+        // Destroy existing chart if it exists
+        if (this.performanceChart) {
+          this.performanceChart.destroy();
+          this.performanceChart = null;
+        }
+
+        const ctx = chartElement.getContext('2d');
+        this.performanceChart = new Chart(ctx, {
+          type: 'radar',
+          data: {
+            labels: ['Velocidade', 'Blindagem', 'Potência', 'Confiabilidade', 'Economia', 'Manutenibilidade'],
+            datasets: [{
+              label: 'Performance',
+              data: [0, 0, 0, 0, 0, 0],
+              backgroundColor: 'rgba(255, 180, 0, 0.2)',
+              borderColor: 'rgba(255, 180, 0, 0.8)',
+              pointBackgroundColor: 'rgba(255, 180, 0, 1)',
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: { 
+              r: { 
+                min: 0, 
+                max: 100, 
+                ticks: { display: false }, 
+                grid: { color: 'rgba(255, 255, 255, 0.1)' }, 
+                pointLabels: { color: 'rgba(255, 255, 255, 0.7)', font: { size: 11 } } 
+              } 
+            },
+            plugins: { legend: { display: false } }
+          }
+        });
+      }
+
+      // Integrated tab loading methods
+      loadChassisTab() { 
+        if (window.tabLoaders) window.tabLoaders.loadChassisTab(); 
+      }
+      loadEngineTab() { 
+        if (window.tabLoaders) window.tabLoaders.loadEngineTab(); 
+      }
+      loadTransmissionTab() { 
+        if (window.tabLoaders) window.tabLoaders.loadTransmissionTab(); 
+      }
+      loadSuspensionTab() { 
+        if (window.tabLoaders) window.tabLoaders.loadSuspensionTab(); 
+      }
+      loadCrewTab() { 
+        if (window.tabLoaders) window.tabLoaders.loadCrewTab(); 
+      }
+      loadArmorTab() { 
+        if (window.tabLoaders) window.tabLoaders.loadArmorTab(); 
+      }
+      loadWeaponsTab() { 
+        if (window.tabLoaders) window.tabLoaders.loadWeaponsTab(); 
+      }
+      loadSystemsTab() { 
+        if (window.tabLoaders) window.tabLoaders.loadSystemsTab(); 
+      }
+      loadEquipmentTab() { 
+        if (window.tabLoaders) window.tabLoaders.loadEquipmentTab(); 
+      }
+    }
+
+    // Inicialização global
+    window.vehicleCreatorApp = new VehicleCreatorApp();
+
+    // Iniciar aplicação quando DOM estiver pronto
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('🚗 Starting Vehicle Creator App...');
+      window.vehicleCreatorApp.initialize();
+    });
+
+    // Fallback para browsers mais antigos
+    window.addEventListener('load', () => {
+      if (!window.vehicleCreatorApp.isInitialized) {
+        console.log('🔄 Fallback initialization...');
+        setTimeout(() => window.vehicleCreatorApp.initialize(), 100);
+      }
+    });
+  </script>
+
+  <!-- VEHICLE SUMMARY MODAL -->
+  <div id="vehicle-summary-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-slate-900 rounded-2xl shadow-2xl border border-slate-700 w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between p-6 border-b border-slate-700 sticky top-0 bg-slate-900 rounded-t-2xl">
+        <div class="flex items-center gap-3">
+          <span class="text-3xl">📋</span>
+          <h2 class="text-2xl font-bold text-slate-100">Ficha Técnica do Veículo</h2>
+        </div>
+        <button onclick="hideVehicleSummaryModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors">
+          <span class="text-slate-400 text-xl">×</span>
+        </button>
+      </div>
+
+      <!-- Modal Content -->
+      <div id="vehicle-summary-content" class="p-6">
+        <!-- Content will be populated by JavaScript -->
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex items-center justify-between p-6 border-t border-slate-700 bg-slate-800/50 rounded-b-2xl">
+        <div class="text-sm text-slate-400">
+          Ficha gerada automaticamente pelo Sistema de Criação de Veículos War1954
+        </div>
+        
+        <!-- Quantity Selection -->
+        <div class="bg-slate-700/30 border border-slate-600/50 rounded-lg p-4 mb-4">
+          <label class="block text-sm font-medium text-slate-300 mb-2">
+            📊 Quantidade de Unidades a Produzir
+          </label>
+          <div class="flex items-center gap-4">
+            <input 
+              type="number" 
+              id="vehicle-quantity-input" 
+              class="flex-1 px-3 py-2 bg-slate-800/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent" 
+              min="1" 
+              max="1000" 
+              value="50"
+              placeholder="Ex: 50"
+            >
+            <div class="text-xs text-slate-400 text-center">
+              <div>Min: 1</div>
+              <div>Max: 1000</div>
+            </div>
+          </div>
+          <p class="text-xs text-slate-400 mt-1">
+            Esta quantidade será avaliada pelo narrador para aprovação
+          </p>
+        </div>
+        
+        <!-- Country Selection for Admin/Narrator -->
+        <div id="admin-country-selection" class="hidden bg-slate-700/30 border border-slate-600/50 rounded-lg p-4 mb-4">
+          <label class="block text-sm font-medium text-slate-300 mb-2">
+            🌍 País de Destino (Admin/Narrador)
+          </label>
+          <select 
+            id="vehicle-target-country" 
+            class="w-full px-3 py-2 bg-slate-800/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+          >
+            <option value="">Carregando países...</option>
+          </select>
+          <p class="text-xs text-slate-400 mt-1">
+            Como admin/narrador, selecione o país que receberá este veículo
+          </p>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="flex gap-3 justify-end">
+          <button onclick="exportVehicleToPDF()" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
+            <span>📄</span>
+            <span>Exportar PDF</span>
+          </button>
+          
+          <button id="submit-approval-btn" onclick="submitForApproval()" class="px-6 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed">
+            <span>📋</span>
+            <span>Enviar para Aprovação</span>
+          </button>
+        </div>
+        
+        <!-- Status Message Area -->
+        <div id="submission-status" class="hidden mt-3 rounded-lg p-3 text-sm"></div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
