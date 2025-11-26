@@ -1,6 +1,14 @@
 // js/vehicleCreator.js - Advanced War-1954 Vehicle Creator System
 // Main logic file - imports component data and runs calculations.
 
+// Side-effect imports to ensure global helpers are loaded before the app starts
+import './utils/templateLoader.js';
+import './components/tabLoaders.js';
+import './utils/costSystem.js';
+import './utils/performanceSystem.js';
+import './utils/energySystem.js';
+import './utils/armorFunctions.js';
+
 // Component Data Imports
 import { chassis } from './data/components/chassis.js';
 import { engines } from './data/components/engines.js';
